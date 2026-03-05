@@ -1,0 +1,104 @@
+/**
+ * Company Review routes.
+ * Defines all endpoints for managing company reviews.
+ */
+
+const express = require("express");
+const router = express.Router();
+const {
+    createCompanyReview,
+    getAllCompanyReviews,
+    getReviewsByCompany,
+    getCompanyReviewById,
+    updateCompanyReview,
+    deleteCompanyReview,
+    getUserReviews,
+    flagReview,
+    markHelpful,
+    markUnhelpful,
+    getCompanyStats,
+    getReviewComments,
+    createReviewComment,
+    replyToComment,
+    updateReviewComment,
+    deleteReviewComment,
+    updateReviewReply,
+    deleteReviewReply,
+    voteComment,
+    voteReply,
+    summarizeReview,
+} = require("../controllers/reviewController");
+const protect = require("../middleware/authMiddleware");
+
+/**
+ * Public routes
+ */
+
+// Get all reviews with filters and pagination
+router.get("/", getAllCompanyReviews);
+
+// Get company statistics (must come before /:id to avoid parameter matching)
+router.get("/stats/all-companies", getCompanyStats);
+
+// Get reviews by company name
+router.get("/company/:companyName", getReviewsByCompany);
+
+// Get single review
+router.get("/:id", getCompanyReviewById);
+
+// Get comments for a review
+router.get("/:id/comments", getReviewComments);
+
+// Summarize a review
+router.get("/:id/summarize", summarizeReview);
+
+// Mark review as helpful
+router.put("/:id/helpful", markHelpful);
+
+// Mark review as unhelpful
+router.put("/:id/unhelpful", markUnhelpful);
+
+/**
+ * Private routes (require authentication)
+ */
+
+// Get user's reviews (must come before other param-based routes)
+router.get("/user/my-reviews", protect, getUserReviews);
+
+// Create new review
+router.post("/", protect, createCompanyReview);
+
+// Update review
+router.put("/:id", protect, updateCompanyReview);
+
+// Delete review
+router.delete("/:id", protect, deleteCompanyReview);
+
+// Flag review as inappropriate
+router.put("/:id/flag", protect, flagReview);
+
+// Create a comment on a review
+router.post("/:id/comments", protect, createReviewComment);
+
+// Reply to a comment on a review
+router.post("/:id/comments/:commentId/reply", protect, replyToComment);
+
+// Edit a comment on a review
+router.put("/:id/comments/:commentId", protect, updateReviewComment);
+
+// Delete a comment on a review
+router.delete("/:id/comments/:commentId", protect, deleteReviewComment);
+
+// Edit a reply in a review thread
+router.put("/:id/comments/:commentId/replies/:replyId", protect, updateReviewReply);
+
+// Delete a reply in a review thread
+router.delete("/:id/comments/:commentId/replies/:replyId", protect, deleteReviewReply);
+
+// Vote on a comment in a review thread
+router.put("/:id/comments/:commentId/vote", protect, voteComment);
+
+// Vote on a reply in a review thread
+router.put("/:id/comments/:commentId/replies/:replyId/vote", protect, voteReply);
+
+module.exports = router;
