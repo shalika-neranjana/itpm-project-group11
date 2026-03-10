@@ -41,6 +41,16 @@ const studentSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
+        degreeProgram: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        academicYear: {
+            type: String,
+            default: "",
+            trim: true,
+        },
         linkedin: {
             type: String,
             default: "",

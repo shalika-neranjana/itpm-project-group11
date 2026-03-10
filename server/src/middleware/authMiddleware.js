@@ -25,12 +25,12 @@ const protect = async (req, res, next) => {
             next();
         } else {
             res.status(401);
-            throw new Error("Not authorized. Token missing.");
+            next(new Error("No authentication token provided."));
         }
 
     } catch (error) {
         res.status(401);
-        throw new Error("Not authorized. Token failed.");
+        next(new Error("Invalid or expired authentication token."));
     }
 };
 
