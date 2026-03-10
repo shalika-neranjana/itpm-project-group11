@@ -1,40 +1,89 @@
 # InternConnect
 
+InternConnect is a web application designed to help students discover and apply for internship opportunities offered by companies.
+
+---
+
+## Prerequisites
+
+* **Node.js** (LTS version recommended)
+* **npm** (comes bundled with Node.js)
+
+---
+
 ## Backend Setup (Server)
 
-This guide explains how to set up and run the backend locally.
+Follow the steps below to set up and run the backend server.
 
-### Prerequisites
-- Node.js (LTS recommended)
-- npm (comes with Node.js)
+### 1. Clone the Repository
 
-### Setup Steps
-
-#### 1. Clone the repository
 ```bash
 git clone https://github.com/shalika-neranjana/itpm-project-group11.git
 ```
 
-#### 2. Navigate to the backend folder
+### 2. Navigate to the Server Directory
+
 ```bash
 cd itpm-project-group11/server
 ```
 
-#### 3. Install dependencies
+### 3. Install Dependencies
+
 ```bash
 npm install
 ```
 
-#### 4. Run the backend in development mode
+### 4. Run the Backend Server
+
+Start the server in development mode using the following command:
+
 ```bash
 npm run dev
 ```
 
-If successful, the terminal should show:
+If the server starts successfully, the terminal should display the following messages:
 
 <code>MongoDB connected</code><br>
 <code>Server running on port 5000</code>
 
 ### Notes
-- Keep the terminal running while the backend is running.
 
+* Keep the terminal running while the backend server is active.
+* The backend must be running before starting the frontend.
+
+---
+
+## Frontend Setup (Client)
+
+Follow the steps below to set up and run the frontend application.
+
+### 1. Navigate to the Client Directory
+
+Open a new terminal and run:
+
+```bash
+cd itpm-project-group11/client
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Run the Frontend Development Server
+
+```bash
+npm run dev
+```
+
+If the frontend starts successfully, the terminal will display a local development URL similar to the following:
+
+<code>http://localhost:5173</code>
+
+Open this URL in your web browser to access the application.
+
+### Notes
+
+* Ensure the backend server is already running before using the frontend.
+* Both the **backend** and **frontend** terminals must remain running during development.
