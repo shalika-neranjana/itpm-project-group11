@@ -43,10 +43,8 @@ npm run dev
 
 If the server starts successfully, the terminal should display the following messages:
 
-<code>
-MongoDB connected<br>
-Server running on port 5000
-</code>
+<code>MongoDB connected<br>
+Server running on port 5000</code>
 
 ### Notes
 
@@ -81,9 +79,7 @@ npm run dev
 
 If the frontend starts successfully, the terminal will display a local development URL similar to the following:
 
-```
-http://localhost:5173
-```
+<code>http://localhost:5173</code>
 
 Open this URL in your web browser to access the application.
 
