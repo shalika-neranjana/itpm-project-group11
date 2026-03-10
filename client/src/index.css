@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --border: #e8eaf0;
+    --accent: #3b6fe8;
+    --accent-light: #eef2fd;
+    --accent-soft: #d4e0fa;
+    --text: #1a1d27;
+    --muted: #6b7280;
+    --danger: #dc2626;
+    --success: #16a34a;
+}
+
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: "DM Sans", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.font-display {
+    font-family: "Playfair Display", serif;
+}
