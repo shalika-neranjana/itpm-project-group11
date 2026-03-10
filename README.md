@@ -1,12 +1,12 @@
 # InternConnect
 
-## Backend Setup (Server)
-
-This guide explains how to set up and run the backend locally.
-
 ### Prerequisites
 - Node.js (LTS recommended)
 - npm (comes with Node.js)
+
+## Backend Setup (Server)
+
+This guide explains how to set up and run the backend locally.
 
 ### Setup Steps
 
@@ -37,4 +37,35 @@ If successful, the terminal should show:
 
 ### Notes
 - Keep the terminal running while the backend is running.
+
+---
+
+## Frontend Setup (Client)
+
+### Setup Steps
+
+#### 1. Open a new terminal and navigate to the frontend folder
+```bash
+cd itpm-project-group11/client
+```
+
+#### 2. Install dependencies
+```bash
+npm install
+```
+
+#### 3. Run the frontend in development mode
+```bash
+npm run dev
+```
+
+If successful, the terminal will show a local URL such as:
+
+`http://localhost:5173`
+
+Open that URL in your browser to access the app.
+
+### Notes
+- The backend server must be running before using the frontend.
+- Keep both terminals (backend and frontend) running simultaneously.
 
