@@ -43,10 +43,10 @@ npm run dev
 
 If the server starts successfully, the terminal should display the following messages:
 
-```
-MongoDB connected
+<code>
+MongoDB connected<br>
 Server running on port 5000
-```
+</code>
 
 ### Notes
 
