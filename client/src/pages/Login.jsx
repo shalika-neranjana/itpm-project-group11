@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
 function Login() {
@@ -28,16 +28,11 @@ function Login() {
     try {
       const response = await api.post('/auth/login', formData)
 
-      console.log('Login response:', response.data)
-
-      const token = response.data.token
-      const student = response.data.student || response.data.user || response.data.data
+      const studentData = response.data.data
+      const token = studentData.token
 
       localStorage.setItem('token', token)
-
-      if (student) {
-        localStorage.setItem('student', JSON.stringify(student))
-      }
+      localStorage.setItem('student', JSON.stringify(studentData))
 
       navigate('/dashboard')
     } catch (err) {
@@ -50,9 +45,9 @@ function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="mb-2 text-center text-3xl font-bold text-slate-800">
-          Intern Connect
+      <div className="w-full max-w-md rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+        <h1 className="font-display mb-2 text-center text-3xl font-bold text-[#1A1D27]">
+          InternConnect
         </h1>
         <p className="mb-6 text-center text-slate-500">
           Login to your student account
@@ -98,11 +93,17 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+            className="w-full rounded-[10px] bg-[#3B6FE8] px-4 py-3 font-semibold text-white transition hover:bg-[#2D5CD4]"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        <p className="mt-6 text-center text-sm text-slate-600">
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="font-semibold text-blue-600 hover:underline">
+            Register
+          </Link>
+        </p>
       </div>
     </div>
   )
