@@ -2,4 +2,4 @@ server/node_modules/
 server/dist/
 server/build/
 server/uploads/*
-!server/uploads/.gitkeep
+.gitkeep
