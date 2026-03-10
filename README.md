@@ -1,69 +1,93 @@
 # InternConnect
 
-### Prerequisites
-- Node.js (LTS recommended)
-- npm (comes with Node.js)
+InternConnect is a web application designed to help students discover and apply for internship opportunities offered by companies.
+
+---
+
+## Prerequisites
+
+* **Node.js** (LTS version recommended)
+* **npm** (comes bundled with Node.js)
+
+---
 
 ## Backend Setup (Server)
 
-### Setup Steps
+Follow the steps below to set up and run the backend server.
 
-#### 1. Clone the repository
+### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/shalika-neranjana/itpm-project-group11.git
 ```
 
-#### 2. Navigate to the backend folder
+### 2. Navigate to the Server Directory
+
 ```bash
 cd itpm-project-group11/server
 ```
 
-#### 3. Install dependencies
+### 3. Install Dependencies
+
 ```bash
 npm install
 ```
 
-#### 4. Run the backend in development mode
+### 4. Run the Backend Server
+
+Start the server in development mode using the following command:
+
 ```bash
 npm run dev
 ```
 
-If successful, the terminal should show:
+If the server starts successfully, the terminal should display the following messages:
 
-<code>MongoDB connected</code><br>
-<code>Server running on port 5000</code>
+```
+MongoDB connected
+Server running on port 5000
+```
 
 ### Notes
-- Keep the terminal running while the backend is running.
+
+* Keep the terminal running while the backend server is active.
+* The backend must be running before starting the frontend.
 
 ---
 
 ## Frontend Setup (Client)
 
-### Setup Steps
+Follow the steps below to set up and run the frontend application.
 
-#### 1. Open a new terminal and navigate to the frontend folder
+### 1. Navigate to the Client Directory
+
+Open a new terminal and run:
+
 ```bash
 cd itpm-project-group11/client
 ```
 
-#### 2. Install dependencies
+### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
-#### 3. Run the frontend in development mode
+### 3. Run the Frontend Development Server
+
 ```bash
 npm run dev
 ```
 
-If successful, the terminal will show a local URL such as:
+If the frontend starts successfully, the terminal will display a local development URL similar to the following:
 
-`http://localhost:5173`
+```
+http://localhost:5173
+```
 
-Open that URL in your browser to access the app.
+Open this URL in your web browser to access the application.
 
 ### Notes
-- The backend server must be running before using the frontend.
-- Keep both terminals (backend and frontend) running simultaneously.
 
+* Ensure the backend server is already running before using the frontend.
+* Both the **backend** and **frontend** terminals must remain running during development.
