@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import Header from '../components/Header'
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('opportunities')
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'opportunities')
 
   const pageTitles = {
     opportunities: {

@@ -44,14 +44,18 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-4">
       <div className="w-full max-w-md rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <h1 className="font-display mb-2 text-center text-3xl font-bold text-[#1A1D27]">
-          InternConnect
-        </h1>
-        <p className="mb-6 text-center text-slate-500">
-          Login to your student account
-        </p>
+        <div className="mb-6 flex flex-col items-center">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[12px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </div>
+          <h1 className="font-display text-3xl font-bold text-[#1A1D27]">InternConnect</h1>
+          <p className="mt-1 text-sm text-[#6B7280]">Login to your student account</p>
+        </div>
 
         {error && (
           <div className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-700">
@@ -61,7 +65,7 @@ function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
               Email
             </label>
             <input
@@ -70,13 +74,13 @@ function Login() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+              className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
               Password
             </label>
             <input
@@ -85,7 +89,7 @@ function Login() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+              className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
               required
             />
           </div>

@@ -116,14 +116,18 @@ function Register() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
-            <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-lg">
-                <h1 className="font-display mb-2 text-center text-3xl font-bold text-[#1A1D27]">
-                    InternConnect
-                </h1>
-                <p className="mb-6 text-center text-slate-500">
-                    Create your student account
-                </p>
+        <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-4 py-8">
+            <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                <div className="mb-6 flex flex-col items-center">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[12px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                        </svg>
+                    </div>
+                    <h1 className="font-display text-3xl font-bold text-[#1A1D27]">InternConnect</h1>
+                    <p className="mt-1 text-sm text-[#6B7280]">Create your student account</p>
+                </div>
 
                 {serverError && (
                     <div className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-700">
@@ -133,7 +137,7 @@ function Register() {
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Student ID
                         </label>
                         <input
@@ -142,7 +146,7 @@ function Register() {
                             value={formData.studentId}
                             onChange={handleChange}
                             placeholder="Enter your student ID"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.studentId && (
                             <p className="mt-1 text-sm text-red-600">{errors.studentId}</p>
@@ -150,7 +154,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             First Name
                         </label>
                         <input
@@ -159,7 +163,7 @@ function Register() {
                             value={formData.firstName}
                             onChange={handleChange}
                             placeholder="Enter your first name"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.firstName && (
                             <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
@@ -167,7 +171,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Last Name
                         </label>
                         <input
@@ -176,7 +180,7 @@ function Register() {
                             value={formData.lastName}
                             onChange={handleChange}
                             placeholder="Enter your last name"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.lastName && (
                             <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
@@ -184,7 +188,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Email
                         </label>
                         <input
@@ -193,7 +197,7 @@ function Register() {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="Enter your email"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.email && (
                             <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -201,7 +205,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Phone
                         </label>
                         <input
@@ -210,12 +214,12 @@ function Register() {
                             value={formData.phone}
                             onChange={handleChange}
                             placeholder="Enter your phone number"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             LinkedIn
                         </label>
                         <input
@@ -224,7 +228,7 @@ function Register() {
                             value={formData.linkedin}
                             onChange={handleChange}
                             placeholder="https://linkedin.com/in/your-profile"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.linkedin && (
                             <p className="mt-1 text-sm text-red-600">{errors.linkedin}</p>
@@ -232,7 +236,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Password
                         </label>
                         <input
@@ -241,7 +245,7 @@ function Register() {
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="Enter your password"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.password && (
                             <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -249,7 +253,7 @@ function Register() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">
                             Confirm Password
                         </label>
                         <input
@@ -258,7 +262,7 @@ function Register() {
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             placeholder="Confirm your password"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                            className="w-full rounded-[10px] border border-[#E8EAF0] px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
                         />
                         {errors.confirmPassword && (
                             <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
@@ -288,3 +292,4 @@ function Register() {
 }
 
 export default Register
+
