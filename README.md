@@ -32,5 +32,4 @@ npm run dev
 
 ### Notes
 - Keep the terminal running while the backend is running.
-- If the project uses environment variables, create a `.env` file inside the `server` folder and add the required values.
 
