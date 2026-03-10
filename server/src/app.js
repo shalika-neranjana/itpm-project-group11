@@ -6,6 +6,7 @@
 const express = require("express");
 const cors = require("cors");
 
+const authRoutes = require("./routes/authRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -26,6 +27,11 @@ app.get("/", (req, res) => {
         message: "Intern Connect API is running",
     });
 });
+
+/**
+ * Application routes
+ */
+app.use("/api/auth", authRoutes);
 
 /**
  * Error handling middleware
