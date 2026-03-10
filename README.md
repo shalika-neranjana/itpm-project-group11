@@ -30,6 +30,11 @@ npm install
 npm run dev
 ```
 
+If successful, the terminal should show:
+
+<code>MongoDB connected</code><br>
+<code>Server running on port 5000</code>
+
 ### Notes
 - Keep the terminal running while the backend is running.
 
