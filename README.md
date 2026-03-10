@@ -6,8 +6,6 @@
 
 ## Backend Setup (Server)
 
-This guide explains how to set up and run the backend locally.
-
 ### Setup Steps
 
 #### 1. Clone the repository
