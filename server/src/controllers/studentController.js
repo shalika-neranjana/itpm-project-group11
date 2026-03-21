@@ -40,10 +40,16 @@ const updateStudentProfile = async (req, res, next) => {
         student.firstName = req.body.firstName || student.firstName;
         student.lastName = req.body.lastName || student.lastName;
         student.email = req.body.email || student.email;
-        student.degreeProgram = req.body.degreeProgram || student.degreeProgram;
-        student.academicYear = req.body.academicYear || student.academicYear;
         student.phone = req.body.phone || student.phone;
         student.linkedin = req.body.linkedin || student.linkedin;
+        student.university = req.body.university || student.university;
+        student.faculty = req.body.faculty || student.faculty;
+        student.specialization = req.body.specialization || student.specialization;
+        student.gpa = req.body.gpa || student.gpa;
+        student.skills = req.body.skills || student.skills;
+        student.resume = req.body.resume || student.resume;
+        student.github = req.body.github || student.github;
+        student.bio = req.body.bio || student.bio;
 
         // If password update requested
         if (req.body.password) {

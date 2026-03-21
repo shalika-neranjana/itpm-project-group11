@@ -72,6 +72,7 @@ const registerStudent = async (req, res, next) => {
                 phone: student.phone,
                 linkedin: student.linkedin,
                 profileImage: student.profileImage,
+                suspended: student.suspended,
                 token: generateToken(student._id),
             },
         });
@@ -103,6 +104,12 @@ const loginStudent = async (req, res, next) => {
             throw new Error("Invalid email or password");
         }
 
+        // Check if student is suspended
+        if (student.suspended) {
+            res.status(403);
+            throw new Error("Account suspended. Please contact administrator.");
+        }
+
         // Compare password
         const isPasswordMatched = await bcrypt.compare(password, student.password);
 
@@ -123,6 +130,7 @@ const loginStudent = async (req, res, next) => {
                 phone: student.phone,
                 linkedin: student.linkedin,
                 profileImage: student.profileImage,
+                suspended: student.suspended,
                 token: generateToken(student._id),
             },
         });
