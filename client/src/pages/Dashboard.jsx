@@ -4,6 +4,8 @@ import Header              from '../components/Header'
 import InternshipList      from '../components/MyInternships/InternshipList'
 import AddInternshipForm   from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
+import Header from '../components/Header'
+import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
 
 function Dashboard() {
   const location = useLocation()
@@ -39,9 +41,9 @@ function Dashboard() {
       subtitle: 'Manage your active and completed internships',
     },
     guidance: {
-      title:    'Student Guidance',
-      subtitle: 'Get AI-powered career path recommendations',
-      message:  'Student Guidance is under development and coming soon.',
+      title: 'Student Guidance',
+      subtitle: 'Track results, interests, skills, and personalized career suggestions',
+      message: 'Student Guidance content is loading.',
     },
     reviews: {
       title:    'Reviews & Feedbacks',
@@ -51,6 +53,10 @@ function Dashboard() {
   }
 
   const current = pageTitles[activeTab]
+  const mainClassName =
+    activeTab === 'guidance'
+      ? 'mx-auto max-w-[1600px] px-6 py-7 xl:px-8'
+      : 'mx-auto max-w-[1200px] px-8 py-7'
 
   const renderMyInternships = () => {
     if (miView === 'add') {
@@ -105,6 +111,8 @@ function Dashboard() {
 
         {activeTab === 'myInternships' ? (
           renderMyInternships()
+        {activeTab === 'guidance' ? (
+          <StudentGuidancePage />
         ) : (
           <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
