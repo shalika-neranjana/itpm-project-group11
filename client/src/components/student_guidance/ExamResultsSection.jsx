@@ -1,4 +1,16 @@
-function ExamResultsSection({ student, examResults }) {
+const formatCaMark = (value) => {
+  const numericValue = Number(value)
+
+  if (!Number.isFinite(numericValue)) {
+    return 'N/A'
+  }
+
+  return Number.isInteger(numericValue)
+    ? numericValue.toString()
+    : numericValue.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function ExamResultsSection({ student, examResults = [] }) {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -8,6 +20,15 @@ function ExamResultsSection({ student, examResults }) {
           {student.studentId ? ` (${student.studentId})` : ''}
         </p>
       </section>
+
+      {examResults.length === 0 && (
+        <section className="rounded-[28px] border border-[#E8EAF0] bg-white p-8 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <h3 className="text-lg font-bold text-[#1A1D27]">No exam results available</h3>
+          <p className="mt-2 text-sm text-[#6B7280]">
+            Your results will appear here once they are available in the system.
+          </p>
+        </section>
+      )}
 
       {examResults.map((semester) => (
         <section
@@ -32,12 +53,12 @@ function ExamResultsSection({ student, examResults }) {
                 </tr>
               </thead>
               <tbody>
-                {semester.subjects.map((subject) => (
-                  <tr key={`${semester.year}-${semester.semester}-${subject.subjectCode}`}>
+                {semester.subjects.map((subject, index) => (
+                  <tr key={subject.resultId || `${semester.year}-${semester.semester}-${subject.subjectCode}-${index}`}>
                     <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm text-[#1A1D27]">{subject.subjectCode}</td>
                     <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm text-[#1A1D27]">{subject.subject}</td>
                     <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm text-[#1A1D27]">{subject.credits}</td>
-                    <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm text-[#1A1D27]">{subject.caPercentage}</td>
+                    <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm text-[#1A1D27]">{formatCaMark(subject.caPercentage)}</td>
                     <td className="border-b border-[#E8EAF0] px-3 py-3 text-sm font-semibold text-[#1A1D27]">{subject.grade}</td>
                   </tr>
                 ))}

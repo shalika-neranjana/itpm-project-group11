@@ -1,3 +1,4 @@
+const Result = require("../../models/Result");
 const StudentGuidance = require("../../models/student_guidance/StudentGuidance");
 
 const DEFAULT_INTERESTS = [
@@ -10,49 +11,6 @@ const DEFAULT_SKILLS = [
     { name: "JavaScript", category: "Programming", level: "Intermediate" },
     { name: "React", category: "Frontend", level: "Intermediate" },
     { name: "SQL", category: "Database", level: "Beginner" },
-];
-
-const DEFAULT_EXAM_RESULTS = [
-    {
-        year: 1,
-        semester: 1,
-        subjects: [
-            { subjectCode: "IT1010", subject: "Introduction to Programming", credits: 4, caPercentage: 88, grade: "A" },
-            { subjectCode: "IT1020", subject: "Computer Systems Fundamentals", credits: 4, caPercentage: 81, grade: "A-" },
-            { subjectCode: "IT1030", subject: "Mathematics for Computing", credits: 4, caPercentage: 76, grade: "B+" },
-            { subjectCode: "IT1040", subject: "Communication Skills", credits: 3, caPercentage: 84, grade: "A-" },
-        ],
-    },
-    {
-        year: 1,
-        semester: 2,
-        subjects: [
-            { subjectCode: "IT1550", subject: "Object Oriented Programming", credits: 4, caPercentage: 83, grade: "A-" },
-            { subjectCode: "IT1560", subject: "Web Development", credits: 4, caPercentage: 89, grade: "A" },
-            { subjectCode: "IT1570", subject: "Database Management Systems", credits: 4, caPercentage: 78, grade: "B+" },
-            { subjectCode: "IT1580", subject: "Statistics for IT", credits: 3, caPercentage: 75, grade: "B+" },
-        ],
-    },
-    {
-        year: 2,
-        semester: 1,
-        subjects: [
-            { subjectCode: "IT2010", subject: "Data Structures and Algorithms", credits: 4, caPercentage: 80, grade: "A-" },
-            { subjectCode: "IT2020", subject: "Human Computer Interaction", credits: 3, caPercentage: 87, grade: "A" },
-            { subjectCode: "IT2030", subject: "Software Engineering", credits: 4, caPercentage: 85, grade: "A-" },
-            { subjectCode: "IT2040", subject: "Mobile Application Development", credits: 4, caPercentage: 77, grade: "B+" },
-        ],
-    },
-    {
-        year: 2,
-        semester: 2,
-        subjects: [
-            { subjectCode: "IT2510", subject: "Object Oriented Programming", credits: 4, caPercentage: 79, grade: "B+" },
-            { subjectCode: "IT2520", subject: "Web Application Development", credits: 4, caPercentage: 91, grade: "A" },
-            { subjectCode: "IT2530", subject: "Database Systems", credits: 4, caPercentage: 86, grade: "A-" },
-            { subjectCode: "IT2540", subject: "Professional Practices", credits: 3, caPercentage: 82, grade: "A-" },
-        ],
-    },
 ];
 
 const CAREER_LIBRARY = [
@@ -92,10 +50,10 @@ const normalizeItems = (items, mapper) => {
         .filter((item) => item && Object.values(item).every(Boolean));
 };
 
-const buildCareerSuggestions = (guidance) => {
+const buildCareerSuggestions = (guidance, examResults) => {
     const interestTags = guidance.interests.map((interest) => interest.name);
     const skillTags = guidance.skills.flatMap((skill) => [skill.name, skill.category]);
-    const subjectTags = guidance.examResults.flatMap((semester) =>
+    const subjectTags = examResults.flatMap((semester) =>
         semester.subjects.map((subject) => subject.subject)
     );
     const tags = new Set([...interestTags, ...skillTags, ...subjectTags]);
@@ -133,35 +91,60 @@ const buildCareerSuggestions = (guidance) => {
     ];
 };
 
-const buildResponse = (guidance) => ({
-    examResults: [...guidance.examResults].sort(
-        (left, right) => left.year - right.year || left.semester - right.semester
-    ),
+const buildResponse = (guidance, examResults) => ({
+    examResults,
     interests: guidance.interests,
     skills: guidance.skills,
     aspirations: guidance.aspirations,
-    careerSuggestions: buildCareerSuggestions(guidance),
+    careerSuggestions: buildCareerSuggestions(guidance, examResults),
 });
 
-const mergeDefaultExamResults = (existingResults = []) => {
-    const semesterMap = new Map(
-        existingResults.map((semester) => [
-            `${semester.year}-${semester.semester}`,
-            semester,
-        ])
-    );
+const sortSubjects = (left, right) =>
+    left.subjectCode.localeCompare(right.subjectCode) || left.subject.localeCompare(right.subject);
 
-    for (const semester of DEFAULT_EXAM_RESULTS) {
-        const key = `${semester.year}-${semester.semester}`;
+const getStudentExamResults = async (studentId) => {
+    const results = await Result.find({ student: studentId })
+        .populate({
+            path: "module",
+            select: "module_code module_name year semester credit_points",
+        })
+        .lean();
+
+    const semesterMap = new Map();
+
+    for (const result of results) {
+        if (!result.module) {
+            continue;
+        }
+
+        const year = Number(result.module.year);
+        const semester = Number(result.module.semester);
+        const key = `${year}-${semester}`;
 
         if (!semesterMap.has(key)) {
-            semesterMap.set(key, semester);
+            semesterMap.set(key, {
+                year,
+                semester,
+                subjects: [],
+            });
         }
+
+        semesterMap.get(key).subjects.push({
+            resultId: String(result._id),
+            subjectCode: result.module.module_code,
+            subject: result.module.module_name,
+            credits: result.module.credit_points,
+            caPercentage: result.caMarks,
+            grade: result.grade,
+        });
     }
 
-    return [...semesterMap.values()].sort(
-        (left, right) => left.year - right.year || left.semester - right.semester
-    );
+    return [...semesterMap.values()]
+        .map((semesterResult) => ({
+            ...semesterResult,
+            subjects: semesterResult.subjects.sort(sortSubjects),
+        }))
+        .sort((left, right) => left.year - right.year || left.semester - right.semester);
 };
 
 const getOrCreateStudentGuidance = async (studentId) => {
@@ -170,18 +153,10 @@ const getOrCreateStudentGuidance = async (studentId) => {
     if (!guidance) {
         guidance = await StudentGuidance.create({
             student: studentId,
-            examResults: DEFAULT_EXAM_RESULTS,
             interests: DEFAULT_INTERESTS,
             skills: DEFAULT_SKILLS,
             aspirations: "I want to build a strong technical foundation and choose a career path that fits my strengths.",
         });
-    } else {
-        const mergedExamResults = mergeDefaultExamResults(guidance.examResults);
-
-        if (mergedExamResults.length !== guidance.examResults.length) {
-            guidance.examResults = mergedExamResults;
-            await guidance.save();
-        }
     }
 
     return guidance;
@@ -190,10 +165,11 @@ const getOrCreateStudentGuidance = async (studentId) => {
 const getStudentGuidance = async (req, res, next) => {
     try {
         const guidance = await getOrCreateStudentGuidance(req.student._id);
+        const examResults = await getStudentExamResults(req.student._id);
 
         res.status(200).json({
             success: true,
-            data: buildResponse(guidance),
+            data: buildResponse(guidance, examResults),
         });
     } catch (error) {
         next(error);
@@ -215,11 +191,12 @@ const updateStudentInterests = async (req, res, next) => {
                 : guidance.aspirations;
 
         await guidance.save();
+        const examResults = await getStudentExamResults(req.student._id);
 
         res.status(200).json({
             success: true,
             message: "Interests updated successfully",
-            data: buildResponse(guidance),
+            data: buildResponse(guidance, examResults),
         });
     } catch (error) {
         next(error);
@@ -237,11 +214,12 @@ const updateStudentSkills = async (req, res, next) => {
         }));
 
         await guidance.save();
+        const examResults = await getStudentExamResults(req.student._id);
 
         res.status(200).json({
             success: true,
             message: "Skills updated successfully",
-            data: buildResponse(guidance),
+            data: buildResponse(guidance, examResults),
         });
     } catch (error) {
         next(error);
