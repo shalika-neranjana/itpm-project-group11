@@ -9,6 +9,7 @@ import InternshipMarketplace from './Profiles/InternshipMarketplace'
 import CompanyDashboard from './Profiles/CompanyDashboard'
 import ApplicationForm from './Profiles/ApplicationForm'
 
+
 function App() {
   return (
     <div className="min-h-screen bg-[#F7F8FA]">
