@@ -10,6 +10,7 @@ const authRoutes = require("./routes/authRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const studentRoutes = require("./routes/studentRoutes");
+const studentGuidanceRoutes = require("./routes/student_guidance/studentGuidanceRoutes");
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/students", studentRoutes);
+app.use("/api/student-guidance", studentGuidanceRoutes);
 
 /**
  * Health check route
