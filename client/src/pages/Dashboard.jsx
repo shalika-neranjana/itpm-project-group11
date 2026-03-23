@@ -1,24 +1,23 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import Header              from '../components/Header'
-import InternshipList      from '../components/MyInternships/InternshipList'
-import AddInternshipForm   from '../components/MyInternships/AddInternshipForm'
-import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
 import Header from '../components/Header'
+import InternshipList from '../components/MyInternships/InternshipList'
+import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
+import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
 import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
 
 function Dashboard() {
   const location = useLocation()
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'opportunities')
 
-  // ── Get student info from localStorage 
+  // Get student info from localStorage.
   const studentData = JSON.parse(localStorage.getItem('student'))
-  const studentId   = studentData?.studentId   
+  const studentId = studentData?.studentId
 
-  // ── My Internships state 
-  const [miView,             setMiView]             = useState('list')
+  // My Internships state.
+  const [miView, setMiView] = useState('list')
   const [selectedInternship, setSelectedInternship] = useState(null)
-  const [listKey,            setListKey]            = useState(0)
+  const [listKey, setListKey] = useState(0)
 
   const handleOpenDashboard = (internship) => {
     setSelectedInternship(internship)
@@ -26,18 +25,18 @@ function Dashboard() {
   }
 
   const handleAddSuccess = () => {
-    setListKey(k => k + 1)
+    setListKey((k) => k + 1)
     setMiView('list')
   }
 
   const pageTitles = {
     opportunities: {
-      title:    'Internship Opportunities',
+      title: 'Internship Opportunities',
       subtitle: 'Browse and apply for internship positions',
-      message:  'Internship Opportunities is under development and coming soon.',
+      message: 'Internship Opportunities is under development and coming soon.',
     },
     myInternships: {
-      title:    'My Internships',
+      title: 'My Internships',
       subtitle: 'Manage your active and completed internships',
     },
     guidance: {
@@ -46,9 +45,9 @@ function Dashboard() {
       message: 'Student Guidance content is loading.',
     },
     reviews: {
-      title:    'Reviews & Feedbacks',
+      title: 'Reviews & Feedbacks',
       subtitle: 'Anonymous internship experience sharing',
-      message:  'Reviews & Feedbacks is under development and coming soon.',
+      message: 'Reviews & Feedbacks is under development and coming soon.',
     },
   }
 
@@ -67,6 +66,7 @@ function Dashboard() {
         />
       )
     }
+
     if (miView === 'dashboard' && selectedInternship) {
       return (
         <InternshipDashboard
@@ -78,11 +78,11 @@ function Dashboard() {
         />
       )
     }
-    // Default — list view
+
     return (
       <InternshipList
         key={listKey}
-        studentId={studentId}        
+        studentId={studentId}
         onOpen={handleOpenDashboard}
         onAddNew={() => setMiView('add')}
       />
@@ -101,7 +101,7 @@ function Dashboard() {
           }
         }}
       />
-      <main className="mx-auto max-w-[1200px] px-8 py-7">
+      <main className={mainClassName}>
         <div className="mb-6">
           <h1 className="font-display text-[28px] font-bold text-[#1A1D27]">
             {current.title}
@@ -111,7 +111,7 @@ function Dashboard() {
 
         {activeTab === 'myInternships' ? (
           renderMyInternships()
-        {activeTab === 'guidance' ? (
+        ) : activeTab === 'guidance' ? (
           <StudentGuidancePage />
         ) : (
           <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
