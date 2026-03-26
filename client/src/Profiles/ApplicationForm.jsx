@@ -20,7 +20,7 @@ const ApplicationForm = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}')
+    const userData = JSON.parse(localStorage.getItem('student') || '{}')
     const token = localStorage.getItem('token')
     
     if (!token || localStorage.getItem('role') !== 'student') {
@@ -77,7 +77,7 @@ const ApplicationForm = () => {
       if (response.data.success) {
         setSuccess('Application submitted successfully!')
         setTimeout(() => {
-          navigate('/marketplace')
+          navigate('/dashboard')
         }, 2000)
       }
     } catch (err) {

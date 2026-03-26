@@ -5,9 +5,14 @@ import api from '../api'
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
+  const [applicants, setApplicants] = useState([])
   const [activeTab, setActiveTab] = useState('internships')
   const [showPostForm, setShowPostForm] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [profileEditMode, setProfileEditMode] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
   const navigate = useNavigate()
 
   const [internshipForm, setInternshipForm] = useState({
@@ -24,6 +29,15 @@ const CompanyDashboard = () => {
     slots: 1
   })
 
+  const [companyForm, setCompanyForm] = useState({
+    name: '',
+    industry: '',
+    location: '',
+    website: '',
+    phone: '',
+    description: ''
+  })
+
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user') || '{}')
     const token = localStorage.getItem('token')
@@ -34,6 +48,14 @@ const CompanyDashboard = () => {
     }
 
     setUser(userData)
+    setCompanyForm({
+      name: userData.name || '',
+      industry: userData.industry || '',
+      location: userData.location || '',
+      website: userData.website || '',
+      phone: userData.phone || '',
+      description: userData.description || ''
+    })
     fetchCompanyInternships()
   }, [navigate])
 
@@ -41,10 +63,36 @@ const CompanyDashboard = () => {
     try {
       const response = await api.get('/internships/company/my')
       setInternships(response.data.data)
+      // Build applicants list from internships.applications
+      const allApplications = []
+      ;(response.data.data || []).forEach((internship) => {
+        ;(internship.applications || []).forEach((app) => {
+          allApplications.push({
+            ...app,
+            internshipId: internship._id,
+            internshipTitle: internship.title,
+            internshipType: internship.type,
+            internshipLocation: internship.location,
+          })
+        })
+      })
+      setApplicants(allApplications)
     } catch (error) {
       console.error('Failed to fetch internships:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUpdateApplicationStatus = async (applicant, status) => {
+    try {
+      await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
+      // Refresh data so UI stays in sync
+      fetchCompanyInternships()
+      alert(`Application ${status.toLowerCase()} and student will see it in their profile.`)
+    } catch (error) {
+      console.error(`Failed to ${status.toLowerCase()} application:`, error)
+      alert(error.response?.data?.message || `Failed to ${status.toLowerCase()} application`)
     }
   }
 
@@ -82,6 +130,41 @@ const CompanyDashboard = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('role')
     navigate('/login')
+  }
+
+  const handleCompanyChange = (e) => {
+    const { name, value } = e.target
+    setCompanyForm(prev => ({ ...prev, [name]: value }))
+    setProfileError('')
+    setProfileSuccess('')
+  }
+
+  const handleSaveCompanyProfile = async () => {
+    setProfileLoading(true)
+    setProfileError('')
+    setProfileSuccess('')
+    try {
+      const response = await api.put('/company/profile', companyForm)
+      if (response.data.success) {
+        localStorage.setItem('user', JSON.stringify(response.data.data))
+        setUser(response.data.data)
+        setCompanyForm({
+          name: response.data.data.name || '',
+          industry: response.data.data.industry || '',
+          location: response.data.data.location || '',
+          website: response.data.data.website || '',
+          phone: response.data.data.phone || '',
+          description: response.data.data.description || ''
+        })
+        setProfileEditMode(false)
+        setProfileSuccess('Company profile updated successfully')
+        setTimeout(() => setProfileSuccess(''), 2500)
+      }
+    } catch (error) {
+      setProfileError(error.response?.data?.message || 'Failed to update company profile')
+    } finally {
+      setProfileLoading(false)
+    }
   }
 
   if (loading) {
@@ -201,32 +284,218 @@ const CompanyDashboard = () => {
         )}
 
         {activeTab === 'applicants' && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No applicants yet. Post internships to attract talent!</p>
+          <div>
+            <h3 className="font-bold text-gray-900 mb-4">Applicants</h3>
+
+            {applicants.length > 0 ? (
+              <div className="space-y-4">
+                {applicants.map((applicant, index) => (
+                  <div key={`${applicant._id}-${index}`} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 text-lg">{applicant.name}</h4>
+                        <p className="text-gray-600">{applicant.email}</p>
+                        {applicant.phone && <p className="text-gray-600">{applicant.phone}</p>}
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                          {applicant.status || 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-1">Applied for</p>
+                      <p className="font-medium text-gray-900">{applicant.internshipTitle}</p>
+                      <p className="text-sm text-gray-600">{applicant.internshipLocation} · {applicant.internshipType}</p>
+                    </div>
+
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-2">Cover Letter</p>
+                      <div className="bg-gray-50 rounded-lg p-3 text-gray-700 text-sm whitespace-pre-wrap">
+                        {applicant.coverLetter}
+                      </div>
+                    </div>
+
+                    {applicant.resume && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-500 mb-1">Resume</p>
+                        <a
+                          href={applicant.resume}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          View Resume
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUpdateApplicationStatus(applicant, 'Accepted')}
+                        disabled={applicant.status === 'Accepted'}
+                        className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-200 disabled:opacity-50"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleUpdateApplicationStatus(applicant, 'Rejected')}
+                        disabled={applicant.status === 'Rejected'}
+                        className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-medium hover:bg-red-200 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No applicants yet. Post internships to attract talent!</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'profile' && (
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-gray-900 mb-4">Company Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                <p className="text-gray-900">{user?.name}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-                <p className="text-gray-900">{user?.industry}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <p className="text-gray-900">{user?.location}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                <p className="text-gray-900">{user?.website || '—'}</p>
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900">Company Information</h3>
+              <button
+                onClick={() => {
+                  setProfileEditMode(prev => !prev)
+                  setProfileError('')
+                  setProfileSuccess('')
+                }}
+                className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+              >
+                {profileEditMode ? 'Cancel' : 'Edit'}
+              </button>
             </div>
+
+            {profileError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {profileError}
+              </div>
+            )}
+            {profileSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                {profileSuccess}
+              </div>
+            )}
+
+            {!profileEditMode ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <p className="text-gray-900">{user?.name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                  <p className="text-gray-900">{user?.industry}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <p className="text-gray-900">{user?.location}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                  <p className="text-gray-900">{user?.website || '—'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <p className="text-gray-900">{user?.phone || '—'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <p className="text-gray-900 whitespace-pre-wrap">{user?.description || '—'}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={companyForm.name}
+                      onChange={handleCompanyChange}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                    <input
+                      type="text"
+                      name="industry"
+                      value={companyForm.industry}
+                      onChange={handleCompanyChange}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={companyForm.location}
+                      onChange={handleCompanyChange}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                    <input
+                      type="url"
+                      name="website"
+                      value={companyForm.website}
+                      onChange={handleCompanyChange}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={companyForm.phone}
+                      onChange={handleCompanyChange}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    name="description"
+                    value={companyForm.description}
+                    onChange={handleCompanyChange}
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="Tell students about your company..."
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSaveCompanyProfile}
+                    disabled={profileLoading}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {profileLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => setProfileEditMode(false)}
+                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

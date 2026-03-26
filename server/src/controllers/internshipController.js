@@ -21,8 +21,8 @@ const getAllInternships = async (req, res, next) => {
             location,
         } = req.query;
 
-        // Build query
-        const query = { status: "Published" };
+        // Build query - Show all internships including Draft ones for students
+        const query = { status: { $in: ["Published", "Draft"] } };
 
         if (search) {
             query.$or = [

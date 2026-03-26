@@ -5,6 +5,7 @@ import InternshipList from '../components/MyInternships/InternshipList'
 import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
 import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
+import api from '../api'
 
 function Dashboard() {
   const location = useLocation()
@@ -219,6 +220,10 @@ function Dashboard() {
                       </div>
                     </div>
 
+                    <div className="text-sm text-gray-700 mb-4 line-clamp-3">
+                      {internship.description}
+                    </div>
+
                     <button
                       onClick={() => handleApply(internship._id)}
                       className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
@@ -234,16 +239,7 @@ function Dashboard() {
               </div>
             )}
           </div>
-        ) : (
-          <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-            <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
-              <h2 className="font-display text-2xl font-bold text-[#1A1D27]">
-                {current.title}
-              </h2>
-              <p className="mt-3 text-base text-[#6B7280]">{current.message}</p>
-            </div>
-          </div>
-        {activeTab === 'myInternships' ? (
+        ) : activeTab === 'myInternships' ? (
           renderMyInternships()
         ) : activeTab === 'guidance' ? (
           <StudentGuidancePage />

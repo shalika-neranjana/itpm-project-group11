@@ -13,12 +13,15 @@ const EnhancedRegister = () => {
     faculty: '',
     specialization: 'Computer Science',
     gpa: '',
+    phone: '',
+    linkedin: '',
+    github: '',
     // Company fields
     name: '',
     industry: '',
     location: '',
     website: '',
-    contactPerson: '',
+    phoneCompany: '',
     // Common fields
     email: '',
     password: '',
@@ -35,6 +38,11 @@ const EnhancedRegister = () => {
     })
   }
 
+  const isStrongPassword = (password) => {
+    // Must match backend rule: min 8 chars, uppercase, lowercase, number
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -46,8 +54,8 @@ const EnhancedRegister = () => {
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (!isStrongPassword(formData.password)) {
+      setError('Password must be at least 8 characters and include uppercase, lowercase, and a number')
       setLoading(false)
       return
     }
@@ -66,7 +74,10 @@ const EnhancedRegister = () => {
           university: formData.university,
           faculty: formData.faculty,
           specialization: formData.specialization,
-          gpa: formData.gpa ? parseFloat(formData.gpa) : undefined
+          gpa: formData.gpa ? parseFloat(formData.gpa) : undefined,
+          phone: formData.phone,
+          linkedin: formData.linkedin,
+          github: formData.github
         }
       } else {
         submitData = {
@@ -76,7 +87,7 @@ const EnhancedRegister = () => {
           password: formData.password,
           location: formData.location,
           website: formData.website,
-          contactPerson: formData.contactPerson
+          phone: formData.phoneCompany
         }
       }
 
@@ -84,17 +95,26 @@ const EnhancedRegister = () => {
       
       if (response.data.success) {
         localStorage.setItem('token', response.data.data.token)
-        localStorage.setItem('user', JSON.stringify(response.data.data))
+        if (regRole === 'student') {
+          localStorage.setItem('student', JSON.stringify(response.data.data))
+        } else {
+          localStorage.setItem('user', JSON.stringify(response.data.data))
+        }
         localStorage.setItem('role', regRole)
         
         if (regRole === 'student') {
-          navigate('/dashboard')
+          navigate('/profile')
         } else {
           navigate('/company-dashboard')
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed')
+      const backendErrors = err.response?.data?.errors
+      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
+        setError(backendErrors.join(', '))
+      } else {
+        setError(err.response?.data?.message || 'Registration failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -167,7 +187,7 @@ const EnhancedRegister = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Full Name
+                      First Name
                     </label>
                     <input
                       type="text"
@@ -175,24 +195,39 @@ const EnhancedRegister = () => {
                       value={formData.firstName}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ahmad Razin"
+                      placeholder="Ahmad"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Student ID
+                      Last Name
                     </label>
                     <input
                       type="text"
-                      name="studentId"
-                      value={formData.studentId}
+                      name="lastName"
+                      value={formData.lastName}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="A22101234"
+                      placeholder="Razin"
                       required
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Student ID
+                  </label>
+                  <input
+                    type="text"
+                    name="studentId"
+                    value={formData.studentId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="A22101234"
+                    required
+                  />
                 </div>
 
                 <div>
@@ -234,7 +269,6 @@ const EnhancedRegister = () => {
                       value={formData.specialization}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
                     >
                       <option value="Computer Science">Computer Science</option>
                       <option value="Software Engineering">Software Engineering</option>
@@ -259,6 +293,49 @@ const EnhancedRegister = () => {
                     max="4"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="3.75"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Phone (Optional)
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="+94 77 123 4567"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      LinkedIn (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      name="linkedin"
+                      value={formData.linkedin}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://linkedin.com/in/username"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    GitHub (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    name="github"
+                    value={formData.github}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://github.com/username"
                   />
                 </div>
               </>
@@ -327,16 +404,15 @@ const EnhancedRegister = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Contact Person
+                    Phone (Optional)
                   </label>
                   <input
-                    type="text"
-                    name="contactPerson"
-                    value={formData.contactPerson}
+                    type="tel"
+                    name="phoneCompany"
+                    value={formData.phoneCompany}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="HR Manager"
-                    required
+                    placeholder="+94 77 123 4567"
                   />
                 </div>
               </>
@@ -369,7 +445,7 @@ const EnhancedRegister = () => {
                   value={formData.password}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8, Aa1 format"
                   required
                 />
               </div>

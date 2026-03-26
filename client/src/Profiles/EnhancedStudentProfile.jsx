@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 
 const EnhancedStudentProfile = () => {
   const [user, setUser] = useState(null)
   const [editMode, setEditMode] = useState(false)
+  const [skillEditMode, setSkillEditMode] = useState(false)
   const [applications, setApplications] = useState([])
+  const allowedSpecializations = [
+    'Computer Science',
+    'Software Engineering',
+    'Data Science',
+    'Multimedia',
+    'Cybersecurity',
+  ]
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -26,34 +34,50 @@ const EnhancedStudentProfile = () => {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const skillsSectionRef = useRef(null)
+  const skillInputRef = useRef(null)
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}')
     const token = localStorage.getItem('token')
     
-    if (!token) {
+    if (!token || localStorage.getItem('role') !== 'student') {
       navigate('/login')
       return
     }
 
-    setUser(userData)
-    setFormData({
-      firstName: userData.firstName || '',
-      lastName: userData.lastName || '',
-      studentId: userData.studentId || '',
-      email: userData.email || '',
-      phone: userData.phone || '',
-      linkedin: userData.linkedin || '',
-      github: userData.github || '',
-      university: userData.university || '',
-      faculty: userData.faculty || '',
-      specialization: userData.specialization || '',
-      gpa: userData.gpa || '',
-      bio: userData.bio || '',
-      skills: userData.skills || []
-    })
+    fetchStudentProfile()
     fetchApplications()
   }, [navigate])
+
+  const fetchStudentProfile = async () => {
+    try {
+      const response = await api.get('/students/profile')
+      const student = response.data.data
+
+      localStorage.setItem('student', JSON.stringify(student))
+      setUser(student)
+      setFormData({
+        firstName: student.firstName || '',
+        lastName: student.lastName || '',
+        studentId: student.studentId || '',
+        email: student.email || '',
+        phone: student.phone || '',
+        linkedin: student.linkedin || '',
+        github: student.github || '',
+        university: student.university || '',
+        faculty: student.faculty || '',
+        specialization: allowedSpecializations.includes(student.specialization)
+          ? student.specialization
+          : '',
+        gpa: student.gpa ?? '',
+        bio: student.bio || '',
+        skills: student.skills || []
+      })
+    } catch (error) {
+      console.error('Failed to fetch student profile:', error)
+      setError(error.response?.data?.message || 'Failed to load profile')
+    }
+  }
 
   const fetchApplications = async () => {
     try {
@@ -72,12 +96,14 @@ const EnhancedStudentProfile = () => {
   }
 
   const handleAddSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+    const skill = newSkill.trim()
+    if (skill && !formData.skills.includes(skill)) {
       setFormData({
         ...formData,
-        skills: [...formData.skills, newSkill.trim()]
+        skills: [...formData.skills, skill]
       })
       setNewSkill('')
+      setSkillEditMode(false)
     }
   }
 
@@ -88,19 +114,35 @@ const EnhancedStudentProfile = () => {
     })
   }
 
+  const handleEditSkills = () => {
+    setEditMode(true)
+    setSkillEditMode(true)
+    setTimeout(() => {
+      skillsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      skillInputRef.current?.focus()
+    }, 0)
+  }
+
   const handleSave = async () => {
     setLoading(true)
     setError('')
     setSuccess('')
 
     try {
-      const response = await api.put('/students/profile', formData)
+      const payload = { ...formData }
+      // DB enum restriction: never send invalid specialization values.
+      if (!payload.specialization || !allowedSpecializations.includes(payload.specialization)) {
+        delete payload.specialization
+      }
+
+      const response = await api.put('/students/profile', payload)
       
       if (response.data.success) {
-        localStorage.setItem('user', JSON.stringify(response.data.data))
+        localStorage.setItem('student', JSON.stringify(response.data.data))
         setUser(response.data.data)
         setEditMode(false)
         setSuccess('Profile updated successfully!')
+        fetchStudentProfile()
         fetchApplications() // Refresh applications
         setTimeout(() => setSuccess(''), 3000)
       }
@@ -113,7 +155,7 @@ const EnhancedStudentProfile = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    localStorage.removeItem('student')
     localStorage.removeItem('role')
     navigate('/login')
   }
@@ -266,11 +308,21 @@ const EnhancedStudentProfile = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                     <input
                       type="text"
                       name="firstName"
                       value={formData.firstName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -284,6 +336,16 @@ const EnhancedStudentProfile = () => {
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                       readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -330,6 +392,20 @@ const EnhancedStudentProfile = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialization</label>
+                    <select
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select specialization</option>
+                      {allowedSpecializations.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn URL</label>
                     <input
                       type="url"
@@ -361,6 +437,59 @@ const EnhancedStudentProfile = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Tell companies about yourself..."
                   />
+                </div>
+
+                {/* Skills */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">Skills</h4>
+                  </div>
+
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddSkill()
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g. React, Node.js, Python"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSkill}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {formData.skills?.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.skills.map((skill, index) => (
+                        <span
+                          key={`${skill}-${index}`}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="ml-2 text-blue-700 hover:text-red-600"
+                            aria-label={`Remove ${skill}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No skills added yet.</p>
+                  )}
                 </div>
 
                 <div className="flex space-x-4">
@@ -395,29 +524,76 @@ const EnhancedStudentProfile = () => {
             ) : (
               /* View Mode */
               <>
+                {/* Notifications (derived from application statuses; no DB changes) */}
+                <div className="bg-white rounded-2xl shadow-sm p-6">
+                  <h3 className="font-bold text-gray-900 text-lg mb-4">Notifications</h3>
+                  {applications.some(a => a?.application?.status === 'Accepted' || a?.application?.status === 'Rejected') ? (
+                    <div className="space-y-3">
+                      {applications
+                        .filter(a => a?.application?.status === 'Accepted' || a?.application?.status === 'Rejected')
+                        .map((a, idx) => (
+                          <div
+                            key={`${a?._id || idx}`}
+                            className={`rounded-lg border p-3 ${
+                              a.application.status === 'Accepted'
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-red-50 border-red-200'
+                            }`}
+                          >
+                            <p className="text-sm text-gray-900">
+                              {a.application.status === 'Accepted'
+                                ? `Congratulations! Your application for "${a.title}" was accepted by ${a.company?.name || 'the company'}.`
+                                : `Your application for "${a.title}" was rejected by ${a.company?.name || 'the company'}.`}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {a.application?.appliedDate
+                                ? new Date(a.application.appliedDate).toLocaleString()
+                                : ''}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No notifications yet.</p>
+                  )}
+                </div>
+
                 {/* Skills */}
                 <div className="bg-white rounded-2xl shadow-sm p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-900 text-lg">Skills</h3>
                     <button
-                      onClick={() => setEditMode(true)}
+                      onClick={() => {
+                        if (!skillEditMode) {
+                          handleEditSkills()
+                          return
+                        }
+                        setSkillEditMode(false)
+                      }}
                       className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                     >
-                      Add Skill
+                      {skillEditMode ? 'Cancel' : 'Edit Skills'}
                     </button>
                   </div>
-                  
-                  {editMode && (
+
+                  {skillEditMode && (
                     <div className="flex gap-2 mb-4">
                       <input
                         type="text"
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddSkill()
+                          }
+                        }}
+                        ref={skillInputRef}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="e.g. React, Python..."
+                        placeholder="e.g. React, Node.js, Python"
                       />
                       <button
+                        type="button"
                         onClick={handleAddSkill}
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700"
                       >
@@ -426,21 +602,30 @@ const EnhancedStudentProfile = () => {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {formData.skills.map((skill, index) => (
-                      <span key={index} className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                        {skill}
-                        {editMode && (
-                          <button
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="ml-2 text-blue-600 hover:text-red-600"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                  </div>
+                  {formData.skills?.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.skills.map((skill, index) => (
+                        <span
+                          key={`${skill}-${index}`}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                        >
+                          {skill}
+                          {skillEditMode && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkill(skill)}
+                              className="ml-2 text-blue-700 hover:text-red-600"
+                              aria-label={`Remove ${skill}`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No skills added yet.</p>
+                  )}
                 </div>
 
                 {/* Applications */}
@@ -448,8 +633,8 @@ const EnhancedStudentProfile = () => {
                   <h3 className="font-bold text-gray-900 text-lg mb-4">My Applications</h3>
                   {applications.length > 0 ? (
                     <div className="space-y-4">
-                      {applications.map((app) => (
-                        <div key={app._id} className="border border-gray-200 rounded-lg p-4">
+                      {applications.filter(Boolean).map((app, idx) => (
+                        <div key={app?._id || idx} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <h4 className="font-semibold text-gray-900">{app.title}</h4>
@@ -470,7 +655,12 @@ const EnhancedStudentProfile = () => {
                             </div>
                             <div className="flex justify-between">
                               <span>💰 {app.stipend}</span>
-                              <span>📅 Applied: {new Date(app.application?.appliedDate).toLocaleDateString()}</span>
+                              <span>
+                                📅 Applied:{' '}
+                                {app.application?.appliedDate
+                                  ? new Date(app.application.appliedDate).toLocaleDateString()
+                                  : '—'}
+                              </span>
                             </div>
                           </div>
                         </div>
