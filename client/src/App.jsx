@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import WriteReview from './pages/WriteReview'
 
+
 function App() {
   return (
     <div className="min-h-screen bg-[#F7F8FA]">
