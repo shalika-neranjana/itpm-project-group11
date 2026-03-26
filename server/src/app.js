@@ -10,6 +10,7 @@ const authRoutes = require("./routes/authRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const studentRoutes = require("./routes/studentRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const studentGuidanceRoutes = require("./routes/student_guidance/studentGuidanceRoutes");
 
 /* MyInternships routes */
@@ -28,6 +29,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/students", studentRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/student-guidance", studentGuidanceRoutes);
 
 /**

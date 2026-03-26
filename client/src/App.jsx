@@ -3,6 +3,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
+import WriteReview from './pages/WriteReview'
 
 
 function App() {
@@ -13,8 +14,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
-
-        
+        <Route path="/write-review" element={<WriteReview />} />
       </Routes>
     </div>
   )
