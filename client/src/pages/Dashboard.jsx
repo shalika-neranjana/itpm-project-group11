@@ -135,7 +135,7 @@ function Dashboard() {
 
         {activeTab === 'reviews' ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold text-[#1A1D27]">
                 Company Reviews
               </h2>
@@ -148,25 +148,23 @@ function Dashboard() {
               </button>
             </div>
             {reviews.length > 0 ? (
-              reviews.map(review => (
-                <CompanyReview key={review.id} review={review} onDelete={handleDeleteReview} onEdit={handleEditReview} />
+              reviews.map((review) => (
+                <CompanyReview
+                  key={review.id}
+                  review={review}
+                  onDelete={handleDeleteReview}
+                  onEdit={handleEditReview}
+                />
               ))
             ) : (
               <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
-                <p className="text-[#6B7280]">No reviews yet. Be the first to share your experience!</p>
+                <p className="text-[#6B7280]">
+                  No reviews yet. Be the first to share your experience!
+                </p>
               </div>
             )}
           </div>
-        ) : (
-          <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-            <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
-              <h2 className="font-display text-2xl font-bold text-[#1A1D27]">
-                {current.title}
-              </h2>
-              <p className="mt-3 text-base text-[#6B7280]">{current.message}</p>
-            </div>
-          </div>
-        {activeTab === 'myInternships' ? (
+        ) : activeTab === 'myInternships' ? (
           renderMyInternships()
         ) : activeTab === 'guidance' ? (
           <StudentGuidancePage />
