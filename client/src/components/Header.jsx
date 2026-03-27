@@ -124,12 +124,11 @@ function Header({ active = 'opportunities', onTabChange }) {
         <header className="sticky top-0 z-50 border-b border-[#E8EAF0] bg-white/95 backdrop-blur-sm">
             <div className="flex h-[64px] w-full items-center justify-between px-8">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>
-                    </div>
+                    <img
+                        src="/logo_icon_only.png"
+                        alt="InternConnect logo"
+                        className="h-[36px] w-[36px] rounded-[10px] border border-[#E8EAF0] bg-white object-cover shadow-sm"
+                    />
 
                     <span className="font-display text-[19px] font-bold text-[#1A1D27]">
                         InternConnect
