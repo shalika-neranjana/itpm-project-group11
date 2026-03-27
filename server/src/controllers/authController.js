@@ -23,11 +23,17 @@ const registerStudent = async (req, res, next) => {
             linkedin,
             profileImage,
         } = req.body;
+        const uploadedProfileImage = req.file ? `/uploads/avatars/${req.file.filename}` : profileImage;
 
         // Validate required fields
         if (!studentId || !firstName || !lastName || !email || !password) {
             res.status(400);
             throw new Error("Please provide all required fields");
+        }
+
+        if (!uploadedProfileImage) {
+            res.status(400);
+            throw new Error("Profile photo is required");
         }
 
         // Check whether a student with the same email already exists
@@ -57,7 +63,7 @@ const registerStudent = async (req, res, next) => {
             password: hashedPassword,
             phone,
             linkedin,
-            profileImage,
+            profileImage: uploadedProfileImage,
         });
 
         res.status(201).json({

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Building2, LockKeyhole, Mail, Phone, User } from 'lucide-react'
+import Cropper from 'react-easy-crop'
+import { ArrowRight, Building2, ImagePlus, LockKeyhole, Mail, Phone, User, X } from 'lucide-react'
 import api from '../api'
 
 function Field({
@@ -75,6 +76,50 @@ function Field({
   )
 }
 
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new Image()
+    image.addEventListener('load', () => resolve(image))
+    image.addEventListener('error', (error) => reject(error))
+    image.src = url
+  })
+
+const getCroppedImageBlob = async (imageSrc, croppedAreaPixels) => {
+  const image = await createImage(imageSrc)
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+
+  canvas.width = croppedAreaPixels.width
+  canvas.height = croppedAreaPixels.height
+
+  context.drawImage(
+    image,
+    croppedAreaPixels.x,
+    croppedAreaPixels.y,
+    croppedAreaPixels.width,
+    croppedAreaPixels.height,
+    0,
+    0,
+    croppedAreaPixels.width,
+    croppedAreaPixels.height
+  )
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Image crop failed'))
+          return
+        }
+
+        resolve(blob)
+      },
+      'image/jpeg',
+      0.92
+    )
+  })
+}
+
 const initialFormData = {
   studentId: '',
   firstName: '',
@@ -98,9 +143,11 @@ const initialErrors = {
   firstName: '',
   lastName: '',
   faculty: '',
+  profileImage: '',
   name: '',
   industry: '',
   location: '',
+  logo: '',
   email: '',
   password: '',
   confirmPassword: ''
@@ -124,6 +171,15 @@ const EnhancedRegister = () => {
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [fieldErrors, setFieldErrors] = useState(initialErrors)
+  const [studentImageFile, setStudentImageFile] = useState(null)
+  const [companyLogoFile, setCompanyLogoFile] = useState(null)
+  const [studentImagePreview, setStudentImagePreview] = useState('')
+  const [companyLogoPreview, setCompanyLogoPreview] = useState('')
+  const [cropSourceImage, setCropSourceImage] = useState('')
+  const [cropTarget, setCropTarget] = useState('')
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const navigate = useNavigate()
 
   const navigateWithTransition = (path) => {
@@ -154,6 +210,70 @@ const EnhancedRegister = () => {
     }
   }
 
+  const resetCropState = () => {
+    setCropSourceImage('')
+    setCropTarget('')
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setCroppedAreaPixels(null)
+  }
+
+  const handleImageSelection = (event, target) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setSubmitError('Please select a valid image file.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      setSubmitError('')
+      setCropTarget(target)
+      setCropSourceImage(String(reader.result || ''))
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropConfirm = async () => {
+    if (!cropSourceImage || !croppedAreaPixels || !cropTarget) {
+      setSubmitError('Please adjust the crop area before saving the image.')
+      return
+    }
+
+    try {
+      const blob = await getCroppedImageBlob(cropSourceImage, croppedAreaPixels)
+      const fileNamePrefix = cropTarget === 'student' ? 'student-profile' : 'company-logo'
+      const croppedFile = new File([blob], `${fileNamePrefix}-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      const previewUrl = URL.createObjectURL(croppedFile)
+
+      if (cropTarget === 'student') {
+        if (studentImagePreview.startsWith('blob:')) URL.revokeObjectURL(studentImagePreview)
+        setStudentImageFile(croppedFile)
+        setStudentImagePreview(previewUrl)
+        setFieldErrors((previous) => ({ ...previous, profileImage: '' }))
+      } else {
+        if (companyLogoPreview.startsWith('blob:')) URL.revokeObjectURL(companyLogoPreview)
+        setCompanyLogoFile(croppedFile)
+        setCompanyLogoPreview(previewUrl)
+        setFieldErrors((previous) => ({ ...previous, logo: '' }))
+      }
+
+      setSubmitError('')
+      resetCropState()
+    } catch {
+      setSubmitError('Unable to crop image. Please try another file.')
+    }
+  }
+
   const validateForm = () => {
     const nextErrors = { ...initialErrors }
 
@@ -165,12 +285,14 @@ const EnhancedRegister = () => {
         nextErrors.studentId = 'Student ID can contain only English letters and numbers.'
       }
       if (!formData.faculty.trim()) nextErrors.faculty = 'Faculty is required.'
+      if (!studentImageFile) nextErrors.profileImage = 'Profile photo is required.'
     }
 
     if (regRole === 'company') {
       if (!formData.name.trim()) nextErrors.name = 'Company name is required.'
       if (!formData.industry.trim()) nextErrors.industry = 'Industry is required.'
       if (!formData.location.trim()) nextErrors.location = 'Location is required.'
+      if (!companyLogoFile) nextErrors.logo = 'Company logo is required.'
     }
 
     if (!formData.email.trim()) {
@@ -231,7 +353,26 @@ const EnhancedRegister = () => {
               phone: formData.phoneCompany
             }
 
-      const response = await api.post(endpoint, submitData)
+      const payload = new FormData()
+      Object.entries(submitData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          payload.append(key, value)
+        }
+      })
+
+      if (regRole === 'student' && studentImageFile) {
+        payload.append('profileImage', studentImageFile)
+      }
+
+      if (regRole === 'company' && companyLogoFile) {
+        payload.append('logo', companyLogoFile)
+      }
+
+      const response = await api.post(endpoint, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
 
       if (response.data.success) {
         localStorage.setItem('token', response.data.data.token)
@@ -420,6 +561,40 @@ const EnhancedRegister = () => {
                     onChange={handleChange}
                     placeholder="https://github.com/username"
                   />
+
+                  <div className="space-y-2">
+                    <label htmlFor="studentProfileImage" className="block text-sm font-semibold text-gray-700">
+                      Profile Photo
+                      <span className="ml-1 text-red-600">*</span>
+                    </label>
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-300 bg-white p-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3">
+                        {studentImagePreview ? (
+                          <img src={studentImagePreview} alt="Student profile preview" className="h-14 w-14 rounded-lg border border-gray-200 object-cover" />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
+                            <ImagePlus className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Upload and crop to 1:1</p>
+                          <p className="text-xs text-gray-500">JPG/PNG up to 5MB</p>
+                        </div>
+                      </div>
+                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                        <ImagePlus className="h-4 w-4" />
+                        Choose Photo
+                        <input
+                          id="studentProfileImage"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => handleImageSelection(event, 'student')}
+                        />
+                      </label>
+                    </div>
+                    {fieldErrors.profileImage ? <p className="text-sm text-red-600">{fieldErrors.profileImage}</p> : null}
+                  </div>
                   </>
                 ) : (
                   <>
@@ -473,6 +648,40 @@ const EnhancedRegister = () => {
                     placeholder="+94 77 123 4567"
                     icon={<Phone className="h-4 w-4" />}
                   />
+
+                  <div className="space-y-2">
+                    <label htmlFor="companyLogo" className="block text-sm font-semibold text-gray-700">
+                      Company Logo
+                      <span className="ml-1 text-red-600">*</span>
+                    </label>
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-300 bg-white p-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3">
+                        {companyLogoPreview ? (
+                          <img src={companyLogoPreview} alt="Company logo preview" className="h-14 w-14 rounded-lg border border-gray-200 object-cover" />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
+                            <ImagePlus className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Upload and crop to 1:1</p>
+                          <p className="text-xs text-gray-500">JPG/PNG up to 5MB</p>
+                        </div>
+                      </div>
+                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                        <ImagePlus className="h-4 w-4" />
+                        Choose Logo
+                        <input
+                          id="companyLogo"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => handleImageSelection(event, 'company')}
+                        />
+                      </label>
+                    </div>
+                    {fieldErrors.logo ? <p className="text-sm text-red-600">{fieldErrors.logo}</p> : null}
+                  </div>
                   </>
                 )}
               </div>
@@ -548,6 +757,72 @@ const EnhancedRegister = () => {
           </section>
         </div>
       </main>
+
+      {cropSourceImage ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Crop image to square (1:1)</h3>
+                <p className="text-sm text-gray-500">Position your image and save the cropped version.</p>
+              </div>
+              <button
+                type="button"
+                onClick={resetCropState}
+                className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Close crop dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="relative h-80 w-full overflow-hidden rounded-xl bg-slate-900">
+              <Cropper
+                image={cropSourceImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_croppedArea, areaPixels) => setCroppedAreaPixels(areaPixels)}
+              />
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <label htmlFor="cropZoom" className="text-sm font-semibold text-gray-700">
+                Zoom
+              </label>
+              <input
+                id="cropZoom"
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(event) => setZoom(Number(event.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={resetCropState}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCropConfirm}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Use Cropped Image
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

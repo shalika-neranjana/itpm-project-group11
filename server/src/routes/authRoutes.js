@@ -4,6 +4,7 @@
 
 const express = require("express");
 const { registerStudent, loginStudent } = require("../controllers/authController");
+const { uploadStudentProfileImage } = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const router = express.Router();
  * @desc    Register a new student
  * @access  Public
  */
-router.post("/register", registerStudent);
+router.post("/register", uploadStudentProfileImage, registerStudent);
 
 /**
  * @route   POST /api/auth/login

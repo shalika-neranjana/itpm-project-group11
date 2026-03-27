@@ -23,12 +23,19 @@ const registerCompany = async (req, res, next) => {
             location,
             contactPerson,
             description,
+            logo,
         } = req.body;
+        const uploadedLogo = req.file ? `/uploads/logos/${req.file.filename}` : logo;
 
         // Validate required fields
         if (!name || !industry || !email || !password) {
             res.status(400);
             throw new Error("Please provide all required fields");
+        }
+
+        if (!uploadedLogo) {
+            res.status(400);
+            throw new Error("Company logo is required");
         }
 
         // Check whether a company with the same email already exists
@@ -53,6 +60,7 @@ const registerCompany = async (req, res, next) => {
             location,
             contactPerson,
             description,
+            logo: uploadedLogo,
         });
 
         res.status(201).json({

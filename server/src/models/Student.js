@@ -85,6 +85,10 @@ const studentSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
+        profileImage: {
+            type: String,
+            default: "",
+        },
         suspended: {
             type: Boolean,
             default: false,
