@@ -14,7 +14,7 @@ function ExamResultsSection({ student, examResults = [] }) {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-        <h2 className="font-display text-2xl font-bold text-[#1A1D27]">Exam Results</h2>
+        <h2 className="font-display text-2xl font-bold text-[#1A1D27]">Academic Performance</h2>
         <p className="mt-1 text-sm text-[#6B7280]">
           Viewing academic results for {student.name}
           {student.studentId ? ` (${student.studentId})` : ''}
@@ -23,7 +23,7 @@ function ExamResultsSection({ student, examResults = [] }) {
 
       {examResults.length === 0 && (
         <section className="rounded-[28px] border border-[#E8EAF0] bg-white p-8 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <h3 className="text-lg font-bold text-[#1A1D27]">No exam results available</h3>
+          <h3 className="text-lg font-bold text-[#1A1D27]">No academic performance data available</h3>
           <p className="mt-2 text-sm text-[#6B7280]">
             Your results will appear here once they are available in the system.
           </p>

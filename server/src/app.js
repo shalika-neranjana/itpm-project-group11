@@ -13,6 +13,7 @@ const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/Profiles/adminRoutes");
 const companyRoutes = require("./routes/companyRoutes");
 const internshipRoutes = require("./routes/internshipRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const studentGuidanceRoutes = require("./routes/student_guidance/studentGuidanceRoutes");
 
 /* MyInternships routes */
@@ -34,6 +35,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/internships", internshipRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/student-guidance", studentGuidanceRoutes);
 
 /**

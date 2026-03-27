@@ -1,5 +1,5 @@
 export const guidanceTabs = [
-  { key: 'examResults', label: 'Exam Results' },
+  { key: 'examResults', label: 'Academic Performance' },
   { key: 'interests', label: 'My Interests' },
   { key: 'skills', label: 'Skills' },
   { key: 'careers', label: 'Career Suggestions' },

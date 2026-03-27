@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
+import CompanyReview from '../components/CompanyReview'
 import InternshipList from '../components/MyInternships/InternshipList'
 import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
@@ -42,6 +43,27 @@ function Dashboard() {
 
   const handleApply = (internshipId) => {
     navigate(`/apply/${internshipId}`)
+  const [reviews, setReviews] = useState([])
+
+  useEffect(() => {
+    // Load user-submitted reviews from localStorage
+    const userReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
+    setReviews(userReviews)
+  }, [])
+
+  const handleDeleteReview = (reviewId) => {
+    // Remove from state
+    setReviews(reviews.filter(review => review.id !== reviewId))
+    
+    // Remove from localStorage
+    const userReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
+    const updatedReviews = userReviews.filter(review => review.id !== reviewId)
+    localStorage.setItem('userReviews', JSON.stringify(updatedReviews))
+  }
+
+  const handleEditReview = (review) => {
+    // Navigate to edit page with review data
+    navigate('/write-review', { state: { review } })
   }
 
   // Get student info from localStorage.
@@ -236,6 +258,34 @@ function Dashboard() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-500">No internships found matching your criteria.</p>
+        {activeTab === 'reviews' ? (
+          <div className="space-y-4">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="font-display text-xl font-bold text-[#1A1D27]">
+                Company Reviews
+              </h2>
+              <button
+                onClick={() => navigate('/write-review')}
+                className="flex items-center gap-2 rounded-lg bg-[#3B6FE8] px-4 py-2 font-semibold text-white transition hover:bg-[#2D5CD4]"
+              >
+                <span>+</span>
+                Write Anonymous Review
+              </button>
+            </div>
+            {reviews.length > 0 ? (
+              reviews.map((review) => (
+                <CompanyReview
+                  key={review.id}
+                  review={review}
+                  onDelete={handleDeleteReview}
+                  onEdit={handleEditReview}
+                />
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
+                <p className="text-[#6B7280]">
+                  No reviews yet. Be the first to share your experience!
+                </p>
               </div>
             )}
           </div>
