@@ -4,6 +4,7 @@
 
 const bcrypt = require("bcryptjs");
 const Student = require("../models/Student");
+const Company = require("../models/Company");
 const generateToken = require("../utils/generateToken");
 
 /**
@@ -23,10 +24,13 @@ const registerStudent = async (req, res, next) => {
             linkedin,
             profileImage,
         } = req.body;
+        const normalizedStudentId = studentId?.trim().toUpperCase();
+        const normalizedEmail = email?.trim().toLowerCase();
+        const normalizedPhone = phone?.trim();
         const uploadedProfileImage = req.file ? `/uploads/avatars/${req.file.filename}` : profileImage;
 
         // Validate required fields
-        if (!studentId || !firstName || !lastName || !email || !password) {
+        if (!studentId || !firstName || !lastName || !email || !password || !phone) {
             res.status(400);
             throw new Error("Please provide all required fields");
         }
@@ -37,17 +41,38 @@ const registerStudent = async (req, res, next) => {
         }
 
         // Check whether a student with the same email already exists
-        const existingStudentByEmail = await Student.findOne({ email });
+        const existingStudentByEmail = await Student.findOne({ email: normalizedEmail });
         if (existingStudentByEmail) {
             res.status(400);
             throw new Error("A student with this email already exists");
         }
 
+        // Ensure email is unique across all account types
+        const existingCompanyByEmail = await Company.findOne({ email: normalizedEmail });
+        if (existingCompanyByEmail) {
+            res.status(400);
+            throw new Error("This email is already registered");
+        }
+
         // Check whether a student with the same student ID already exists
-        const existingStudentById = await Student.findOne({ studentId });
+        const existingStudentById = await Student.findOne({ studentId: normalizedStudentId });
         if (existingStudentById) {
             res.status(400);
             throw new Error("A student with this student ID already exists");
+        }
+
+        if (normalizedPhone) {
+            const existingStudentByPhone = await Student.findOne({ phone: normalizedPhone });
+            if (existingStudentByPhone) {
+                res.status(400);
+                throw new Error("A student with this phone number already exists");
+            }
+
+            const existingCompanyByPhone = await Company.findOne({ phone: normalizedPhone });
+            if (existingCompanyByPhone) {
+                res.status(400);
+                throw new Error("This phone number is already registered");
+            }
         }
 
         // Hash password before saving
@@ -56,12 +81,12 @@ const registerStudent = async (req, res, next) => {
 
         // Create student
         const student = await Student.create({
-            studentId,
+            studentId: normalizedStudentId,
             firstName,
             lastName,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
-            phone,
+            phone: normalizedPhone,
             linkedin,
             profileImage: uploadedProfileImage,
         });

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Cropper from 'react-easy-crop'
 import { ArrowRight, Building2, ImagePlus, LockKeyhole, Mail, Phone, User, X } from 'lucide-react'
 import api from '../api'
+import { formatPhoneNumber } from '../utils/phoneFormatter'
 
 function Field({
   label,
@@ -130,6 +131,7 @@ const initialFormData = {
   github: '',
   name: '',
   industry: '',
+  address: '',
   location: '',
   website: '',
   phoneCompany: '',
@@ -143,10 +145,11 @@ const initialErrors = {
   firstName: '',
   lastName: '',
   faculty: '',
+  phone: '',
   profileImage: '',
   name: '',
   industry: '',
-  location: '',
+  phoneCompany: '',
   logo: '',
   email: '',
   password: '',
@@ -163,6 +166,49 @@ const facultyOptions = [
   { value: 'Faculty of Humanities & Sciences', label: 'Faculty of Humanities & Sciences' },
   { value: 'School of Architecture', label: 'School of Architecture' },
   { value: 'Faculty of Graduate Studies', label: 'Faculty of Graduate Studies' }
+]
+
+const companyIndustryOptions = [
+  {
+    value: 'Technology & IT',
+    label: 'Technology & IT (Software, AI, Cybersecurity, SaaS, Data, Cloud)'
+  },
+  {
+    value: 'Finance & Business Services',
+    label: 'Finance & Business Services (Banking, Accounting, Consulting, Insurance, Legal)'
+  },
+  {
+    value: 'Healthcare & Life Sciences',
+    label: 'Healthcare & Life Sciences (Hospitals, Pharma, Biotech, Medical Services)'
+  },
+  {
+    value: 'Education & Training',
+    label: 'Education & Training (Schools, Universities, EdTech, Training Institutes)'
+  },
+  {
+    value: 'Manufacturing & Engineering',
+    label: 'Manufacturing & Engineering (Factories, Industrial, Automotive, Electronics)'
+  },
+  {
+    value: 'Retail & E-commerce',
+    label: 'Retail & E-commerce (Online Stores, Supermarkets, Wholesale)'
+  },
+  {
+    value: 'Media, Marketing & Communication',
+    label: 'Media, Marketing & Communication (Advertising, Digital Marketing, PR, Entertainment)'
+  },
+  {
+    value: 'Transportation & Logistics',
+    label: 'Transportation & Logistics (Delivery, Shipping, Travel, Supply Chain)'
+  },
+  {
+    value: 'Energy, Agriculture & Environment',
+    label: 'Energy, Agriculture & Environment (Farming, Renewable Energy, Utilities, Sustainability)'
+  },
+  {
+    value: 'Hospitality, Real Estate & Other Services',
+    label: 'Hospitality, Real Estate & Other Services (Hotels, Tourism, Property, NGOs, General Services)'
+  }
 ]
 
 const EnhancedRegister = () => {
@@ -193,12 +239,15 @@ const EnhancedRegister = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target
-    const nextValue =
-      name === 'studentId'
-        ? value
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, '')
-        : value
+    let nextValue = value
+    
+    if (name === 'studentId') {
+      nextValue = value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+    } else if (name === 'phone' || name === 'phoneCompany') {
+      nextValue = formatPhoneNumber(value)
+    }
 
     setFormData((previous) => ({
       ...previous,
@@ -285,13 +334,14 @@ const EnhancedRegister = () => {
         nextErrors.studentId = 'Student ID can contain only English letters and numbers.'
       }
       if (!formData.faculty.trim()) nextErrors.faculty = 'Faculty is required.'
+      if (!formData.phone.trim()) nextErrors.phone = 'Phone number is required.'
       if (!studentImageFile) nextErrors.profileImage = 'Profile photo is required.'
     }
 
     if (regRole === 'company') {
       if (!formData.name.trim()) nextErrors.name = 'Company name is required.'
       if (!formData.industry.trim()) nextErrors.industry = 'Industry is required.'
-      if (!formData.location.trim()) nextErrors.location = 'Location is required.'
+      if (!formData.phoneCompany.trim()) nextErrors.phoneCompany = 'Phone number is required.'
       if (!companyLogoFile) nextErrors.logo = 'Company logo is required.'
     }
 
@@ -346,6 +396,7 @@ const EnhancedRegister = () => {
           : {
               name: formData.name,
               industry: formData.industry,
+              address: formData.address,
               email: formData.email,
               password: formData.password,
               location: formData.location,
@@ -541,6 +592,9 @@ const EnhancedRegister = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+94 77 123 4567"
+                      required
+                      requiredIndicator
+                      error={fieldErrors.phone}
                       icon={<Phone className="h-4 w-4" />}
                     />
                     <Field
@@ -609,26 +663,24 @@ const EnhancedRegister = () => {
                     icon={<Building2 className="h-4 w-4" />}
                   />
 
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <Field
-                      label="Industry"
-                      name="industry"
-                      value={formData.industry}
-                      onChange={handleChange}
-                      placeholder="Technology"
-                      required
-                      error={fieldErrors.industry}
-                    />
-                    <Field
-                      label="Location"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      placeholder="Kuala Lumpur"
-                      required
-                      error={fieldErrors.location}
-                    />
-                  </div>
+                  <Field
+                    label="Industry"
+                    name="industry"
+                    value={formData.industry}
+                    onChange={handleChange}
+                    options={companyIndustryOptions}
+                    selectPlaceholder="Select company industry"
+                    required
+                    error={fieldErrors.industry}
+                  />
+
+                  <Field
+                    label="Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="123, Main Street, Colombo"
+                  />
 
                   <Field
                     label="Website (Optional)"
@@ -640,12 +692,15 @@ const EnhancedRegister = () => {
                   />
 
                   <Field
-                    label="Phone (Optional)"
+                    label="Phone"
                     name="phoneCompany"
                     type="tel"
                     value={formData.phoneCompany}
                     onChange={handleChange}
                     placeholder="+94 77 123 4567"
+                    required
+                    requiredIndicator
+                    error={fieldErrors.phoneCompany}
                     icon={<Phone className="h-4 w-4" />}
                   />
 
