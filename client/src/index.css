@@ -29,3 +29,50 @@ body {
 .font-display {
     font-family: "Playfair Display", serif;
 }
+
+@keyframes auth-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(22px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes role-form-swap {
+    from {
+        opacity: 0;
+        transform: translateX(var(--role-shift, 14px)) translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) translateY(0);
+    }
+}
+
+.auth-panel-transition {
+    animation: auth-panel-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.role-form-transition {
+    animation: role-form-swap 280ms cubic-bezier(0.2, 0.75, 0.28, 1) both;
+}
+
+.role-form-transition[data-role="student"] {
+    --role-shift: -14px;
+}
+
+.role-form-transition[data-role="company"] {
+    --role-shift: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-panel-transition,
+    .role-form-transition {
+        animation: none;
+    }
+}

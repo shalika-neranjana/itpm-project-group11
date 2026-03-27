@@ -98,8 +98,22 @@ function LoginPage() {
     }
   }
 
+  const navigateWithTransition = (path) => {
+    if (typeof document !== 'undefined' && typeof document.startViewTransition === 'function') {
+      document.startViewTransition(() => navigate(path))
+      return
+    }
+
+    navigate(path)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6] text-gray-900">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
       <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-3">
@@ -120,7 +134,7 @@ function LoginPage() {
         </div>
       </header>
 
-      <main className="relative flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
+      <main className="relative z-10 flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -left-20 h-64 w-64 rounded-full bg-blue-100/60 blur-3xl" />
           <div className="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
@@ -137,7 +151,10 @@ function LoginPage() {
             <p className="mt-2 text-sm text-gray-600">Sign in to continue managing your internship workflow.</p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
+          <div
+            className="auth-panel-transition rounded-2xl border border-white/60 bg-white/70 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.14)]"
+            style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+          >
           <div className="mb-6 flex items-center justify-between gap-4">
             <h2 className="text-xl font-bold text-gray-900">Login</h2>
           </div>
@@ -200,7 +217,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-indigo-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-indigo-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>
@@ -218,13 +235,14 @@ function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-gray-600">
             Don&apos;t have an account?{' '}
-            <Link
-              to="/register"
-              className="group relative inline-block font-semibold text-blue-600 transition-all duration-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+            <button
+              type="button"
+              onClick={() => navigateWithTransition('/register')}
+              className="group relative inline-block cursor-pointer font-semibold text-blue-600 transition-all duration-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             >
               Create account
               <span className="absolute -bottom-0.5 left-0 h-0.5 w-0 bg-blue-600 transition-all duration-300 group-hover:w-full" />
-            </Link>
+            </button>
           </p>
         </div>
         </div>

@@ -126,6 +126,15 @@ const EnhancedRegister = () => {
   const [fieldErrors, setFieldErrors] = useState(initialErrors)
   const navigate = useNavigate()
 
+  const navigateWithTransition = (path) => {
+    if (typeof document !== 'undefined' && typeof document.startViewTransition === 'function') {
+      document.startViewTransition(() => navigate(path))
+      return
+    }
+
+    navigate(path)
+  }
+
   const handleChange = (event) => {
     const { name, value } = event.target
     const nextValue =
@@ -249,7 +258,12 @@ const EnhancedRegister = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6] text-gray-900">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
       <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-3">
@@ -270,7 +284,7 @@ const EnhancedRegister = () => {
         </div>
       </header>
 
-      <main className="relative flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
+      <main className="relative z-10 flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -left-20 h-64 w-64 rounded-full bg-blue-100/60 blur-3xl" />
           <div className="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
@@ -287,7 +301,10 @@ const EnhancedRegister = () => {
             <p className="mt-2 text-sm text-gray-600">Join InternConnect and start your internship journey.</p>
           </div>
 
-          <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
+          <section
+            className="auth-panel-transition rounded-2xl border border-white/60 bg-white/70 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.14)]"
+            style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+          >
             <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-900">Account setup</h2>
             </div>
@@ -322,8 +339,9 @@ const EnhancedRegister = () => {
             ) : null}
 
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-              {regRole === 'student' ? (
-                <>
+              <div key={regRole} data-role={regRole} className="role-form-transition space-y-6">
+                {regRole === 'student' ? (
+                  <>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Field
                       label="First Name"
@@ -402,9 +420,9 @@ const EnhancedRegister = () => {
                     onChange={handleChange}
                     placeholder="https://github.com/username"
                   />
-                </>
-              ) : (
-                <>
+                  </>
+                ) : (
+                  <>
                   <Field
                     label="Company Name"
                     name="name"
@@ -455,8 +473,9 @@ const EnhancedRegister = () => {
                     placeholder="+94 77 123 4567"
                     icon={<Phone className="h-4 w-4" />}
                   />
-                </>
-              )}
+                  </>
+                )}
+              </div>
 
               <Field
                 label="Email Address"
@@ -520,7 +539,7 @@ const EnhancedRegister = () => {
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={() => navigate('/login')}
+                onClick={() => navigateWithTransition('/login')}
                 className="cursor-pointer font-semibold text-blue-600 transition-colors duration-300 hover:text-blue-700"
               >
                 Sign in
