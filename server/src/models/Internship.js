@@ -111,4 +111,9 @@ const internshipSchema = new mongoose.Schema(
     }
 );
 
+// Indexes to speed up common listing and filtering queries
+internshipSchema.index({ status: 1, specialization: 1, type: 1, deadline: -1 });
+internshipSchema.index({ company: 1, createdAt: -1 });
+internshipSchema.index({ "applications.student": 1 });
+
 module.exports = mongoose.model("Internship", internshipSchema);

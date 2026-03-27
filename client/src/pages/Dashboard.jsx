@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import CompanyReview from '../components/CompanyReview'
@@ -20,13 +20,8 @@ function Dashboard() {
     type: ''
   })
 
-  useEffect(() => {
-    if (activeTab === 'opportunities') {
-      fetchInternships()
-    }
-  }, [activeTab, filters])
-
-  const fetchInternships = async () => {
+  const fetchInternships = useCallback(async () => {
+    setLoading(true)
     try {
       const response = await api.get('/internships', { params: filters })
       setInternships(response.data.data || [])
@@ -35,7 +30,13 @@ function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
+
+  useEffect(() => {
+    if (activeTab === 'opportunities') {
+      fetchInternships()
+    }
+  }, [activeTab, fetchInternships])
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -55,7 +56,7 @@ function Dashboard() {
 
   const handleDeleteReview = (reviewId) => {
     // Remove from state
-    setReviews(reviews.filter(review => review.id !== reviewId))
+    setReviews((prev) => prev.filter(review => review.id !== reviewId))
     
     // Remove from localStorage
     const userReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
@@ -68,8 +69,11 @@ function Dashboard() {
     navigate('/write-review', { state: { review } })
   }
 
-  // Get student info from localStorage.
-  const studentData = JSON.parse(localStorage.getItem('student'))
+  // Get student info from localStorage once on mount.
+  const studentData = useMemo(() => {
+    const stored = localStorage.getItem('student')
+    return stored ? JSON.parse(stored) : null
+  }, [])
   const studentId = studentData?.studentId
 
   // My Internships state.

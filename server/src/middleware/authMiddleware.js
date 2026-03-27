@@ -20,8 +20,16 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Attach student data to request
-            req.student = await Student.findById(decoded.id).select("-password");
+            const student = await Student.findById(decoded.id).select("-password");
 
+            if (!student) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Not authorized. User not found.",
+                });
+            }
+
+            req.student = student;
             next();
         } else {
             return res.status(401).json({

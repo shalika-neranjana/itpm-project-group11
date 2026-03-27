@@ -90,14 +90,15 @@ const getAllCompanyReviews = async (req, res, next) => {
         sortObject[sortBy] = -1;
 
         // Get reviews
-        const reviews = await CompanyReview.find(filter)
-            .sort(sortObject)
-            .skip(skip)
-            .limit(limitNum)
-            .populate("authorId", "firstName lastName email");
-
-        // Get total count for pagination
-        const total = await CompanyReview.countDocuments(filter);
+        const [reviews, total] = await Promise.all([
+            CompanyReview.find(filter)
+                .sort(sortObject)
+                .skip(skip)
+                .limit(limitNum)
+                .populate("authorId", "firstName lastName email")
+                .lean(),
+            CompanyReview.countDocuments(filter),
+        ]);
 
         res.status(200).json({
             success: true,
@@ -134,7 +135,8 @@ const getReviewsByCompany = async (req, res, next) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
-            .populate("authorId", "firstName lastName");
+            .populate("authorId", "firstName lastName")
+            .lean();
 
         const total = await CompanyReview.countDocuments({
             companyName: { $regex: `^${companyName}$`, $options: "i" },
