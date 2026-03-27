@@ -8,13 +8,14 @@ import AdminSimple from './Profiles/AdminSimple'
 import InternshipMarketplace from './Profiles/InternshipMarketplace'
 import CompanyDashboard from './Profiles/CompanyDashboard'
 import ApplicationForm from './Profiles/ApplicationForm'
+import Home from './pages/Home'
 
 
 function App() {
   return (
     <div className="min-h-screen bg-[#F7F8FA]">
       <Routes>
-        <Route path="/" element={<EnhancedLogin />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<EnhancedLogin />} />
         <Route path="/register" element={<EnhancedRegister />} />
         <Route path="/dashboard" element={<Dashboard />} />
