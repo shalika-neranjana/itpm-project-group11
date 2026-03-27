@@ -43,6 +43,8 @@ function Dashboard() {
 
   const handleApply = (internshipId) => {
     navigate(`/apply/${internshipId}`)
+  }
+
   const [reviews, setReviews] = useState([])
 
   useEffect(() => {
@@ -258,7 +260,10 @@ function Dashboard() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-500">No internships found matching your criteria.</p>
-        {activeTab === 'reviews' ? (
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'reviews' ? (
           <div className="space-y-4">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold text-[#1A1D27]">
