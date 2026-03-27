@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const Student = require("../models/Student");
 const Company = require("../models/Company");
 const generateToken = require("../utils/generateToken");
+const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
  * @desc    Register a new student
@@ -13,6 +14,8 @@ const generateToken = require("../utils/generateToken");
  * @access  Public
  */
 const registerStudent = async (req, res, next) => {
+    let registrationCompleted = false;
+
     try {
         const {
             studentId,
@@ -22,12 +25,14 @@ const registerStudent = async (req, res, next) => {
             password,
             phone,
             linkedin,
+            faculty,
+            github,
             profileImage,
         } = req.body;
         const normalizedStudentId = studentId?.trim().toUpperCase();
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedPhone = phone?.trim();
-        const uploadedProfileImage = req.file ? `/uploads/avatars/${req.file.filename}` : profileImage;
+        const uploadedProfileImage = getUploadedFilePath(req.file, "avatars", profileImage);
 
         // Validate required fields
         if (!studentId || !firstName || !lastName || !email || !password || !phone) {
@@ -88,8 +93,12 @@ const registerStudent = async (req, res, next) => {
             password: hashedPassword,
             phone: normalizedPhone,
             linkedin,
+            faculty,
+            github,
             profileImage: uploadedProfileImage,
         });
+
+        registrationCompleted = true;
 
         res.status(201).json({
             success: true,
@@ -102,12 +111,18 @@ const registerStudent = async (req, res, next) => {
                 email: student.email,
                 phone: student.phone,
                 linkedin: student.linkedin,
+                faculty: student.faculty,
+                github: student.github,
                 profileImage: student.profileImage,
                 suspended: student.suspended,
                 token: generateToken(student._id),
             },
         });
     } catch (error) {
+        if (!registrationCompleted) {
+            deleteUploadedFile(req.file);
+        }
+
         next(error);
     }
 };

@@ -6,6 +6,7 @@ const bcrypt = require("bcryptjs");
 const Company = require("../models/Company");
 const Student = require("../models/Student");
 const generateToken = require("../utils/generateToken");
+const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
  * @desc    Register a new company
@@ -13,6 +14,8 @@ const generateToken = require("../utils/generateToken");
  * @access  Public
  */
 const registerCompany = async (req, res, next) => {
+    let registrationCompleted = false;
+
     try {
         const {
             name,
@@ -29,7 +32,7 @@ const registerCompany = async (req, res, next) => {
         } = req.body;
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedPhone = phone?.trim();
-        const uploadedLogo = req.file ? `/uploads/logos/${req.file.filename}` : logo;
+        const uploadedLogo = getUploadedFilePath(req.file, "logos", logo);
 
         // Validate required fields
         if (!name || !industry || !normalizedEmail || !password || !normalizedPhone) {
@@ -89,6 +92,8 @@ const registerCompany = async (req, res, next) => {
             logo: uploadedLogo,
         });
 
+        registrationCompleted = true;
+
         res.status(201).json({
             success: true,
             message: "Company registered successfully",
@@ -109,6 +114,10 @@ const registerCompany = async (req, res, next) => {
             },
         });
     } catch (error) {
+        if (!registrationCompleted) {
+            deleteUploadedFile(req.file);
+        }
+
         next(error);
     }
 };
