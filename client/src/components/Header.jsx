@@ -99,11 +99,6 @@ function Header({ active = 'opportunities', onTabChange }) {
     ]
 
     const handleNavClick = (item) => {
-        if (item.key === 'profile') {
-            navigate('/profile')
-            return
-        }
-
         if (window.location.pathname !== '/dashboard') {
             navigate('/dashboard', { state: { tab: item.key } })
             return
@@ -178,7 +173,16 @@ function Header({ active = 'opportunities', onTabChange }) {
                         {showUserMenu && (
                             <div className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-[#E8EAF0] bg-white p-1 shadow-lg">
                                 <button
-                                    onClick={() => { setShowUserMenu(false); navigate('/profile') }}
+                                    onClick={() => {
+                                        setShowUserMenu(false)
+                                        if (window.location.pathname !== '/dashboard') {
+                                            navigate('/dashboard', { state: { tab: 'profile' } })
+                                            return
+                                        }
+                                        if (onTabChange) {
+                                            onTabChange('profile', 'My Profile')
+                                        }
+                                    }}
                                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[#1A1D27] hover:bg-[#F7F8FA]"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
