@@ -1,13 +1,13 @@
 /**
  * Controller for Internship CRUD
  */
-const Internship = require("../../models/MyInternships/Internship");
+const StudentInternship = require("../../models/MyInternships/Internship");
 
 // Add new internship
 exports.addInternship = async (req, res) => {
     try {
 
-        const newInternship = new Internship(req.body);
+        const newInternship = new StudentInternship(req.body);
 
         const savedInternship = await newInternship.save();
 
@@ -22,7 +22,7 @@ exports.addInternship = async (req, res) => {
 // Get all internships for student
 exports.getInternships = async (req, res) => {
     try {
-        const internships = await Internship.find({
+        const internships = await StudentInternship.find({
             studentIdNumber: req.params.studentId  
         })
         res.json(internships)
@@ -36,7 +36,7 @@ exports.getInternships = async (req, res) => {
 exports.getInternshipById = async (req, res) => {
     try {
 
-        const internship = await Internship.findById(
+        const internship = await StudentInternship.findById(
             req.params.id
         );
 
@@ -52,7 +52,7 @@ exports.getInternshipById = async (req, res) => {
 exports.updateInternship = async (req, res) => {
     try {
 
-        const updated = await Internship.findByIdAndUpdate(
+        const updated = await StudentInternship.findByIdAndUpdate(
             req.params.id,
             req.body,
             { new: true }
@@ -70,7 +70,7 @@ exports.updateInternship = async (req, res) => {
 exports.deleteInternship = async (req, res) => {
     try {
 
-        await Internship.findByIdAndDelete(
+        await StudentInternship.findByIdAndDelete(
             req.params.id
         );
 

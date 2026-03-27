@@ -46,6 +46,49 @@ const studentSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
+        university: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        faculty: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        specialization: {
+            type: String,
+            enum: ["Computer Science", "Software Engineering", "Data Science", "Multimedia", "Cybersecurity"],
+            default: "Computer Science",
+        },
+        gpa: {
+            type: Number,
+            min: 0,
+            max: 4,
+            default: 0,
+        },
+        skills: [{
+            type: String,
+            trim: true,
+        }],
+        resume: {
+            type: String,
+            default: "",
+        },
+        github: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        bio: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        suspended: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

@@ -68,6 +68,6 @@ const internshipSchema = new mongoose.Schema(
   }
 );
 
-const Internship = mongoose.model("Internship", internshipSchema);
+const StudentInternship = mongoose.model("StudentInternship", internshipSchema);
 
-module.exports = Internship;
+module.exports = StudentInternship;
