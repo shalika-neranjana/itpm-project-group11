@@ -1,119 +1,211 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Building2, LockKeyhole, Mail, Phone, User } from 'lucide-react'
 import api from '../api'
+
+function Field({ label, name, type = 'text', value, onChange, placeholder, required = false, error = '', icon, options = null }) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={name} className="block text-sm font-semibold text-gray-700">
+        {label}
+      </label>
+      <div className="relative">
+        {icon ? <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">{icon}</span> : null}
+        {options ? (
+          <select
+            id={name}
+            name={name}
+            value={value}
+            onChange={onChange}
+            required={required}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${name}-error` : undefined}
+            className={`w-full rounded-lg border bg-white py-3 text-sm text-gray-900 outline-none transition-all duration-300 focus:ring-2 ${
+              icon ? 'pl-10 pr-4' : 'px-4'
+            } ${error ? 'border-red-300 focus:ring-red-500/30' : 'border-gray-300 focus:ring-blue-500'}`}
+          >
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            required={required}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${name}-error` : undefined}
+            className={`w-full rounded-lg border bg-white py-3 text-sm text-gray-900 outline-none transition-all duration-300 placeholder:text-gray-400 focus:ring-2 ${
+              icon ? 'pl-10 pr-4' : 'px-4'
+            } ${error ? 'border-red-300 focus:ring-red-500/30' : 'border-gray-300 focus:ring-blue-500'}`}
+          />
+        )}
+      </div>
+      {error ? (
+        <p id={`${name}-error`} className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+const initialFormData = {
+  studentId: '',
+  firstName: '',
+  lastName: '',
+  faculty: '',
+  specialization: 'Computer Science',
+  phone: '',
+  linkedin: '',
+  github: '',
+  name: '',
+  industry: '',
+  location: '',
+  website: '',
+  phoneCompany: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+}
+
+const initialErrors = {
+  studentId: '',
+  firstName: '',
+  lastName: '',
+  faculty: '',
+  name: '',
+  industry: '',
+  location: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+}
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
 
 const EnhancedRegister = () => {
   const [regRole, setRegRole] = useState('student')
-  const [formData, setFormData] = useState({
-    // Student fields
-    studentId: '',
-    firstName: '',
-    lastName: '',
-    university: '',
-    faculty: '',
-    specialization: 'Computer Science',
-    gpa: '',
-    phone: '',
-    linkedin: '',
-    github: '',
-    // Company fields
-    name: '',
-    industry: '',
-    location: '',
-    website: '',
-    phoneCompany: '',
-    // Common fields
-    email: '',
-    password: '',
-    confirmPassword: ''
-  })
+  const [formData, setFormData] = useState(initialFormData)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState(initialErrors)
   const navigate = useNavigate()
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+  const handleChange = (event) => {
+    const { name, value } = event.target
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value
+    }))
+
+    if (fieldErrors[name]) {
+      setFieldErrors((previous) => ({ ...previous, [name]: '' }))
+    }
   }
 
-  const isStrongPassword = (password) => {
-    // Must match backend rule: min 8 chars, uppercase, lowercase, number
-    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)
+  const validateForm = () => {
+    const nextErrors = { ...initialErrors }
+
+    if (regRole === 'student') {
+      if (!formData.firstName.trim()) nextErrors.firstName = 'First name is required.'
+      if (!formData.lastName.trim()) nextErrors.lastName = 'Last name is required.'
+      if (!formData.studentId.trim()) nextErrors.studentId = 'Student ID is required.'
+      if (!formData.faculty.trim()) nextErrors.faculty = 'Faculty is required.'
+    }
+
+    if (regRole === 'company') {
+      if (!formData.name.trim()) nextErrors.name = 'Company name is required.'
+      if (!formData.industry.trim()) nextErrors.industry = 'Industry is required.'
+      if (!formData.location.trim()) nextErrors.location = 'Location is required.'
+    }
+
+    if (!formData.email.trim()) {
+      nextErrors.email = 'Email is required.'
+    } else if (!emailRegex.test(formData.email.trim())) {
+      nextErrors.email = 'Enter a valid email address.'
+    }
+
+    if (!formData.password) {
+      nextErrors.password = 'Password is required.'
+    } else if (!passwordRegex.test(formData.password)) {
+      nextErrors.password = 'Password must be at least 8 characters and include letters and numbers.'
+    }
+
+    if (!formData.confirmPassword) {
+      nextErrors.confirmPassword = 'Please confirm your password.'
+    } else if (formData.confirmPassword !== formData.password) {
+      nextErrors.confirmPassword = 'Passwords do not match.'
+    }
+
+    setFieldErrors(nextErrors)
+    return Object.values(nextErrors).every((value) => value === '')
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setSubmitError('')
+
+    if (!validateForm()) {
+      return
+    }
+
     setLoading(true)
-    setError('')
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
-    }
-
-    if (!isStrongPassword(formData.password)) {
-      setError('Password must be at least 8 characters and include uppercase, lowercase, and a number')
-      setLoading(false)
-      return
-    }
 
     try {
       const endpoint = regRole === 'student' ? '/auth/register' : '/company/register'
-      
-      let submitData
-      if (regRole === 'student') {
-        submitData = {
-          studentId: formData.studentId,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          university: formData.university,
-          faculty: formData.faculty,
-          specialization: formData.specialization,
-          gpa: formData.gpa ? parseFloat(formData.gpa) : undefined,
-          phone: formData.phone,
-          linkedin: formData.linkedin,
-          github: formData.github
-        }
-      } else {
-        submitData = {
-          name: formData.name,
-          industry: formData.industry,
-          email: formData.email,
-          password: formData.password,
-          location: formData.location,
-          website: formData.website,
-          phone: formData.phoneCompany
-        }
-      }
+
+      const submitData =
+        regRole === 'student'
+          ? {
+              studentId: formData.studentId,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              password: formData.password,
+              faculty: formData.faculty,
+              specialization: formData.specialization,
+              phone: formData.phone,
+              linkedin: formData.linkedin,
+              github: formData.github
+            }
+          : {
+              name: formData.name,
+              industry: formData.industry,
+              email: formData.email,
+              password: formData.password,
+              location: formData.location,
+              website: formData.website,
+              phone: formData.phoneCompany
+            }
 
       const response = await api.post(endpoint, submitData)
-      
+
       if (response.data.success) {
         localStorage.setItem('token', response.data.data.token)
         if (regRole === 'student') {
           localStorage.setItem('student', JSON.stringify(response.data.data))
-        } else {
-          localStorage.setItem('user', JSON.stringify(response.data.data))
-        }
-        localStorage.setItem('role', regRole)
-        
-        if (regRole === 'student') {
+          localStorage.setItem('role', 'student')
           navigate('/profile')
         } else {
+          localStorage.setItem('user', JSON.stringify(response.data.data))
+          localStorage.setItem('role', 'company')
           navigate('/company-dashboard')
         }
       }
-    } catch (err) {
-      const backendErrors = err.response?.data?.errors
+    } catch (error) {
+      const backendErrors = error.response?.data?.errors
       if (Array.isArray(backendErrors) && backendErrors.length > 0) {
-        setError(backendErrors.join(', '))
+        setSubmitError(backendErrors.join(', '))
       } else {
-        setError(err.response?.data?.message || 'Registration failed')
+        setSubmitError(error.response?.data?.message || 'Registration failed')
       }
     } finally {
       setLoading(false)
@@ -121,383 +213,287 @@ const EnhancedRegister = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-white font-bold text-xl mb-4">
-            IC
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">InternConnect</h1>
-          <p className="text-gray-600">Join the platform that connects talent with opportunity</p>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/logo_icon_only.png"
+              alt="InternConnect logo"
+              className="h-10 w-10 rounded-lg border border-gray-200 object-cover"
+            />
+            <span className="text-xl font-bold tracking-tight text-gray-900">InternConnect</span>
+          </Link>
+
+          <Link
+            to="/"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-all duration-300 hover:border-blue-400 hover:text-blue-700 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
+          >
+            Back to Home
+          </Link>
+        </div>
+      </header>
+
+      <main className="relative flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-24 -left-20 h-64 w-64 rounded-full bg-blue-100/60 blur-3xl" />
+          <div className="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
         </div>
 
-        {/* Register Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Account</h2>
-
-          {/* Role Toggle */}
-          <div className="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl p-1 mb-8">
-            <button
-              onClick={() => setRegRole('student')}
-              className={`py-3 px-4 rounded-lg font-semibold transition-all ${
-                regRole === 'student'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-              </svg>
-              Student
-            </button>
-            <button
-              onClick={() => setRegRole('company')}
-              className={`py-3 px-4 rounded-lg font-semibold transition-all ${
-                regRole === 'company'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-              Company
-            </button>
+        <div className="relative w-full max-w-2xl space-y-6">
+          <div className="text-center">
+            <img
+              src="/logo_icon_only.png"
+              alt="InternConnect logo mark"
+              className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-gray-200 bg-white object-cover p-2 shadow-sm"
+            />
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Create your account</h1>
+            <p className="mt-2 text-sm text-gray-600">Join InternConnect and start your internship journey.</p>
           </div>
 
-          {/* Error Alert */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center">
-              <svg className="w-5 h-5 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2" />
-                <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2" />
-              </svg>
-              <span className="text-red-800 font-medium">{error}</span>
+          <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Account setup</h2>
             </div>
-          )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {regRole === 'student' ? (
-              // Student Fields
-              <>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
+            <div className="mb-8 grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setRegRole('student')}
+                className={`rounded-lg px-4 py-3 text-sm font-semibold transition-all ${
+                  regRole === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <User className="mr-2 inline h-4 w-4" />
+                Student
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegRole('company')}
+                className={`rounded-lg px-4 py-3 text-sm font-semibold transition-all ${
+                  regRole === 'company' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Building2 className="mr-2 inline h-4 w-4" />
+                Company
+              </button>
+            </div>
+
+            {submitError ? (
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {submitError}
+              </div>
+            ) : null}
+
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              {regRole === 'student' ? (
+                <>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="First Name"
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Ahmad"
                       required
+                      error={fieldErrors.firstName}
+                      icon={<User className="h-4 w-4" />}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
+                    <Field
+                      label="Last Name"
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Razin"
                       required
+                      error={fieldErrors.lastName}
+                      icon={<User className="h-4 w-4" />}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Student ID
-                  </label>
-                  <input
-                    type="text"
+                  <Field
+                    label="Student ID"
                     name="studentId"
                     value={formData.studentId}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="A22101234"
                     required
+                    error={fieldErrors.studentId}
+                    icon={<User className="h-4 w-4" />}
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    University
-                  </label>
-                  <input
-                    type="text"
-                    name="university"
-                    value={formData.university}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Universiti Teknologi Malaysia"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Faculty
-                    </label>
-                    <input
-                      type="text"
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="Faculty"
                       name="faculty"
                       value={formData.faculty}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Faculty of Computing"
                       required
+                      error={fieldErrors.faculty}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Specialization
-                    </label>
-                    <select
+                    <Field
+                      label="Specialization"
                       name="specialization"
                       value={formData.specialization}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Computer Science">Computer Science</option>
-                      <option value="Software Engineering">Software Engineering</option>
-                      <option value="Data Science">Data Science</option>
-                      <option value="Multimedia">Multimedia</option>
-                      <option value="Cybersecurity">Cybersecurity</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    GPA (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    name="gpa"
-                    value={formData.gpa}
-                    onChange={handleChange}
-                    step="0.01"
-                    min="0"
-                    max="4"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="3.75"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone (Optional)
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="+94 77 123 4567"
+                      options={['Computer Science', 'Software Engineering', 'Data Science', 'Multimedia', 'Cybersecurity']}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      LinkedIn (Optional)
-                    </label>
-                    <input
-                      type="url"
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="Phone (Optional)"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+94 77 123 4567"
+                      icon={<Phone className="h-4 w-4" />}
+                    />
+                    <Field
+                      label="LinkedIn (Optional)"
                       name="linkedin"
+                      type="url"
                       value={formData.linkedin}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="https://linkedin.com/in/username"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    GitHub (Optional)
-                  </label>
-                  <input
-                    type="url"
+                  <Field
+                    label="GitHub (Optional)"
                     name="github"
+                    type="url"
                     value={formData.github}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="https://github.com/username"
                   />
-                </div>
-              </>
-            ) : (
-              // Company Fields
-              <>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
+                </>
+              ) : (
+                <>
+                  <Field
+                    label="Company Name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="TechNova Sdn Bhd"
                     required
+                    error={fieldErrors.name}
+                    icon={<Building2 className="h-4 w-4" />}
                   />
-                </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Industry
-                    </label>
-                    <input
-                      type="text"
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="Industry"
                       name="industry"
                       value={formData.industry}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Technology"
                       required
+                      error={fieldErrors.industry}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Location
-                    </label>
-                    <input
-                      type="text"
+                    <Field
+                      label="Location"
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Kuala Lumpur"
                       required
+                      error={fieldErrors.location}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Website
-                  </label>
-                  <input
-                    type="url"
+                  <Field
+                    label="Website (Optional)"
                     name="website"
+                    type="url"
                     value={formData.website}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="https://company.com"
                   />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone (Optional)
-                  </label>
-                  <input
-                    type="tel"
+                  <Field
+                    label="Phone (Optional)"
                     name="phoneCompany"
+                    type="tel"
                     value={formData.phoneCompany}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="+94 77 123 4567"
+                    icon={<Phone className="h-4 w-4" />}
                   />
-                </div>
-              </>
-            )}
+                </>
+              )}
 
-            {/* Common Fields */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
+              <Field
+                label="Email Address"
                 name="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="you@email.com"
                 required
+                error={fieldErrors.email}
+                icon={<Mail className="h-4 w-4" />}
               />
-            </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <Field
+                  label="Password"
                   name="password"
+                  type="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Min. 8, Aa1 format"
+                  placeholder="Minimum 8 characters with letters and numbers"
                   required
+                  error={fieldErrors.password}
+                  icon={<LockKeyhole className="h-4 w-4" />}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
+                <Field
+                  label="Confirm Password"
                   name="confirmPassword"
+                  type="password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Repeat password"
                   required
+                  error={fieldErrors.confirmPassword}
+                  icon={<LockKeyhole className="h-4 w-4" />}
                 />
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating Account...
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" />
-                  </svg>
-                  Create Account
-                </div>
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-indigo-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
 
-          {/* Login Link */}
-          <div className="mt-8 text-center">
-            <span className="text-gray-600">Already have an account? </span>
-            <button
-              onClick={() => navigate('/login')}
-              className="text-blue-600 font-semibold hover:text-blue-700"
-            >
-              Sign in
-            </button>
-          </div>
+            <p className="mt-8 text-center text-sm text-gray-600">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="font-semibold text-blue-600 transition-colors duration-300 hover:text-blue-700"
+              >
+                Sign in
+              </button>
+            </p>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

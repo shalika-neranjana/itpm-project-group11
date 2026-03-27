@@ -33,6 +33,8 @@ function LoginPage() {
   const [submitError, setSubmitError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' })
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   useEffect(() => {
     setRole(detectUserRole(email))
   }, [email])
@@ -42,6 +44,8 @@ function LoginPage() {
 
     if (!email.trim()) {
       nextErrors.email = 'Email is required.'
+    } else if (!emailRegex.test(email.trim())) {
+      nextErrors.email = 'Enter a valid email address.'
     }
 
     if (!password.trim()) {
@@ -95,19 +99,47 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-white px-4 py-10">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-            <span className="text-lg font-bold tracking-wide">IC</span>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">InternConnect</h1>
-          <p className="mt-2 text-sm text-gray-500">Sign in to continue managing your internship workflow.</p>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/logo_icon_only.png"
+              alt="InternConnect logo"
+              className="h-10 w-10 rounded-lg border border-gray-200 object-cover"
+            />
+            <span className="text-xl font-bold tracking-tight text-gray-900">InternConnect</span>
+          </Link>
+
+          <Link
+            to="/"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-all duration-300 hover:border-blue-400 hover:text-blue-700 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2"
+          >
+            Back to Home
+          </Link>
+        </div>
+      </header>
+
+      <main className="relative flex min-h-[calc(100vh-73px)] items-center justify-center px-4 py-10">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-24 -left-20 h-64 w-64 rounded-full bg-blue-100/60 blur-3xl" />
+          <div className="absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-indigo-100/60 blur-3xl" />
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-lg">
+        <div className="relative w-full max-w-md space-y-6">
+          <div className="text-center">
+            <img
+              src="/logo_icon_only.png"
+              alt="InternConnect logo mark"
+              className="mx-auto mb-4 h-16 w-16 rounded-2xl border border-gray-200 bg-white object-cover p-2 shadow-sm"
+            />
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Welcome back</h1>
+            <p className="mt-2 text-sm text-gray-600">Sign in to continue managing your internship workflow.</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
           <div className="mb-6 flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+            <h2 className="text-xl font-bold text-gray-900">Login</h2>
           </div>
 
           {submitError ? (
@@ -168,7 +200,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-indigo-600 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>
@@ -195,7 +227,8 @@ function LoginPage() {
             </Link>
           </p>
         </div>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
