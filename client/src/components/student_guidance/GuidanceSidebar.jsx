@@ -16,7 +16,7 @@ function GuidanceSidebar({ activeTab, onChange }) {
               key={tab.key}
               type="button"
               onClick={() => onChange(tab.key)}
-              className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
+              className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 ${
                 isActive
                   ? 'bg-[#EEF2FD] text-[#3B6FE8]'
                   : 'text-[#4B5563] hover:bg-[#F7F8FA] hover:text-[#1A1D27]'

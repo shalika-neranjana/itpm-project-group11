@@ -2,12 +2,23 @@ import { useEffect, useState } from 'react'
 import { skillCategories, skillLevels } from './constants'
 
 const emptySkill = { name: '', category: skillCategories[0], level: skillLevels[0] }
+const levelPriority = {
+  Beginner: 1,
+  Intermediate: 2,
+  Advanced: 3,
+}
+
+const levelTagClass = {
+  Beginner: 'bg-emerald-50 text-emerald-700',
+  Intermediate: 'bg-amber-50 text-amber-700',
+  Advanced: 'bg-violet-50 text-violet-700',
+}
 
 function IconButton({ onClick, label, tone = 'default', disabled = false, children }) {
   const toneClass =
     tone === 'danger'
-      ? 'border-red-200 text-red-600 hover:bg-red-50'
-      : 'border-[#D4E0FA] text-[#3B6FE8] hover:bg-[#EEF2FD]'
+      ? 'border-red-200 text-red-600 hover:bg-red-50 focus-visible:ring-red-200'
+      : 'border-[#D4E0FA] text-[#3B6FE8] hover:bg-[#EEF2FD] focus-visible:ring-[#8DB2FF]'
 
   return (
     <button
@@ -15,7 +26,7 @@ function IconButton({ onClick, label, tone = 'default', disabled = false, childr
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-[10px] border transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-[10px] border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
     >
       {children}
     </button>
@@ -56,6 +67,10 @@ function SkillsSection({ skills, onSave, saving }) {
   const [skillMode, setSkillMode] = useState('add')
   const [activeSkillIndex, setActiveSkillIndex] = useState(null)
   const [skillForm, setSkillForm] = useState(emptySkill)
+  const [sortBy, setSortBy] = useState('nameAsc')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [levelFilter, setLevelFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     setDraftSkills(skills)
@@ -115,6 +130,46 @@ function SkillsSection({ skills, onSave, saving }) {
     await persistSkills(nextSkills)
   }
 
+  const displayedSkills = draftSkills
+    .map((skill, index) => ({ ...skill, originalIndex: index }))
+    .filter((skill) => {
+      const query = searchTerm.trim().toLowerCase()
+
+      if (!query) {
+        return true
+      }
+
+      return (
+        skill.name.toLowerCase().includes(query) ||
+        skill.category.toLowerCase().includes(query) ||
+        skill.level.toLowerCase().includes(query)
+      )
+    })
+    .filter((skill) => (categoryFilter === 'all' ? true : skill.category === categoryFilter))
+    .filter((skill) => (levelFilter === 'all' ? true : skill.level === levelFilter))
+    .sort((a, b) => {
+      if (sortBy === 'nameAsc') {
+        return a.name.localeCompare(b.name)
+      }
+
+      if (sortBy === 'nameDesc') {
+        return b.name.localeCompare(a.name)
+      }
+
+      if (sortBy === 'levelHigh') {
+        return (levelPriority[b.level] ?? 0) - (levelPriority[a.level] ?? 0)
+      }
+
+      if (sortBy === 'levelLow') {
+        return (levelPriority[a.level] ?? 0) - (levelPriority[b.level] ?? 0)
+      }
+
+      return 0
+    })
+
+  const getLevelTagClass = (level) => levelTagClass[level] ?? 'bg-[#EEF2FD] text-[#3B6FE8]'
+  const levelColumns = ['Beginner', 'Intermediate', 'Advanced']
+
   return (
     <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col gap-2 border-b border-[#E8EAF0] pb-5">
@@ -125,58 +180,142 @@ function SkillsSection({ skills, onSave, saving }) {
       </div>
 
       <div className="mt-6 space-y-6">
-        <div className="flex justify-end">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search skills..."
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition placeholder:text-[#9CA3AF] hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            />
+
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="nameAsc">Sort: Name (A-Z)</option>
+              <option value="nameDesc">Sort: Name (Z-A)</option>
+              <option value="levelHigh">Sort: Level (High-Low)</option>
+              <option value="levelLow">Sort: Level (Low-High)</option>
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="all">All Categories</option>
+              {skillCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={levelFilter}
+              onChange={(event) => setLevelFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="all">All Levels</option>
+              {skillLevels.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end">
           <button
             type="button"
             onClick={openAddSkillModal}
             disabled={saving}
-            className="rounded-[10px] border border-[#D4E0FA] px-4 py-3 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#EEF2FD]"
+            className="rounded-[10px] border border-[#D4E0FA] px-4 py-3 text-sm font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
           >
             Add Skill
           </button>
+          </div>
         </div>
 
         {draftSkills.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {draftSkills.map((skill, index) => (
-              <article
-                key={`${skill.name}-${skill.level}-${index}`}
-                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5"
-              >
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
-                    <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
-                    <span className="mt-2 inline-flex rounded-full bg-[#EEF2FD] px-2.5 py-1 text-xs font-semibold text-[#3B6FE8]">
-                      {skill.level}
+          <div className="grid gap-4 xl:grid-cols-3">
+            {levelColumns.map((level) => {
+              const levelItems = displayedSkills.filter((skill) => skill.level === level)
+
+              return (
+                <section key={level} className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5">
+                  <div className="flex items-center justify-between border-b border-[#E8EAF0] pb-3">
+                    <h3 className="text-sm font-semibold text-[#1A1D27]">{level}</h3>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(level)}`}
+                    >
+                      {levelItems.length}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <IconButton
-                      onClick={() => openEditSkillModal(index)}
-                      label="Edit skill"
-                      disabled={saving}
-                    >
-                      <PencilIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleSkillDelete(index)}
-                      label="Delete skill"
-                      tone="danger"
-                      disabled={saving}
-                    >
-                      <TrashIcon />
-                    </IconButton>
+                  <div className="mt-3 space-y-3">
+                    {levelItems.length > 0 ? (
+                      levelItems.map((skill) => (
+                        <article
+                          key={`${skill.name}-${skill.level}-${skill.originalIndex}`}
+                          className="rounded-2xl border border-[#E8EAF0] bg-white p-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
+                              <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
+                              <span
+                                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(skill.level)}`}
+                              >
+                                {skill.level}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <IconButton
+                                onClick={() => openEditSkillModal(skill.originalIndex)}
+                                label="Edit skill"
+                                disabled={saving}
+                              >
+                                <PencilIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleSkillDelete(skill.originalIndex)}
+                                label="Delete skill"
+                                tone="danger"
+                                disabled={saving}
+                              >
+                                <TrashIcon />
+                              </IconButton>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-4 text-center text-sm text-[#6B7280]">
+                        No {level.toLowerCase()} skills.
+                      </p>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+                </section>
+              )
+            })}
+          </div>
+        ) : null}
+
+        {draftSkills.length > 0 && displayedSkills.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
+            No skills match the selected sort and filter options.
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
-            No skills added yet.
-          </div>
+          draftSkills.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
+              No skills added yet.
+            </div>
+          )
         )}
 
       </div>
@@ -200,7 +339,7 @@ function SkillsSection({ skills, onSave, saving }) {
                   }
                   required
                   placeholder="e.g., React"
-                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
                 />
               </div>
 
@@ -212,7 +351,7 @@ function SkillsSection({ skills, onSave, saving }) {
                     onChange={(event) =>
                       setSkillForm((current) => ({ ...current, category: event.target.value }))
                     }
-                    className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                    className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
                   >
                     {skillCategories.map((category) => (
                       <option key={category} value={category}>
@@ -229,7 +368,7 @@ function SkillsSection({ skills, onSave, saving }) {
                     onChange={(event) =>
                       setSkillForm((current) => ({ ...current, level: event.target.value }))
                     }
-                    className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                    className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
                   >
                     {skillLevels.map((level) => (
                       <option key={level} value={level}>
@@ -244,14 +383,14 @@ function SkillsSection({ skills, onSave, saving }) {
                 <button
                   type="button"
                   onClick={() => setShowSkillModal(false)}
-                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:bg-[#F7F8FA]"
+                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:border-[#CAD8F5] hover:bg-[#F7F8FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CAD8F5] focus-visible:ring-offset-2"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
+                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
                 >
                   {saving ? 'Saving...' : skillMode === 'edit' ? 'Update' : 'Add'}
                 </button>

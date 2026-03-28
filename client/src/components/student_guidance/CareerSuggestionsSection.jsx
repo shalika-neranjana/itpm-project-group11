@@ -1,3 +1,7 @@
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { careerRoadmaps } from './careerRoadmaps'
+
 const normalizeScore = (value) => {
   const parsed = Number.parseInt(String(value).replace(/[^\d]/g, ''), 10)
   if (Number.isNaN(parsed)) {
@@ -11,6 +15,7 @@ const getScoreTone = (score) => {
     return {
       badge: 'bg-[#E8F7EE] text-[#127A3A]',
       bar: 'from-[#1E9A52] to-[#38C172]',
+      accent: 'border-l-[#21A365] bg-gradient-to-br from-white to-[#F4FBF7]',
       label: 'Strong match',
     }
   }
@@ -19,6 +24,7 @@ const getScoreTone = (score) => {
     return {
       badge: 'bg-[#FFF5E8] text-[#A15C06]',
       bar: 'from-[#D9932E] to-[#F2B44A]',
+      accent: 'border-l-[#D9932E] bg-gradient-to-br from-white to-[#FFF9F0]',
       label: 'Promising fit',
     }
   }
@@ -26,14 +32,56 @@ const getScoreTone = (score) => {
   return {
     badge: 'bg-[#F2F4F8] text-[#4B5563]',
     bar: 'from-[#8B97A9] to-[#AAB4C2]',
+    accent: 'border-l-[#8B97A9] bg-gradient-to-br from-white to-[#F8FAFC]',
     label: 'Needs growth',
   }
 }
 
-function CareerSuggestionsSection({ aspirations, interests, skills, careerSuggestions }) {
-  const topScore = careerSuggestions.length
-    ? Math.max(...careerSuggestions.map((career) => normalizeScore(career.matchScore)))
+function CareerSuggestionsSection({ aspirations, interests, skills }) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('scoreHigh')
+  const effectiveCareerSuggestions = careerRoadmaps
+
+  const topScore = effectiveCareerSuggestions.length
+    ? Math.max(...effectiveCareerSuggestions.map((career) => normalizeScore(career.matchScore)))
     : 0
+
+  const visibleSuggestions = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+
+    return [...effectiveCareerSuggestions]
+      .filter((career) => {
+        const score = normalizeScore(career.matchScore)
+        const tone = getScoreTone(score).label
+        const matchesSearch =
+          !query ||
+          career.title.toLowerCase().includes(query) ||
+          String(career.summary || '').toLowerCase().includes(query) ||
+          career.matchedAreas.some((area) => area.toLowerCase().includes(query))
+        const matchesStatus = statusFilter === 'all' || tone === statusFilter
+
+        return matchesSearch && matchesStatus
+      })
+      .sort((a, b) => {
+        const scoreA = normalizeScore(a.matchScore)
+        const scoreB = normalizeScore(b.matchScore)
+
+        if (sortBy === 'scoreLow') {
+          return scoreA - scoreB
+        }
+
+        if (sortBy === 'titleAsc') {
+          return a.title.localeCompare(b.title)
+        }
+
+        if (sortBy === 'titleDesc') {
+          return b.title.localeCompare(a.title)
+        }
+
+        return scoreB - scoreA
+      })
+  }, [effectiveCareerSuggestions, searchTerm, sortBy, statusFilter])
 
   return (
     <div className="space-y-6">
@@ -77,16 +125,57 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
         </div>
       </section>
 
-      {careerSuggestions.length > 0 ? (
+      {effectiveCareerSuggestions.length > 0 ? (
+        <section className="rounded-2xl border border-[#E8EAF0] bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search roles or keywords..."
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition placeholder:text-[#9CA3AF] hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            />
+
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="all">All statuses</option>
+              <option value="Strong match">Strong match</option>
+              <option value="Promising fit">Promising fit</option>
+              <option value="Needs growth">Needs growth</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="scoreHigh">Sort: Match score (high to low)</option>
+              <option value="scoreLow">Sort: Match score (low to high)</option>
+              <option value="titleAsc">Sort: Role title (A-Z)</option>
+              <option value="titleDesc">Sort: Role title (Z-A)</option>
+            </select>
+
+            <div className="rounded-[10px] border border-[#E3EAF8] bg-[#F7FAFF] px-3 py-2 text-sm text-[#5F6C80]">
+              Showing <span className="font-semibold text-[#1A1D27]">{visibleSuggestions.length}</span> of{' '}
+              <span className="font-semibold text-[#1A1D27]">{effectiveCareerSuggestions.length}</span> roles
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {effectiveCareerSuggestions.length > 0 ? (
         <div className="grid gap-5 xl:grid-cols-3">
-          {careerSuggestions.map((career) => {
+          {visibleSuggestions.map((career) => {
             const score = normalizeScore(career.matchScore)
             const tone = getScoreTone(score)
 
             return (
               <article
                 key={career.title}
-                className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(22,34,57,0.08)]"
+                className={`rounded-2xl border border-l-4 border-[#E8EAF0] p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(22,34,57,0.08)] ${tone.accent}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-xl font-bold text-[#1A1D27]">{career.title}</h3>
@@ -100,7 +189,7 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
                     <span>Match Score</span>
                     <span className="text-[#1A1D27]">{score}%</span>
                   </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#EEF2F8]">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E8EEF7]">
                     <div
                       className={`h-full rounded-full bg-gradient-to-r ${tone.bar}`}
                       style={{ width: `${score}%` }}
@@ -109,6 +198,12 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-[#5F6C80]">{career.summary}</p>
+                <Link
+                  to={`/student-guidance/career/${career.id}`}
+                  className="mt-3 inline-flex rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
+                >
+                  View comprehensive guide
+                </Link>
 
                 <div className="mt-5">
                   <p className="text-sm font-semibold text-[#1A1D27]">Why the AI recommends this</p>
@@ -134,6 +229,15 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
           <h3 className="font-display text-xl font-bold text-[#1A1D27]">No AI suggestions yet</h3>
           <p className="mt-2 text-sm text-[#6B7280]">
             Add interests, skills, and aspiration notes to unlock personalized career recommendations.
+          </p>
+        </section>
+      )}
+
+      {effectiveCareerSuggestions.length > 0 && visibleSuggestions.length === 0 && (
+        <section className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
+          <h3 className="font-display text-xl font-bold text-[#1A1D27]">No matching career suggestions</h3>
+          <p className="mt-2 text-sm text-[#6B7280]">
+            Try changing the search text, status filter, or sorting option.
           </p>
         </section>
       )}

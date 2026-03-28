@@ -152,7 +152,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
           <button
             type="button"
             onClick={handleClearChat}
-            className="rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:bg-[#EEF2FD]"
+            className="rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
           >
             Clear Chat
           </button>
@@ -198,14 +198,14 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
               onChange={(event) => setInput(event.target.value)}
               placeholder="Ask about profile improvements, internship readiness, or career direction..."
               rows={3}
-              className="w-full resize-none rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+              className="w-full resize-none rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
             />
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-[#8092B5]">Enter your message and press Send.</p>
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
-                className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Send
               </button>
@@ -223,7 +223,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
                   type="button"
                   onClick={() => sendMessage(prompt)}
                   disabled={isTyping}
-                  className="rounded-full border border-[#D4E0FA] bg-white px-3 py-1.5 text-xs font-semibold text-[#3B6FE8] transition hover:bg-[#EEF2FD] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full border border-[#D4E0FA] bg-white px-3 py-1.5 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {prompt}
                 </button>

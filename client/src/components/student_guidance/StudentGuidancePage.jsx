@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   fetchStudentGuidance,
   updateStudentInterests,
@@ -12,6 +13,7 @@ import InterestsSection from './InterestsSection'
 import SkillsSection from './SkillsSection'
 
 function StudentGuidancePage() {
+  const location = useLocation()
   const [activeTab, setActiveTab] = useState('examResults')
   const [guidance, setGuidance] = useState({
     examResults: [],
@@ -36,6 +38,15 @@ function StudentGuidancePage() {
       return { name: 'Student', studentId: '', email: '' }
     }
   }, [])
+
+  useEffect(() => {
+    const requestedTab = location.state?.guidanceTab
+    const allowedTabs = ['examResults', 'interests', 'skills', 'askInternConnect', 'careers']
+
+    if (requestedTab && allowedTabs.includes(requestedTab)) {
+      setActiveTab(requestedTab)
+    }
+  }, [location.state])
 
   useEffect(() => {
     const loadGuidance = async () => {

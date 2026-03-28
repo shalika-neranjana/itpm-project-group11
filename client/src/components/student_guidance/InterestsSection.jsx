@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react'
 import { interestCategories } from './constants'
 
 const emptyInterest = { name: '', category: interestCategories[0] }
+const interestCategoryTagClass = {
+  Technology: 'bg-sky-50 text-sky-700',
+  Design: 'bg-fuchsia-50 text-fuchsia-700',
+  Analytics: 'bg-indigo-50 text-indigo-700',
+  Business: 'bg-emerald-50 text-emerald-700',
+  Communication: 'bg-amber-50 text-amber-700',
+}
 
 function IconButton({ onClick, label, tone = 'default', disabled = false, children }) {
   const toneClass =
     tone === 'danger'
-      ? 'border-red-200 text-red-600 hover:bg-red-50'
-      : 'border-[#D4E0FA] text-[#3B6FE8] hover:bg-[#EEF2FD]'
+      ? 'border-red-200 text-red-600 hover:bg-red-50 focus-visible:ring-red-200'
+      : 'border-[#D4E0FA] text-[#3B6FE8] hover:bg-[#EEF2FD] focus-visible:ring-[#8DB2FF]'
 
   return (
     <button
@@ -15,7 +22,7 @@ function IconButton({ onClick, label, tone = 'default', disabled = false, childr
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-[10px] border transition disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-[10px] border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${toneClass}`}
     >
       {children}
     </button>
@@ -59,6 +66,8 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
   const [interestForm, setInterestForm] = useState(emptyInterest)
   const [showAspirationModal, setShowAspirationModal] = useState(false)
   const [aspirationForm, setAspirationForm] = useState('')
+  const [interestSearch, setInterestSearch] = useState('')
+  const [interestCategoryFilter, setInterestCategoryFilter] = useState('all')
 
   useEffect(() => {
     setDraftInterests(interests)
@@ -140,6 +149,21 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
     await persistInterestChanges(draftInterests, '')
   }
 
+  const filteredInterests = draftInterests.map((interest, index) => ({ ...interest, originalIndex: index })).filter((interest) => {
+    const query = interestSearch.trim().toLowerCase()
+    const matchesSearch =
+      !query ||
+      interest.name.toLowerCase().includes(query) ||
+      interest.category.toLowerCase().includes(query)
+    const matchesCategory =
+      interestCategoryFilter === 'all' || interest.category === interestCategoryFilter
+
+    return matchesSearch && matchesCategory
+  })
+
+  const getInterestTagClass = (category) =>
+    interestCategoryTagClass[category] ?? 'bg-[#EEF2FD] text-[#3B6FE8]'
+
   return (
     <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col gap-2 border-b border-[#E8EAF0] pb-5">
@@ -150,42 +174,67 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
       </div>
 
       <div className="mt-6 space-y-6">
-        <div className="flex justify-end">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="text"
+              value={interestSearch}
+              onChange={(event) => setInterestSearch(event.target.value)}
+              placeholder="Search interests..."
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition placeholder:text-[#9CA3AF] hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            />
+
+            <select
+              value={interestCategoryFilter}
+              onChange={(event) => setInterestCategoryFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
+            >
+              <option value="all">All Categories</option>
+              {interestCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end">
           <button
             type="button"
             onClick={openAddInterestModal}
             disabled={saving}
-            className="rounded-[10px] border border-[#D4E0FA] px-4 py-3 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#EEF2FD]"
+            className="rounded-[10px] border border-[#D4E0FA] px-4 py-3 text-sm font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
           >
             Add Interest
           </button>
+          </div>
         </div>
 
         {draftInterests.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {draftInterests.map((interest, index) => (
+            {filteredInterests.map((interest) => (
               <article
-                key={`${interest.name}-${index}`}
-                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5"
+                key={`${interest.name}-${interest.originalIndex}`}
+                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4 transition hover:-translate-y-0.5 hover:border-[#D4E0FA] hover:shadow-[0_6px_18px_rgba(26,29,39,0.08)]"
               >
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1A1D27] break-words">{interest.name}</p>
-                    <span className="mt-1.5 inline-flex rounded-full bg-[#EEF2FD] px-2.5 py-1 text-xs font-semibold text-[#3B6FE8]">
+                    <p className="text-xl font-semibold text-[#1A1D27] break-words">{interest.name}</p>
+                    <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getInterestTagClass(interest.category)}`}>
                       {interest.category}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <IconButton
-                      onClick={() => openEditInterestModal(index)}
+                      onClick={() => openEditInterestModal(interest.originalIndex)}
                       label="Edit interest"
                       disabled={saving}
                     >
                       <PencilIcon />
                     </IconButton>
                     <IconButton
-                      onClick={() => handleDeleteInterest(index)}
+                      onClick={() => handleDeleteInterest(interest.originalIndex)}
                       label="Delete interest"
                       tone="danger"
                       disabled={saving}
@@ -197,17 +246,25 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
               </article>
             ))}
           </div>
+        ) : null}
+
+        {draftInterests.length > 0 && filteredInterests.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
+            No interests match your search or filter.
+          </div>
         ) : (
+          draftInterests.length === 0 && (
           <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
             No interests added yet.
           </div>
+          )
         )}
 
-        <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-5">
+        <div className="rounded-2xl border border-[#E8EAF0] bg-gradient-to-br from-[#FCFCFD] to-[#F7FAFF] p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[#1A1D27]">Career Aspiration Note</p>
-              <p className="mt-2 text-sm leading-6 text-[#6B7280]">
+              <p className="text-base font-semibold text-[#1A1D27]">Career Aspiration Note</p>
+              <p className="mt-2 max-h-44 overflow-auto pr-2 text-sm leading-7 text-[#6B7280]">
                 {draftAspirations || 'Add your aspiration note to guide smarter career recommendations.'}
               </p>
             </div>
@@ -249,7 +306,7 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
                   }
                   required
                   placeholder="e.g., Product Design"
-                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
                 />
               </div>
 
@@ -260,7 +317,7 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
                   onChange={(event) =>
                     setInterestForm((current) => ({ ...current, category: event.target.value }))
                   }
-                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                  className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
                 >
                   {interestCategories.map((category) => (
                     <option key={category} value={category}>
@@ -274,14 +331,14 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
                 <button
                   type="button"
                   onClick={() => setShowInterestModal(false)}
-                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:bg-[#F7F8FA]"
+                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:border-[#CAD8F5] hover:bg-[#F7F8FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CAD8F5] focus-visible:ring-offset-2"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
+                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
                 >
                   {saving ? 'Saving...' : interestMode === 'edit' ? 'Update' : 'Add'}
                 </button>
@@ -305,21 +362,21 @@ function InterestsSection({ interests, aspirations, onSave, saving }) {
                 value={aspirationForm}
                 onChange={(event) => setAspirationForm(event.target.value)}
                 placeholder="I want to work on products that improve digital accessibility."
-                className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#3B6FE8]"
+                className="w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm outline-none transition hover:border-[#CAD8F5] focus:border-[#3B6FE8] focus-visible:ring-2 focus-visible:ring-[#BFD4FF]"
               />
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAspirationModal(false)}
-                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:bg-[#F7F8FA]"
+                  className="rounded-[10px] border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] transition hover:border-[#CAD8F5] hover:bg-[#F7F8FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#CAD8F5] focus-visible:ring-offset-2"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
+                  className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#9CB7F5]"
                 >
                   {saving ? 'Saving...' : 'Save Note'}
                 </button>
