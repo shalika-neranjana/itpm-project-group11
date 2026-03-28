@@ -10,13 +10,22 @@ const errorHandler = (err, req, res, next) => {
     const isFileTooLarge = err.code === "LIMIT_FILE_SIZE";
     res.status(400).json({
       success: false,
-      message: isFileTooLarge ? "Image size must be 5MB or less" : err.message,
+      message: isFileTooLarge ? "File size must be 5MB or less" : err.message,
       stack: process.env.NODE_ENV === "production" ? null : err.stack,
     });
     return;
   }
 
   if (err.message === "Only image files are allowed") {
+    res.status(400).json({
+      success: false,
+      message: err.message,
+      stack: process.env.NODE_ENV === "production" ? null : err.stack,
+    });
+    return;
+  }
+
+  if (err.message === "Only PDF files are allowed") {
     res.status(400).json({
       success: false,
       message: err.message,

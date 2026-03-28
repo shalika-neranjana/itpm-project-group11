@@ -491,9 +491,12 @@ const createReviewComment = async (req, res, next) => {
         review.comments.push(newComment);
         await review.save();
 
+        // Get the newly added comment with its _id
+        const addedComment = review.comments[review.comments.length - 1];
+
         res.status(201).json({
             success: true,
-            data: newComment,
+            data: addedComment,
         });
     } catch (error) {
         next(error);

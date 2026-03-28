@@ -16,6 +16,20 @@ const panelClass = 'rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1
 const inputClass =
   'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8]'
 
+const resolveUploadUrl = (pathOrUrl) => {
+  if (!pathOrUrl) {
+    return ''
+  }
+
+  if (pathOrUrl.startsWith('http')) {
+    return pathOrUrl
+  }
+
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+  const origin = base.replace(/\/api\/?$/, '')
+  return `${origin}${pathOrUrl}`
+}
+
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
@@ -404,7 +418,7 @@ const CompanyDashboard = () => {
 
                       {applicant.resume ? (
                         <a
-                          href={applicant.resume}
+                          href={resolveUploadUrl(applicant.resume)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm font-semibold text-[#3B6FE8] transition-colors hover:text-[#2D5CD4]"

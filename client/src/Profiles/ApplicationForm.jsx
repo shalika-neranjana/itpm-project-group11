@@ -11,9 +11,9 @@ const ApplicationForm = () => {
     name: '',
     email: '',
     phone: '',
-    coverLetter: '',
-    resume: ''
+    coverLetter: ''
   })
+  const [resumeFile, setResumeFile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -34,8 +34,7 @@ const ApplicationForm = () => {
       name: `${userData.firstName} ${userData.lastName}`,
       email: userData.email,
       phone: userData.phone || '',
-      coverLetter: '',
-      resume: userData.resume || ''
+      coverLetter: ''
     })
 
     fetchInternship()
@@ -72,8 +71,31 @@ const ApplicationForm = () => {
       return
     }
 
+    if (!resumeFile) {
+      setError('Please upload your resume as a PDF file')
+      setSubmitting(false)
+      return
+    }
+
+    if (resumeFile.type !== 'application/pdf') {
+      setError('Only PDF files are allowed for resume upload')
+      setSubmitting(false)
+      return
+    }
+
     try {
-      const response = await api.post(`/internships/${id}/apply`, formData)
+      const payload = new FormData()
+      payload.append('name', formData.name)
+      payload.append('email', formData.email)
+      payload.append('phone', formData.phone)
+      payload.append('coverLetter', formData.coverLetter)
+      payload.append('resume', resumeFile)
+
+      const response = await api.post(`/internships/${id}/apply`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       
       if (response.data.success) {
         setSuccess('Application submitted successfully!')
@@ -253,16 +275,20 @@ const ApplicationForm = () => {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
-                      Resume URL
+                      Resume (PDF) *
                     </label>
                     <input
-                      type="url"
+                      type="file"
                       name="resume"
-                      value={formData.resume}
-                      onChange={handleChange}
+                      accept=".pdf,application/pdf"
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0] || null
+                        setResumeFile(selectedFile)
+                      }}
                       className="w-full rounded-lg border border-[#D9E2F2] px-4 py-2.5 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/15"
-                      placeholder="Link to your resume (optional)"
+                      required
                     />
+                    <p className="mt-1 text-sm text-[#6B7280]">Only PDF files are accepted.</p>
                   </div>
                 </div>
 

@@ -4,6 +4,7 @@
 
 const Internship = require("../models/Internship");
 const Student = require("../models/Student");
+const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
  * @desc    Get all internships (public)
@@ -265,11 +266,14 @@ const getCompanyInternships = async (req, res, next) => {
  * @access  Private (Student)
  */
 const applyForInternship = async (req, res, next) => {
+    let applicationSaved = false;
+
     try {
         const { name, email, phone, coverLetter, resume } = req.body;
+        const uploadedResume = getUploadedFilePath(req.file, "resumes", resume);
 
         // Validate required fields
-        if (!name || !email || !coverLetter) {
+        if (!name || !email || !coverLetter || !uploadedResume) {
             res.status(400);
             throw new Error("Please provide all required fields");
         }
@@ -298,16 +302,21 @@ const applyForInternship = async (req, res, next) => {
             email,
             phone,
             coverLetter,
-            resume,
+            resume: uploadedResume,
         });
 
         await internship.save();
+        applicationSaved = true;
 
         res.status(201).json({
             success: true,
             message: "Application submitted successfully",
         });
     } catch (error) {
+        if (!applicationSaved) {
+            deleteUploadedFile(req.file);
+        }
+
         next(error);
     }
 };

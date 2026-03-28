@@ -17,6 +17,7 @@ const {
 
 const protect = require("../middleware/authMiddleware");
 const companyAuth = require("../middleware/companyMiddleware");
+const { uploadResumePdf } = require("../middleware/uploadMiddleware");
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ router.get("/", getAllInternships);
 router.get("/:id", getInternshipById);
 
 // Protected routes for students
-router.post("/:id/apply", protect, applyForInternship);
+router.post("/:id/apply", protect, uploadResumePdf, applyForInternship);
 router.get("/applications/my", protect, getStudentApplications);
 
 // Protected routes for companies
