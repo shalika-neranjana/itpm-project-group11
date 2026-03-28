@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { skillCategories, skillLevels } from './constants'
 
 const emptySkill = { name: '', category: skillCategories[0], level: skillLevels[0] }
+const levelPriority = {
+  Beginner: 1,
+  Intermediate: 2,
+  Advanced: 3,
+}
+
+const levelTagClass = {
+  Beginner: 'bg-emerald-50 text-emerald-700',
+  Intermediate: 'bg-amber-50 text-amber-700',
+  Advanced: 'bg-violet-50 text-violet-700',
+}
 
 function IconButton({ onClick, label, tone = 'default', disabled = false, children }) {
   const toneClass =
@@ -56,6 +67,9 @@ function SkillsSection({ skills, onSave, saving }) {
   const [skillMode, setSkillMode] = useState('add')
   const [activeSkillIndex, setActiveSkillIndex] = useState(null)
   const [skillForm, setSkillForm] = useState(emptySkill)
+  const [sortBy, setSortBy] = useState('nameAsc')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [levelFilter, setLevelFilter] = useState('all')
 
   useEffect(() => {
     setDraftSkills(skills)
@@ -115,6 +129,32 @@ function SkillsSection({ skills, onSave, saving }) {
     await persistSkills(nextSkills)
   }
 
+  const displayedSkills = draftSkills
+    .map((skill, index) => ({ ...skill, originalIndex: index }))
+    .filter((skill) => (categoryFilter === 'all' ? true : skill.category === categoryFilter))
+    .filter((skill) => (levelFilter === 'all' ? true : skill.level === levelFilter))
+    .sort((a, b) => {
+      if (sortBy === 'nameAsc') {
+        return a.name.localeCompare(b.name)
+      }
+
+      if (sortBy === 'nameDesc') {
+        return b.name.localeCompare(a.name)
+      }
+
+      if (sortBy === 'levelHigh') {
+        return (levelPriority[b.level] ?? 0) - (levelPriority[a.level] ?? 0)
+      }
+
+      if (sortBy === 'levelLow') {
+        return (levelPriority[a.level] ?? 0) - (levelPriority[b.level] ?? 0)
+      }
+
+      return 0
+    })
+
+  const getLevelTagClass = (level) => levelTagClass[level] ?? 'bg-[#EEF2FD] text-[#3B6FE8]'
+
   return (
     <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col gap-2 border-b border-[#E8EAF0] pb-5">
@@ -125,7 +165,47 @@ function SkillsSection({ skills, onSave, saving }) {
       </div>
 
       <div className="mt-6 space-y-6">
-        <div className="flex justify-end">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8]"
+            >
+              <option value="nameAsc">Sort: Name (A-Z)</option>
+              <option value="nameDesc">Sort: Name (Z-A)</option>
+              <option value="levelHigh">Sort: Level (High-Low)</option>
+              <option value="levelLow">Sort: Level (Low-High)</option>
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8]"
+            >
+              <option value="all">All Categories</option>
+              {skillCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={levelFilter}
+              onChange={(event) => setLevelFilter(event.target.value)}
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8]"
+            >
+              <option value="all">All Levels</option>
+              {skillLevels.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end">
           <button
             type="button"
             onClick={openAddSkillModal}
@@ -134,34 +214,37 @@ function SkillsSection({ skills, onSave, saving }) {
           >
             Add Skill
           </button>
+          </div>
         </div>
 
         {draftSkills.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {draftSkills.map((skill, index) => (
+            {displayedSkills.map((skill) => (
               <article
-                key={`${skill.name}-${skill.level}-${index}`}
+                key={`${skill.name}-${skill.level}-${skill.originalIndex}`}
                 className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5"
               >
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
                     <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
-                    <span className="mt-2 inline-flex rounded-full bg-[#EEF2FD] px-2.5 py-1 text-xs font-semibold text-[#3B6FE8]">
+                    <span
+                      className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(skill.level)}`}
+                    >
                       {skill.level}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <IconButton
-                      onClick={() => openEditSkillModal(index)}
+                      onClick={() => openEditSkillModal(skill.originalIndex)}
                       label="Edit skill"
                       disabled={saving}
                     >
                       <PencilIcon />
                     </IconButton>
                     <IconButton
-                      onClick={() => handleSkillDelete(index)}
+                      onClick={() => handleSkillDelete(skill.originalIndex)}
                       label="Delete skill"
                       tone="danger"
                       disabled={saving}
@@ -173,10 +256,18 @@ function SkillsSection({ skills, onSave, saving }) {
               </article>
             ))}
           </div>
-        ) : (
+        ) : null}
+
+        {draftSkills.length > 0 && displayedSkills.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
-            No skills added yet.
+            No skills match the selected sort and filter options.
           </div>
+        ) : (
+          draftSkills.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-6 text-center text-sm text-[#6B7280]">
+              No skills added yet.
+            </div>
+          )
         )}
 
       </div>
