@@ -77,6 +77,29 @@ function Field({
   )
 }
 
+function PasswordRequirements({ password }) {
+  const checks = [
+    { label: 'At least 8 characters', valid: password.length >= 8 },
+    { label: 'At least 1 uppercase letter', valid: /[A-Z]/.test(password) },
+    { label: 'At least 1 lowercase letter', valid: /[a-z]/.test(password) },
+    { label: 'At least 1 number', valid: /\d/.test(password) },
+    { label: 'At least 1 special character', valid: /[^A-Za-z0-9]/.test(password) }
+  ]
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Password requirements</p>
+      <ul className="space-y-1 text-sm">
+        {checks.map((check) => (
+          <li key={check.label} className={check.valid ? 'text-emerald-700' : 'text-gray-500'}>
+            {check.valid ? '\u2713' : '\u2022'} {check.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 const createImage = (url) =>
   new Promise((resolve, reject) => {
     const image = new Image()
@@ -157,7 +180,7 @@ const initialErrors = {
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
 const studentIdRegex = /^[A-Z0-9]+$/
 const facultyOptions = [
   { value: 'Faculty of Computing', label: 'Faculty of Computing' },
@@ -359,7 +382,7 @@ const EnhancedRegister = () => {
     if (!formData.password) {
       nextErrors.password = 'Password is required.'
     } else if (!passwordRegex.test(formData.password)) {
-      nextErrors.password = 'Password must be at least 8 characters and include letters and numbers.'
+      nextErrors.password = 'Password must include uppercase, lowercase, number, special character, and be at least 8 characters.'
     }
 
     if (!formData.confirmPassword) {
@@ -694,6 +717,8 @@ const EnhancedRegister = () => {
                       icon={<LockKeyhole className="h-4 w-4" />}
                     />
                   </div>
+
+                  <PasswordRequirements password={formData.password} />
                   </>
                 ) : (
                   <>
@@ -826,6 +851,8 @@ const EnhancedRegister = () => {
                       icon={<LockKeyhole className="h-4 w-4" />}
                     />
                   </div>
+
+                  <PasswordRequirements password={formData.password} />
                 </>
               ) : null}
 
