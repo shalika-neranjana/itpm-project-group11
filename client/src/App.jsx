@@ -12,6 +12,7 @@ import ApplicationForm from './Profiles/ApplicationForm'
 import Home from './pages/Home'
 import WriteReview from './pages/WriteReview'
 import ReviewDetail from './pages/ReviewDetail'
+import CareerRoadmapDetail from './pages/CareerRoadmapDetail'
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
         <Route path="/apply/:id" element={<ApplicationForm />} />
         <Route path="/write-review" element={<WriteReview />} />
         <Route path="/review/:reviewId" element={<ReviewDetail />} />
+        <Route path="/student-guidance/career/:careerId" element={<CareerRoadmapDetail />} />
       </Routes>
     </div>
   )
