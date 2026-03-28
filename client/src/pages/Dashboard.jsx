@@ -507,44 +507,55 @@ function Dashboard() {
                 {filteredInternships.map((internship) => (
                   <article
                     key={internship._id}
-                    className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                    onClick={() => handleViewOpportunity(internship)}
+                    className="rounded-2xl border border-[#E8EAF0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col cursor-pointer"
                   >
-                    <div className="mb-5 border-b border-[#E8EAF0] pb-5">
-                      <div className="mb-2 inline-flex rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
-                        {internship.specialization || 'General'}
-                      </div>
-                      <h3 className="text-lg font-bold text-[#1A1D27]">{internship.title}</h3>
-                      <span className="mt-2 inline-block rounded-full bg-[#F7F8FA] px-3 py-1 text-xs font-bold text-[#6B7280]">
-                        {internship.type || '-'}
-                      </span>
-                    </div>
+                    {/* Header Section */}
+                    <div className="p-6 pb-4">
+                      {/* Job Title */}
+                      <h3 className="text-xl font-bold text-[#1A1D27] mb-3 line-clamp-2">{internship.title}</h3>
+                      
+                      {/* Company */}
+                      <p className="text-sm font-semibold text-[#1A1D27] mb-3">
+                        {typeof internship.company === 'object' 
+                          ? internship.company?.name || 'Unknown Company'
+                          : internship.company || 'Unknown Company'}
+                      </p>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg bg-[#F7F8FA] p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Slots</p>
-                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.slots}</p>
-                      </div>
-                      <div className="rounded-lg bg-[#F7F8FA] p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Stipend</p>
-                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.stipend || 'Not set'}</p>
-                      </div>
-                      <div className="rounded-lg bg-[#F7F8FA] p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
-                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.location || 'Not set'}</p>
-                      </div>
-                      <div className="rounded-lg bg-[#F7F8FA] p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
-                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.duration || 'Not set'}</p>
+                      {/* Type and Specialization Tags Row */}
+                      <div className="flex gap-2 flex-wrap">
+                        <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
+                          {internship.type || 'Not set'}
+                        </span>
+                        <span className="inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 border border-purple-200">
+                          {internship.specialization || 'General'}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="mt-5 grid grid-cols-1 gap-3">
-                      <button
-                        onClick={() => handleViewOpportunity(internship)}
-                        className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
-                      >
-                        View
-                      </button>
+                    {/* Divider */}
+                    <div className="h-px bg-[#E8EAF0]"></div>
+
+                    {/* Info Grid */}
+                    <div className="p-6 flex-1">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Stipend</p>
+                          <p className="text-base font-bold text-[#1A1D27]">{internship.stipend || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Duration</p>
+                          <p className="text-base font-bold text-[#1A1D27]">{internship.duration || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Location</p>
+                          <p className="text-base font-bold text-[#1A1D27]">{internship.location || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Openings</p>
+                          <p className="text-base font-bold text-[#1A1D27]">{internship.slots}</p>
+                        </div>
+                      </div>
                     </div>
                   </article>
                 ))}
