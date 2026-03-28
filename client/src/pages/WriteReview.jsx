@@ -109,9 +109,9 @@ function WriteReview() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
 
       <div className="relative z-10">
-        <Header />
+        <Header active="reviews" />
 
-        <main className="mx-auto max-w-[600px] px-8 py-7">
+        <main className="mx-auto max-w-[1600px] px-6 py-7 xl:px-8">
         <div className="mb-8">
           <button
             onClick={handleCancel}
@@ -127,9 +127,10 @@ function WriteReview() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+        <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:p-8">
+          <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1fr_1.35fr] xl:items-start">
+            <div className="space-y-6">
+              <div>
               <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
                 Company Name *
               </label>
@@ -141,9 +142,9 @@ function WriteReview() {
                 placeholder="e.g., TechCorp Malaysia"
                 className="w-full rounded-lg border border-[#E8EAF0] px-4 py-3 text-base outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
               />
-            </div>
+              </div>
 
-            <div>
+              <div>
               <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
                 Your Role/Position *
               </label>
@@ -155,9 +156,9 @@ function WriteReview() {
                 placeholder="e.g., Software Engineering Intern"
                 className="w-full rounded-lg border border-[#E8EAF0] px-4 py-3 text-base outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
               />
-            </div>
+              </div>
 
-            <div>
+              <div>
               <label className="mb-3 block text-sm font-semibold text-[#1A1D27]">
                 Overall Rating *
               </label>
@@ -177,9 +178,11 @@ function WriteReview() {
                   </button>
                 ))}
               </div>
+              </div>
             </div>
 
-            <div>
+            <div className="space-y-6">
+              <div>
               <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
                 Your Experience *
               </label>
@@ -188,20 +191,21 @@ function WriteReview() {
                 value={formData.experience}
                 onChange={handleChange}
                 placeholder="Share your honest experience about the company, role, work environment, mentorship, work-life balance, etc."
-                rows="8"
+                rows="10"
                 className="w-full rounded-lg border border-[#E8EAF0] px-4 py-3 text-base outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10"
               />
-            </div>
+              </div>
 
-            <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 flex gap-3">
-              <span>🔒</span>
-              <div>
-                <p className="font-semibold">Your identity is fully protected</p>
-                <p className="text-xs mt-1">Your review will be verified by AI before publishing to ensure authenticity and prevent spam.</p>
+              <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 flex gap-3">
+                <span>🔒</span>
+                <div>
+                  <p className="font-semibold">Your identity is fully protected</p>
+                  <p className="text-xs mt-1">Your review will be verified by AI before publishing to ensure authenticity and prevent spam.</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2 lg:col-span-2 lg:pt-0">
               <button
                 type="submit"
                 disabled={loading}
