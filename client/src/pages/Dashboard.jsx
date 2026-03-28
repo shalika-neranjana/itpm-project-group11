@@ -210,10 +210,7 @@ function Dashboard() {
   }
 
   const current = pageTitles[activeTab]
-  const mainClassName =
-    activeTab === 'guidance'
-      ? 'mx-auto max-w-[1600px] px-6 py-7 xl:px-8'
-      : 'mx-auto max-w-[1200px] px-8 py-7'
+  const mainClassName = 'mx-auto max-w-[1600px] px-6 py-7 xl:px-8'
 
   const renderMyInternships = () => {
     if (miView === 'add') {
