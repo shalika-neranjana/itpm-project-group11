@@ -251,7 +251,12 @@ function Dashboard() {
     `${profileFormData.firstName?.[0] || ''}${profileFormData.lastName?.[0] || ''}`.toUpperCase() || 'ST'
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
       <Header
         active={activeTab}
         onTabChange={(tab) => {
@@ -262,7 +267,7 @@ function Dashboard() {
           }
         }}
       />
-      <main className={mainClassName}>
+      <main className={`relative z-10 ${mainClassName}`}>
         <div className="mb-6">
           <h1 className="font-display text-[28px] font-bold text-[#1A1D27]">
             {current.title}
