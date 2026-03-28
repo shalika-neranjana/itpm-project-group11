@@ -172,6 +172,8 @@ const initialErrors = {
   profileImage: '',
   name: '',
   industry: '',
+  address: '',
+  website: '',
   phoneCompany: '',
   logo: '',
   email: '',
@@ -369,6 +371,8 @@ const EnhancedRegister = () => {
     if (regRole === 'company') {
       if (!formData.name.trim()) nextErrors.name = 'Company name is required.'
       if (!formData.industry.trim()) nextErrors.industry = 'Industry is required.'
+      if (!formData.address.trim()) nextErrors.address = 'Address is required.'
+      if (!formData.website.trim()) nextErrors.website = 'Website is required.'
       if (!formData.phoneCompany.trim()) nextErrors.phoneCompany = 'Phone number is required.'
       if (!companyLogoFile) nextErrors.logo = 'Company logo is required.'
     }
@@ -713,6 +717,7 @@ const EnhancedRegister = () => {
                       onChange={handleChange}
                       placeholder="Repeat password"
                       required
+                      requiredIndicator
                       error={fieldErrors.confirmPassword}
                       icon={<LockKeyhole className="h-4 w-4" />}
                     />
@@ -729,6 +734,7 @@ const EnhancedRegister = () => {
                     onChange={handleChange}
                     placeholder="TechNova Sdn Bhd"
                     required
+                    requiredIndicator
                     error={fieldErrors.name}
                     icon={<Building2 className="h-4 w-4" />}
                   />
@@ -741,6 +747,7 @@ const EnhancedRegister = () => {
                     options={companyIndustryOptions}
                     selectPlaceholder="Select company industry"
                     required
+                    requiredIndicator
                     error={fieldErrors.industry}
                   />
 
@@ -750,15 +757,21 @@ const EnhancedRegister = () => {
                     value={formData.address}
                     onChange={handleChange}
                     placeholder="123, Main Street, Colombo"
+                    required
+                    requiredIndicator
+                    error={fieldErrors.address}
                   />
 
                   <Field
-                    label="Website (Optional)"
+                    label="Website"
                     name="website"
                     type="url"
                     value={formData.website}
                     onChange={handleChange}
                     placeholder="https://company.com"
+                    required
+                    requiredIndicator
+                    error={fieldErrors.website}
                   />
 
                   <Field
@@ -847,6 +860,7 @@ const EnhancedRegister = () => {
                       onChange={handleChange}
                       placeholder="Repeat password"
                       required
+                      requiredIndicator
                       error={fieldErrors.confirmPassword}
                       icon={<LockKeyhole className="h-4 w-4" />}
                     />

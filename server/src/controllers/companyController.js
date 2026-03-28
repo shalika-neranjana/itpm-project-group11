@@ -32,10 +32,12 @@ const registerCompany = async (req, res, next) => {
         } = req.body;
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedPhone = phone?.trim();
+        const normalizedAddress = address?.trim();
+        const normalizedWebsite = website?.trim();
         const uploadedLogo = getUploadedFilePath(req.file, "logos", logo);
 
         // Validate required fields
-        if (!name || !industry || !normalizedEmail || !password || !normalizedPhone) {
+        if (!name || !industry || !normalizedEmail || !password || !normalizedPhone || !normalizedAddress || !normalizedWebsite) {
             res.status(400);
             throw new Error("Please provide all required fields");
         }
@@ -84,8 +86,8 @@ const registerCompany = async (req, res, next) => {
             email: normalizedEmail,
             password: hashedPassword,
             phone: normalizedPhone,
-            website,
-            address,
+            website: normalizedWebsite,
+            address: normalizedAddress,
             location,
             contactPerson,
             description,
