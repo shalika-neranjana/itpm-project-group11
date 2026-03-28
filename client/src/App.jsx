@@ -8,6 +8,7 @@ import InternshipMarketplace from './Profiles/InternshipMarketplace'
 import CompanyDashboard from './Profiles/CompanyDashboard'
 import ApplicationForm from './Profiles/ApplicationForm'
 import Home from './pages/Home'
+import WriteReview from './pages/WriteReview'
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/marketplace" element={<InternshipMarketplace />} />
         <Route path="/company-dashboard" element={<CompanyDashboard />} />
         <Route path="/apply/:id" element={<ApplicationForm />} />
+        <Route path="/write-review" element={<WriteReview />} />
       </Routes>
     </div>
   )

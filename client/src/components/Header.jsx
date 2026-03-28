@@ -99,8 +99,10 @@ function Header({ active = 'opportunities', onTabChange }) {
     ]
 
     const handleNavClick = (item) => {
-        if (window.location.pathname !== '/dashboard') {
-            navigate('/dashboard', { state: { tab: item.key } })
+        if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/profile') {
+            const path = item.key === 'profile' ? '/profile' : '/dashboard'
+            const query = item.key === 'opportunities' || item.key === 'profile' ? '' : `?tab=${item.key}`
+            navigate(`${path}${query}`)
             return
         }
 
@@ -175,8 +177,8 @@ function Header({ active = 'opportunities', onTabChange }) {
                                 <button
                                     onClick={() => {
                                         setShowUserMenu(false)
-                                        if (window.location.pathname !== '/dashboard') {
-                                            navigate('/dashboard', { state: { tab: 'profile' } })
+                                        if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/profile') {
+                                            navigate('/profile')
                                             return
                                         }
                                         if (onTabChange) {

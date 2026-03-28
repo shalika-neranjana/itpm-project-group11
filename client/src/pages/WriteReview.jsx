@@ -92,19 +92,26 @@ function WriteReview() {
       }
 
       setLoading(false)
-      navigate('/dashboard', { state: { tab: 'reviews' } })
+      navigate('/dashboard?tab=reviews')
     }, 500)
   }
 
   const handleCancel = () => {
-    navigate('/dashboard', { state: { tab: 'reviews' } })
+    navigate('/dashboard?tab=reviews')
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
-      <Header />
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
 
-      <main className="mx-auto max-w-[600px] px-8 py-7">
+      <div className="relative z-10">
+        <Header />
+
+        <main className="mx-auto max-w-[600px] px-8 py-7">
         <div className="mb-8">
           <button
             onClick={handleCancel}
@@ -212,7 +219,8 @@ function WriteReview() {
             </div>
           </form>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

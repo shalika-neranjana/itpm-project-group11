@@ -8,20 +8,29 @@ import InternshipDashboard from '../components/MyInternships/InternshipDashboard
 import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
 import api from '../api'
 
+const DASHBOARD_TABS = ['opportunities', 'myInternships', 'guidance', 'reviews', 'profile']
+
+const getTabFromLocation = (location) => {
+  const queryTab = new URLSearchParams(location.search).get('tab')
+  if (queryTab && DASHBOARD_TABS.includes(queryTab)) {
+    return queryTab
+  }
+
+  if (location.pathname === '/profile') {
+    return 'profile'
+  }
+
+  if (location.state?.tab && DASHBOARD_TABS.includes(location.state.tab)) {
+    return location.state.tab
+  }
+
+  return 'opportunities'
+}
+
 function Dashboard() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState(() => {
-    if (location.state?.tab) {
-      return location.state.tab
-    }
-
-    if (location.pathname === '/profile') {
-      return 'profile'
-    }
-
-    return 'opportunities'
-  })
+  const [activeTab, setActiveTab] = useState(() => getTabFromLocation(location))
   const [internships, setInternships] = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
@@ -47,6 +56,34 @@ function Dashboard() {
       fetchInternships()
     }
   }, [activeTab, fetchInternships])
+
+  useEffect(() => {
+    const nextTab = getTabFromLocation(location)
+    setActiveTab(nextTab)
+
+    if (nextTab !== 'myInternships') {
+      setMiView('list')
+      setSelectedInternship(null)
+    }
+  }, [location.pathname, location.search, location.state])
+
+  const handleTabChange = (tab) => {
+    const targetPath = tab === 'profile' ? '/profile' : '/dashboard'
+    const targetSearch = tab === 'opportunities' || tab === 'profile' ? '' : `?tab=${tab}`
+    const nextUrl = `${targetPath}${targetSearch}`
+    const currentUrl = `${location.pathname}${location.search}`
+
+    if (currentUrl !== nextUrl) {
+      navigate(nextUrl)
+      return
+    }
+
+    setActiveTab(tab)
+    if (tab !== 'myInternships') {
+      setMiView('list')
+      setSelectedInternship(null)
+    }
+  }
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -256,13 +293,7 @@ function Dashboard() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
       <Header
         active={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab)
-          if (tab === 'myInternships') {
-            setMiView('list')
-            setSelectedInternship(null)
-          }
-        }}
+        onTabChange={handleTabChange}
       />
       <main className={`relative z-10 ${mainClassName}`}>
         <div className="mb-6">
