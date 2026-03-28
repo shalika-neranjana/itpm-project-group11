@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BriefcaseBusiness,
   Building2,
   LogOut,
-  MailOpen,
   PencilLine,
   Phone,
   Plus,
@@ -16,6 +15,8 @@ import api from '../api'
 const panelClass = 'rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
 const inputClass =
   'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8]'
+const signupInputClass =
+  'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10'
 
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
@@ -182,25 +183,10 @@ const CompanyDashboard = () => {
     }
   }
 
-  const totalApplications = applicants.length
-  const acceptedApplications = applicants.filter((applicant) => applicant.status === 'Accepted').length
-  const profileCompletion = useMemo(() => {
-    const fields = [user?.name, user?.industry, user?.location, user?.website, user?.phone, user?.description]
-    const completedFields = fields.filter((value) => String(value || '').trim()).length
-    return Math.round((completedFields / fields.length) * 100)
-  }, [user])
-
   const tabs = [
     { id: 'internships', label: 'Published internships', icon: BriefcaseBusiness },
     { id: 'applicants', label: 'Applicants', icon: Users },
     { id: 'profile', label: 'Company Profile', icon: Building2 }
-  ]
-
-  const statCards = [
-    { label: 'Published Roles', value: internships.length, note: 'Active internship posts', icon: BriefcaseBusiness },
-    { label: 'Applications', value: totalApplications, note: 'Candidates in your pipeline', icon: MailOpen },
-    { label: 'Accepted', value: acceptedApplications, note: 'Students moved forward', icon: Users },
-    { label: 'Profile Ready', value: `${profileCompletion}%`, note: 'Company profile completeness', icon: Building2 }
   ]
 
   const pageTitles = {
@@ -297,19 +283,6 @@ const CompanyDashboard = () => {
           <h1 className="font-display text-[36px] font-bold text-[#0F1419]">{current.title}</h1>
           <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
         </div>
-
-        <section className="mb-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-          {statCards.map(({ label, value, note, icon: Icon }) => (
-            <div key={label} className={`${panelClass} !p-3.5`}>
-              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF2FD] text-[#3B6FE8]">
-                <Icon className="h-[15px] w-[15px]" />
-              </div>
-              <p className="text-[28px] leading-none font-bold tracking-tight text-[#1A1D27]">{value}</p>
-              <p className="mt-0.5 text-[13px] font-semibold leading-tight text-[#1A1D27]">{label}</p>
-              <p className="mt-0.5 text-[12px] leading-tight text-[#6B7280]">{note}</p>
-            </div>
-          ))}
-        </section>
 
         <section className="mb-6 flex flex-wrap gap-3 lg:hidden">
           {tabs.map(({ id, label, icon: Icon }) => {
@@ -619,12 +592,16 @@ const CompanyDashboard = () => {
 
       {showPostForm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl md:p-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Post New Internship</h3>
-                <p className="mt-1 text-sm text-[#6B7280]">Fill in the details to publish a new internship opening.</p>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_20px_40px_rgba(15,23,42,0.18)]">
+            <div className="mb-6 flex flex-col items-center text-center">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[12px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
+                <Plus className="h-5 w-5 text-white" />
               </div>
+              <h3 className="font-display text-3xl font-bold text-[#1A1D27]">Post New Internship</h3>
+              <p className="mt-1 text-sm text-[#6B7280]">Create a new role for students using the same clean form style.</p>
+            </div>
+
+            <div className="mb-5 flex justify-end">
               <button
                 onClick={() => setShowPostForm(false)}
                 className="rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-2 text-sm font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
@@ -633,103 +610,86 @@ const CompanyDashboard = () => {
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Internship Title</label>
                 <input
                   type="text"
                   value={internshipForm.title}
                   onChange={(e) => setInternshipForm({ ...internshipForm, title: e.target.value })}
-                  className={inputClass}
+                  className={signupInputClass}
                   placeholder="e.g. Software Engineering Intern"
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Specialization</label>
-                  <select
-                    value={internshipForm.specialization}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, specialization: e.target.value })}
-                    className={inputClass}
-                  >
-                    <option>Computer Science</option>
-                    <option>Data Science</option>
-                    <option>Multimedia</option>
-                    <option>Software Engineering</option>
-                    <option>Cybersecurity</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Type</label>
-                  <select
-                    value={internshipForm.type}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, type: e.target.value })}
-                    className={inputClass}
-                  >
-                    <option>On-site</option>
-                    <option>Remote</option>
-                    <option>Hybrid</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Duration</label>
-                  <input
-                    type="text"
-                    value={internshipForm.duration}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, duration: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. 3 months"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Location</label>
-                  <input
-                    type="text"
-                    value={internshipForm.location}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, location: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. Colombo"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Stipend</label>
-                  <input
-                    type="text"
-                    value={internshipForm.stipend}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, stipend: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. LKR 50,000/month"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Deadline</label>
-                  <input
-                    type="date"
-                    value={internshipForm.deadline}
-                    onChange={(e) => setInternshipForm({ ...internshipForm, deadline: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Specialization</label>
+                <select
+                  value={internshipForm.specialization}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, specialization: e.target.value })}
+                  className={signupInputClass}
+                >
+                  <option>Computer Science</option>
+                  <option>Data Science</option>
+                  <option>Multimedia</option>
+                  <option>Software Engineering</option>
+                  <option>Cybersecurity</option>
+                </select>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Description</label>
-                <textarea
-                  value={internshipForm.description}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, description: e.target.value })}
-                  rows={5}
-                  className={inputClass}
-                  placeholder="Describe the internship role..."
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Type</label>
+                <select
+                  value={internshipForm.type}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, type: e.target.value })}
+                  className={signupInputClass}
+                >
+                  <option>On-site</option>
+                  <option>Remote</option>
+                  <option>Hybrid</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Duration</label>
+                <input
+                  type="text"
+                  value={internshipForm.duration}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, duration: e.target.value })}
+                  className={signupInputClass}
+                  placeholder="e.g. 3 months"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Location</label>
+                <input
+                  type="text"
+                  value={internshipForm.location}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, location: e.target.value })}
+                  className={signupInputClass}
+                  placeholder="e.g. Colombo"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Stipend</label>
+                <input
+                  type="text"
+                  value={internshipForm.stipend}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, stipend: e.target.value })}
+                  className={signupInputClass}
+                  placeholder="e.g. LKR 50,000/month"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Deadline</label>
+                <input
+                  type="date"
+                  value={internshipForm.deadline}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, deadline: e.target.value })}
+                  className={signupInputClass}
                 />
               </div>
 
@@ -740,7 +700,18 @@ const CompanyDashboard = () => {
                   value={internshipForm.slots}
                   onChange={(e) => setInternshipForm({ ...internshipForm, slots: parseInt(e.target.value, 10) || 1 })}
                   min="1"
-                  className={inputClass}
+                  className={signupInputClass}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Description</label>
+                <textarea
+                  value={internshipForm.description}
+                  onChange={(e) => setInternshipForm({ ...internshipForm, description: e.target.value })}
+                  rows={5}
+                  className={signupInputClass}
+                  placeholder="Describe the internship role..."
                 />
               </div>
             </div>
@@ -748,14 +719,14 @@ const CompanyDashboard = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={handlePostInternship}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-4 py-3 font-semibold text-white transition hover:bg-[#2D5CD4]"
               >
                 <Plus className="h-4 w-4" />
                 Post Internship
               </button>
               <button
                 onClick={() => setShowPostForm(false)}
-                className="flex-1 rounded-[10px] border border-[#E8EAF0] bg-white px-5 py-3 text-sm font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                className="flex-1 rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
               >
                 Cancel
               </button>
