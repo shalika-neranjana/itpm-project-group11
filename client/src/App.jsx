@@ -11,6 +11,7 @@ import CompanyEditInternship from './Profiles/CompanyEditInternship'
 import ApplicationForm from './Profiles/ApplicationForm'
 import Home from './pages/Home'
 import WriteReview from './pages/WriteReview'
+import ReviewDetail from './pages/ReviewDetail'
 
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/company-dashboard/edit-internship/:id" element={<CompanyEditInternship />} />
         <Route path="/apply/:id" element={<ApplicationForm />} />
         <Route path="/write-review" element={<WriteReview />} />
+        <Route path="/review/:reviewId" element={<ReviewDetail />} />
       </Routes>
     </div>
   )

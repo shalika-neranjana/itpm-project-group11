@@ -3,6 +3,7 @@
  * Handles operations for creating, reading, updating, and deleting company reviews.
  */
 
+const mongoose = require("mongoose");
 const CompanyReview = require("../models/Review");
 const Student = require("../models/Student");
 
@@ -431,6 +432,130 @@ const getCompanyStats = async (req, res, next) => {
     }
 };
 
+/**
+ * @desc    Get all comments for a review
+ * @route   GET /api/reviews/:id/comments
+ * @access  Public
+ */
+const getReviewComments = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        res.status(200).json({
+            success: true,
+            data: review.comments || [],
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Create a comment on a review
+ * @route   POST /api/reviews/:id/comments
+ * @access  Private
+ */
+const createReviewComment = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { text } = req.body;
+
+        if (!text || !text.trim()) {
+            res.status(400);
+            throw new Error("Comment text is required");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        // Get student info for author name
+        const student = await Student.findById(req.student._id);
+        const authorName = student ? `${student.firstName} ${student.lastName}` : "Anonymous";
+
+        const newComment = {
+            text: text.trim(),
+            authorId: req.student._id,
+            authorName: authorName,
+            replies: [],
+        };
+
+        review.comments.push(newComment);
+        await review.save();
+
+        res.status(201).json({
+            success: true,
+            data: newComment,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Reply to a comment on a review
+ * @route   POST /api/reviews/:id/comments/:commentId/reply
+ * @access  Private (only review author can reply)
+ */
+const replyToComment = async (req, res, next) => {
+    try {
+        const { id, commentId } = req.params;
+        const { text } = req.body;
+
+        if (!text || !text.trim()) {
+            res.status(400);
+            throw new Error("Reply text is required");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        // Check if user is the review author
+        if (review.authorId.toString() !== req.student._id.toString()) {
+            res.status(403);
+            throw new Error("Only the review author can reply to comments");
+        }
+
+        // Find the comment
+        const comment = review.comments.find(c => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        // Get student info for reply author name
+        const student = await Student.findById(req.student._id);
+        const authorName = student ? `${student.firstName} ${student.lastName}` : "Anonymous";
+
+        const newReply = {
+            text: text.trim(),
+            authorId: req.student._id,
+            authorName: authorName,
+        };
+
+        comment.replies.push(newReply);
+        await review.save();
+
+        res.status(201).json({
+            success: true,
+            data: comment,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createCompanyReview,
     getAllCompanyReviews,
@@ -443,4 +568,7 @@ module.exports = {
     markHelpful,
     markUnhelpful,
     getCompanyStats,
+    getReviewComments,
+    createReviewComment,
+    replyToComment,
 };

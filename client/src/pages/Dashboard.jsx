@@ -8,6 +8,7 @@ import InternshipDashboard from '../components/MyInternships/InternshipDashboard
 import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
 import { X } from 'lucide-react'
 import api from '../api'
+import { getAllReviews, deleteReview } from '../api/reviews'
 
 const DASHBOARD_TABS = ['opportunities', 'myInternships', 'guidance', 'reviews', 'profile']
 
@@ -189,6 +190,8 @@ function Dashboard() {
   }
 
   const [reviews, setReviews] = useState([])
+  const [reviewsSearch, setReviewsSearch] = useState('')
+  const [ratingFilter, setRatingFilter] = useState('')
   const token = localStorage.getItem('token')
   const [profileFormData, setProfileFormData] = useState({
     studentId: '',
@@ -204,9 +207,18 @@ function Dashboard() {
   const [profileImageLoadFailed, setProfileImageLoadFailed] = useState(false)
 
   useEffect(() => {
-    // Load user-submitted reviews from localStorage
-    const userReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
-    setReviews(userReviews)
+    // Load all reviews from API (visible to all students)
+    const loadReviews = async () => {
+      try {
+        const allReviews = await getAllReviews()
+        setReviews(allReviews)
+      } catch (error) {
+        console.error('Failed to fetch reviews:', error)
+        setReviews([])
+      }
+    }
+    
+    loadReviews()
   }, [])
 
   useEffect(() => {
@@ -226,14 +238,18 @@ function Dashboard() {
     })
   }, [])
 
-  const handleDeleteReview = (reviewId) => {
-    // Remove from state
-    setReviews((prev) => prev.filter(review => review.id !== reviewId))
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) {
+      return
+    }
     
-    // Remove from localStorage
-    const userReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
-    const updatedReviews = userReviews.filter(review => review.id !== reviewId)
-    localStorage.setItem('userReviews', JSON.stringify(updatedReviews))
+    try {
+      await deleteReview(reviewId)
+      setReviews((prev) => prev.filter(review => review._id !== reviewId))
+    } catch (error) {
+      console.error('Failed to delete review:', error)
+      alert('Failed to delete review. Please try again.')
+    }
   }
 
   const handleEditReview = (review) => {
@@ -541,29 +557,75 @@ function Dashboard() {
           </>
         ) : activeTab === 'reviews' ? (
           <div className="space-y-5">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="font-display text-xl font-bold text-[#1A1D27]">
-                Company Reviews
-              </h2>
-              <button
-                onClick={() => navigate('/write-review')}
-                className="flex items-center gap-2 rounded-lg bg-[#3B6FE8] px-4 py-2 font-semibold text-white transition hover:bg-[#2D5CD4]"
-              >
-                <span>+</span>
-                Write Anonymous Review
-              </button>
+            <div className="mb-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-xl font-bold text-[#1A1D27]">
+                  Company Reviews
+                </h2>
+                <button
+                  onClick={() => navigate('/write-review')}
+                  className="flex items-center gap-2 rounded-lg bg-[#3B6FE8] px-4 py-2 font-semibold text-white transition hover:bg-[#2D5CD4] cursor-pointer"
+                >
+                  <span>+</span>
+                  Write Anonymous Review
+                </button>
+              </div>
+              {reviews.length > 0 && (
+                <div className="flex flex-wrap gap-4">
+                  <input
+                    type="text"
+                    placeholder="Search by company name or role..."
+                    value={reviewsSearch}
+                    onChange={(e) => setReviewsSearch(e.target.value)}
+                    className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <select
+                    value={ratingFilter}
+                    onChange={(e) => setRatingFilter(e.target.value)}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4+ Stars</option>
+                    <option value="3">3+ Stars</option>
+                    <option value="2">2+ Stars</option>
+                    <option value="1">1+ Stars</option>
+                  </select>
+                </div>
+              )}
             </div>
             {reviews.length > 0 ? (
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                {reviews.map((review) => (
-                  <CompanyReview
-                    key={review.id}
-                    review={review}
-                    onDelete={handleDeleteReview}
-                    onEdit={handleEditReview}
-                  />
-                ))}
-              </div>
+              (() => {
+                const filteredReviews = reviews.filter((review) => {
+                  const searchLower = reviewsSearch.toLowerCase()
+                  const matchesSearch =
+                    review.company?.toLowerCase().includes(searchLower) ||
+                    review.role?.toLowerCase().includes(searchLower)
+                  const matchesRating =
+                    ratingFilter === '' ||
+                    (review.rating && parseInt(review.rating) >= parseInt(ratingFilter))
+                  return matchesSearch && matchesRating
+                })
+                
+                return filteredReviews.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filteredReviews.map((review) => (
+                      <CompanyReview
+                        key={review.id}
+                        review={review}
+                        onDelete={handleDeleteReview}
+                        onEdit={handleEditReview}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
+                    <p className="text-[#6B7280]">
+                      No reviews found matching "{reviewsSearch}"
+                    </p>
+                  </div>
+                )
+              })()
             ) : (
               <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
                 <p className="text-[#6B7280]">

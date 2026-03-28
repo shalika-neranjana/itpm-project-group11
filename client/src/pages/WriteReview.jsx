@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, MessageSquare, Send } from 'lucide-react'
+import { createReview, updateReview } from '../api/reviews'
 
 const signupInputClass =
   'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10'
@@ -39,7 +40,7 @@ function WriteReview() {
     }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.company || !formData.role || !formData.experience || !formData.rating) {
       alert('Please fill all fields')
@@ -47,56 +48,23 @@ function WriteReview() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      // Get current user from localStorage
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      
-      // Determine if review is good or bad based on rating
-      const isBadReview = formData.rating <= 2
-      const isGoodReview = formData.rating >= 4
-      
+    try {
       if (editingReview) {
         // Update existing review
-        const updatedReview = {
-          ...editingReview,
-          company: formData.company,
-          role: formData.role,
-          rating: formData.rating,
-          text: formData.experience,
-          verified: isGoodReview, // Re-evaluate verification
-          flagged: isBadReview, // Re-evaluate flagging
-          sentiment: isBadReview ? 'Negative' : isGoodReview ? 'Positive' : 'Neutral',
-          updatedAt: new Date().toISOString(), // Track when it was last edited
-        }
-        
-        const existingReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
-        const updatedReviews = existingReviews.map(r => r.id === editingReview.id ? updatedReview : r)
-        localStorage.setItem('userReviews', JSON.stringify(updatedReviews))
+        await updateReview(editingReview._id, formData)
+        alert('Review updated successfully')
       } else {
         // Create new review
-        const newReview = {
-          id: Date.now(),
-          authorId: user.id || user.email || 'anonymous',
-          authorName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'Anonymous',
-          company: formData.company,
-          role: formData.role,
-          rating: formData.rating,
-          text: formData.experience,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          createdAt: new Date().toISOString(), // Store full timestamp for comparison
-          tags: [],
-          verified: isGoodReview, // Only verified if rating >= 4
-          flagged: isBadReview, // Flag if rating <= 2
-          sentiment: isBadReview ? 'Negative' : isGoodReview ? 'Positive' : 'Neutral',
-        }
-        
-        const existingReviews = JSON.parse(localStorage.getItem('userReviews') || '[]')
-        localStorage.setItem('userReviews', JSON.stringify([newReview, ...existingReviews]))
+        await createReview(formData)
+        alert('Review submitted successfully')
       }
-
-      setLoading(false)
       navigate('/dashboard?tab=reviews')
-    }, 500)
+    } catch (error) {
+      console.error('Error submitting review:', error)
+      alert(error.message || 'Failed to submit review. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCancel = () => {
