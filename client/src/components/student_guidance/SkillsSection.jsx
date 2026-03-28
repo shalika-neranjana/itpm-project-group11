@@ -154,6 +154,7 @@ function SkillsSection({ skills, onSave, saving }) {
     })
 
   const getLevelTagClass = (level) => levelTagClass[level] ?? 'bg-[#EEF2FD] text-[#3B6FE8]'
+  const levelColumns = ['Beginner', 'Intermediate', 'Advanced']
 
   return (
     <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
@@ -218,43 +219,68 @@ function SkillsSection({ skills, onSave, saving }) {
         </div>
 
         {draftSkills.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {displayedSkills.map((skill) => (
-              <article
-                key={`${skill.name}-${skill.level}-${skill.originalIndex}`}
-                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5"
-              >
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
-                    <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
+          <div className="grid gap-4 xl:grid-cols-3">
+            {levelColumns.map((level) => {
+              const levelItems = displayedSkills.filter((skill) => skill.level === level)
+
+              return (
+                <section key={level} className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5">
+                  <div className="flex items-center justify-between border-b border-[#E8EAF0] pb-3">
+                    <h3 className="text-sm font-semibold text-[#1A1D27]">{level}</h3>
                     <span
-                      className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(skill.level)}`}
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(level)}`}
                     >
-                      {skill.level}
+                      {levelItems.length}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <IconButton
-                      onClick={() => openEditSkillModal(skill.originalIndex)}
-                      label="Edit skill"
-                      disabled={saving}
-                    >
-                      <PencilIcon />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleSkillDelete(skill.originalIndex)}
-                      label="Delete skill"
-                      tone="danger"
-                      disabled={saving}
-                    >
-                      <TrashIcon />
-                    </IconButton>
+                  <div className="mt-3 space-y-3">
+                    {levelItems.length > 0 ? (
+                      levelItems.map((skill) => (
+                        <article
+                          key={`${skill.name}-${skill.level}-${skill.originalIndex}`}
+                          className="rounded-2xl border border-[#E8EAF0] bg-white p-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
+                              <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
+                              <span
+                                className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getLevelTagClass(skill.level)}`}
+                              >
+                                {skill.level}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <IconButton
+                                onClick={() => openEditSkillModal(skill.originalIndex)}
+                                label="Edit skill"
+                                disabled={saving}
+                              >
+                                <PencilIcon />
+                              </IconButton>
+                              <IconButton
+                                onClick={() => handleSkillDelete(skill.originalIndex)}
+                                label="Delete skill"
+                                tone="danger"
+                                disabled={saving}
+                              >
+                                <TrashIcon />
+                              </IconButton>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-4 text-center text-sm text-[#6B7280]">
+                        No {level.toLowerCase()} skills.
+                      </p>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+                </section>
+              )
+            })}
           </div>
         ) : null}
 
