@@ -266,10 +266,10 @@ function Dashboard() {
       />
       <main className={`relative z-10 ${mainClassName}`}>
         <div className="mb-6">
-          <h1 className="font-display text-[28px] font-bold text-[#1A1D27]">
+          <h1 className="font-display text-[36px] font-bold text-[#0F1419]">
             {current.title}
           </h1>
-          <p className="mt-1 text-sm text-[#6B7280]">{current.subtitle}</p>
+          <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
         </div>
 
         {activeTab === 'opportunities' ? (
