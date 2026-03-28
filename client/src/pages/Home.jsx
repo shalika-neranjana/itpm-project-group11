@@ -9,7 +9,10 @@ import Testimonials from '../components/landing/Testimonials'
 
 function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div
+      className="min-h-screen bg-gray-50 bg-cover bg-center bg-no-repeat text-gray-900"
+      style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+    >
       <Navbar />
       <main>
         <Hero />

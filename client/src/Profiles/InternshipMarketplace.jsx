@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
+
+const resolveCompanyLogoUrl = (logoPath) => {
+  if (!logoPath) return ''
+  if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) return logoPath
+  return `${API_ORIGIN}${logoPath}`
+}
+
 const InternshipMarketplace = () => {
   const [internships, setInternships] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,7 +114,21 @@ const InternshipMarketplace = () => {
           {internships.map((internship) => (
             <div key={internship._id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center mr-3">
+                {internship.company?.logo ? (
+                  <img
+                    src={resolveCompanyLogoUrl(internship.company.logo)}
+                    alt={internship.company?.name || 'Company logo'}
+                    className="w-12 h-12 object-cover rounded-lg mr-3"
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                      e.target.nextElementSibling.style.display = 'flex'
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="w-12 h-12 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center mr-3"
+                  style={internship.company?.logo ? { display: 'none' } : {}}
+                >
                   {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
                 </div>
                 <div>
