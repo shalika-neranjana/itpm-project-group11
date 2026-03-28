@@ -303,48 +303,65 @@ function Dashboard() {
             ) : internships.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {internships.map((internship) => (
-                  <div key={internship._id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center mr-3">
-                        {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
+                  <div key={internship._id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                    {/* Header with Logo and Title */}
+                    <div className="mb-5 pb-5 border-b border-gray-100">
+                      <div className="flex items-start gap-4 mb-3">
+                        {internship.company?.logo ? (
+                          <img 
+                            src={internship.company.logo.startsWith('http') ? internship.company.logo : `http://localhost:5000${internship.company.logo}`}
+                            alt={internship.company?.name}
+                            className="w-14 h-14 object-cover rounded-xl shadow-md"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl text-white font-bold flex items-center justify-center shadow-md"
+                          style={internship.company?.logo ? { display: 'none' } : {}}
+                        >
+                          {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">{internship.company?.name}</p>
+                          <h3 className="font-bold text-gray-900 text-base leading-tight mb-2">{internship.title}</h3>
+                          <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
+                            internship.type === 'Remote' ? 'bg-purple-100 text-purple-800' :
+                            internship.type === 'Hybrid' ? 'bg-amber-100 text-amber-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {internship.type}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{internship.title}</h3>
-                        <p className="text-sm text-gray-600">{internship.company?.name}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                        {internship.specialization}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        internship.type === 'Remote' ? 'bg-purple-100 text-purple-800' :
-                        internship.type === 'Hybrid' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {internship.type}
-                      </span>
-                    </div>
-
-                    <div className="text-sm text-gray-600 mb-4">
-                      <div className="flex justify-between mb-1">
-                        <span>⏱ {internship.duration}</span>
-                        <span>📅 {new Date(internship.deadline).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>📍 {internship.location}</span>
-                        <span>💰 {internship.stipend}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-sm text-gray-700 mb-4 line-clamp-3">
-                      {internship.description}
                     </div>
 
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-5 flex-grow">
+                      <div className="bg-gradient-to-br from-blue-50 to-transparent rounded-lg p-3">
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Duration</p>
+                        <p className="text-sm font-bold text-gray-900">{internship.duration}</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-red-50 to-transparent rounded-lg p-3">
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Deadline</p>
+                        <p className="text-sm font-bold text-gray-900">{new Date(internship.deadline).toLocaleDateString()}</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-green-50 to-transparent rounded-lg p-3">
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Stipend</p>
+                        <p className="text-sm font-bold text-gray-900">{internship.stipend}</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-transparent rounded-lg p-3">
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Slots</p>
+                        <p className="text-sm font-bold text-gray-900">{internship.slots}</p>
+                      </div>
+                    </div>
+
+                    {/* Button */}
                     <button
                       onClick={() => handleApply(internship._id)}
-                      className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 active:scale-95 shadow-md"
                     >
                       Apply Now
                     </button>
