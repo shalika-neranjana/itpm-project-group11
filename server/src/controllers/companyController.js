@@ -4,7 +4,9 @@
 
 const bcrypt = require("bcryptjs");
 const Company = require("../models/Company");
+const Student = require("../models/Student");
 const generateToken = require("../utils/generateToken");
+const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
  * @desc    Register a new company
@@ -12,6 +14,8 @@ const generateToken = require("../utils/generateToken");
  * @access  Public
  */
 const registerCompany = async (req, res, next) => {
+    let registrationCompleted = false;
+
     try {
         const {
             name,
@@ -20,22 +24,53 @@ const registerCompany = async (req, res, next) => {
             password,
             phone,
             website,
+            address,
             location,
             contactPerson,
             description,
+            logo,
         } = req.body;
+        const normalizedEmail = email?.trim().toLowerCase();
+        const normalizedPhone = phone?.trim();
+        const uploadedLogo = getUploadedFilePath(req.file, "logos", logo);
 
         // Validate required fields
-        if (!name || !industry || !email || !password) {
+        if (!name || !industry || !normalizedEmail || !password || !normalizedPhone) {
             res.status(400);
             throw new Error("Please provide all required fields");
         }
 
+        if (!uploadedLogo) {
+            res.status(400);
+            throw new Error("Company logo is required");
+        }
+
         // Check whether a company with the same email already exists
-        const existingCompany = await Company.findOne({ email });
+        const existingCompany = await Company.findOne({ email: normalizedEmail });
         if (existingCompany) {
             res.status(400);
             throw new Error("A company with this email already exists");
+        }
+
+        // Ensure email is unique across all account types
+        const existingStudent = await Student.findOne({ email: normalizedEmail });
+        if (existingStudent) {
+            res.status(400);
+            throw new Error("This email is already registered");
+        }
+
+        if (normalizedPhone) {
+            const existingCompanyByPhone = await Company.findOne({ phone: normalizedPhone });
+            if (existingCompanyByPhone) {
+                res.status(400);
+                throw new Error("A company with this phone number already exists");
+            }
+
+            const existingStudentByPhone = await Student.findOne({ phone: normalizedPhone });
+            if (existingStudentByPhone) {
+                res.status(400);
+                throw new Error("This phone number is already registered");
+            }
         }
 
         // Hash password before saving
@@ -46,14 +81,18 @@ const registerCompany = async (req, res, next) => {
         const company = await Company.create({
             name,
             industry,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
-            phone,
+            phone: normalizedPhone,
             website,
+            address,
             location,
             contactPerson,
             description,
+            logo: uploadedLogo,
         });
+
+        registrationCompleted = true;
 
         res.status(201).json({
             success: true,
@@ -65,6 +104,7 @@ const registerCompany = async (req, res, next) => {
                 email: company.email,
                 phone: company.phone,
                 website: company.website,
+                address: company.address,
                 location: company.location,
                 contactPerson: company.contactPerson,
                 description: company.description,
@@ -74,6 +114,10 @@ const registerCompany = async (req, res, next) => {
             },
         });
     } catch (error) {
+        if (!registrationCompleted) {
+            deleteUploadedFile(req.file);
+        }
+
         next(error);
     }
 };
@@ -119,6 +163,7 @@ const loginCompany = async (req, res, next) => {
                 email: company.email,
                 phone: company.phone,
                 website: company.website,
+                address: company.address,
                 location: company.location,
                 contactPerson: company.contactPerson,
                 description: company.description,
@@ -167,6 +212,7 @@ const updateCompanyProfile = async (req, res, next) => {
             industry,
             phone,
             website,
+            address,
             location,
             contactPerson,
             description,
@@ -185,6 +231,7 @@ const updateCompanyProfile = async (req, res, next) => {
         company.industry = industry || company.industry;
         company.phone = phone || company.phone;
         company.website = website || company.website;
+        company.address = address || company.address;
         company.location = location || company.location;
         company.contactPerson = contactPerson || company.contactPerson;
         company.description = description || company.description;

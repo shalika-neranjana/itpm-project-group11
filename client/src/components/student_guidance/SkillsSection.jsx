@@ -137,17 +137,17 @@ function SkillsSection({ skills, onSave, saving }) {
         </div>
 
         {draftSkills.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {draftSkills.map((skill, index) => (
               <article
                 key={`${skill.name}-${skill.level}-${index}`}
-                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4"
+                className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-3.5"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[#1A1D27]">{skill.name}</p>
-                    <p className="mt-1 text-sm text-[#6B7280]">{skill.category}</p>
-                    <span className="mt-3 inline-flex rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1A1D27] break-words">{skill.name}</p>
+                    <p className="mt-1 text-sm text-[#6B7280] break-words">{skill.category}</p>
+                    <span className="mt-2 inline-flex rounded-full bg-[#EEF2FD] px-2.5 py-1 text-xs font-semibold text-[#3B6FE8]">
                       {skill.level}
                     </span>
                   </div>
@@ -179,9 +179,6 @@ function SkillsSection({ skills, onSave, saving }) {
           </div>
         )}
 
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8092B5]">
-          {saving ? 'Saving changes...' : 'Changes are synced automatically.'}
-        </p>
       </div>
 
       {showSkillModal && (

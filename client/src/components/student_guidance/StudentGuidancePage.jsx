@@ -4,6 +4,7 @@ import {
   updateStudentInterests,
   updateStudentSkills,
 } from '../../api/student_guidance/guidanceApi'
+import AskInternConnectSection from './AskInternConnectSection'
 import CareerSuggestionsSection from './CareerSuggestionsSection'
 import ExamResultsSection from './ExamResultsSection'
 import GuidanceSidebar from './GuidanceSidebar'
@@ -94,6 +95,14 @@ function StudentGuidancePage() {
         skills={guidance.skills}
         onSave={handleSkillSave}
         saving={saveState.skills}
+      />
+    ),
+    askInternConnect: (
+      <AskInternConnectSection
+        student={student}
+        interests={guidance.interests}
+        skills={guidance.skills}
+        examResults={guidance.examResults}
       />
     ),
     careers: (

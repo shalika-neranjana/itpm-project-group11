@@ -75,10 +75,10 @@ export default function InternshipDashboard({ internship, onBack }) {
           <button
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id)}
-            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-all ${
+            className={`rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-all ${
               activeSubTab === tab.id
                 ? "border-[#3B6FE8] bg-[#3B6FE8] text-white"
-                : "border-[#E8EAF0] text-[#6B7280] hover:bg-[#F7F8FA]"
+                : "border-white bg-white/20 text-[#6B7280] hover:bg-white/30"
             }`}
           >
             {tab.label}

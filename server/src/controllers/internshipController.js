@@ -4,6 +4,7 @@
 
 const Internship = require("../models/Internship");
 const Student = require("../models/Student");
+const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
  * @desc    Get all internships (public)
@@ -20,6 +21,10 @@ const getAllInternships = async (req, res, next) => {
             type,
             location,
         } = req.query;
+
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
+        const skip = (pageNum - 1) * limitNum;
 
         // Build query - Show all internships including Draft ones for students
         const query = { status: { $in: ["Published", "Draft"] } };
@@ -43,27 +48,25 @@ const getAllInternships = async (req, res, next) => {
             query.location = { $regex: location, $options: "i" };
         }
 
-        // Calculate pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        // Get internships with company details
-        const internships = await Internship.find(query)
-            .populate("company", "name logo")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
-
-        // Get total count
-        const total = await Internship.countDocuments(query);
+        // Get internships with company details and total count concurrently
+        const [internships, total] = await Promise.all([
+            Internship.find(query)
+                .populate("company", "name logo")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean(),
+            Internship.countDocuments(query),
+        ]);
 
         res.status(200).json({
             success: true,
             data: internships,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / parseInt(limit)),
+                pages: Math.ceil(total / limitNum),
             },
         });
     } catch (error) {
@@ -229,23 +232,27 @@ const deleteInternship = async (req, res, next) => {
 const getCompanyInternships = async (req, res, next) => {
     try {
         const { page = 1, limit = 10 } = req.query;
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
+        const skip = (pageNum - 1) * limitNum;
 
-        const internships = await Internship.find({ company: req.company._id })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(parseInt(limit));
-
-        const total = await Internship.countDocuments({ company: req.company._id });
+        const [internships, total] = await Promise.all([
+            Internship.find({ company: req.company._id })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean(),
+            Internship.countDocuments({ company: req.company._id }),
+        ]);
 
         res.status(200).json({
             success: true,
             data: internships,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / parseInt(limit)),
+                pages: Math.ceil(total / limitNum),
             },
         });
     } catch (error) {
@@ -259,11 +266,14 @@ const getCompanyInternships = async (req, res, next) => {
  * @access  Private (Student)
  */
 const applyForInternship = async (req, res, next) => {
+    let applicationSaved = false;
+
     try {
         const { name, email, phone, coverLetter, resume } = req.body;
+        const uploadedResume = getUploadedFilePath(req.file, "resumes", resume);
 
         // Validate required fields
-        if (!name || !email || !coverLetter) {
+        if (!name || !email || !coverLetter || !uploadedResume) {
             res.status(400);
             throw new Error("Please provide all required fields");
         }
@@ -292,16 +302,21 @@ const applyForInternship = async (req, res, next) => {
             email,
             phone,
             coverLetter,
-            resume,
+            resume: uploadedResume,
         });
 
         await internship.save();
+        applicationSaved = true;
 
         res.status(201).json({
             success: true,
             message: "Application submitted successfully",
         });
     } catch (error) {
+        if (!applicationSaved) {
+            deleteUploadedFile(req.file);
+        }
+
         next(error);
     }
 };
@@ -316,7 +331,9 @@ const getStudentApplications = async (req, res, next) => {
         const applications = await Internship.find(
             { "applications.student": req.student._id },
             { "applications.$": 1, title: 1, company: 1, deadline: 1, location: 1, type: 1, duration: 1, stipend: 1 }
-        ).populate("company", "name logo");
+        )
+            .populate("company", "name logo")
+            .lean();
 
         // Format applications
         const formattedApplications = applications.map(internship => ({

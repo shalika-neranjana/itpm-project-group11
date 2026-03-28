@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api'
+import Header from '../components/Header'
 
 const ApplicationForm = () => {
   const { id } = useParams()
@@ -10,9 +11,10 @@ const ApplicationForm = () => {
     name: '',
     email: '',
     phone: '',
-    coverLetter: '',
-    resume: ''
+    coverLetter: ''
   })
+  const [resumeFile, setResumeFile] = useState(null)
+  const [resumeInputKey, setResumeInputKey] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -33,8 +35,7 @@ const ApplicationForm = () => {
       name: `${userData.firstName} ${userData.lastName}`,
       email: userData.email,
       phone: userData.phone || '',
-      coverLetter: '',
-      resume: userData.resume || ''
+      coverLetter: ''
     })
 
     fetchInternship()
@@ -71,8 +72,31 @@ const ApplicationForm = () => {
       return
     }
 
+    if (!resumeFile) {
+      setError('Please upload your resume as a PDF file')
+      setSubmitting(false)
+      return
+    }
+
+    if (resumeFile.type !== 'application/pdf') {
+      setError('Only PDF files are allowed for resume upload')
+      setSubmitting(false)
+      return
+    }
+
     try {
-      const response = await api.post(`/internships/${id}/apply`, formData)
+      const payload = new FormData()
+      payload.append('name', formData.name)
+      payload.append('email', formData.email)
+      payload.append('phone', formData.phone)
+      payload.append('coverLetter', formData.coverLetter)
+      payload.append('resume', resumeFile)
+
+      const response = await api.post(`/internships/${id}/apply`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
       
       if (response.data.success) {
         setSuccess('Application submitted successfully!')
@@ -89,198 +113,265 @@ const ApplicationForm = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
+        <div className="relative z-10 flex min-h-screen items-center justify-center">
+          <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_6px_20px_rgba(22,34,57,0.08)]">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#3B6FE8]"></div>
+            <p className="mt-4 text-sm font-semibold text-[#3E4957]">Loading internship details...</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!internship) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500">Internship not found</p>
+      <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
+        <div className="relative z-10 flex min-h-screen items-center justify-center">
+          <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 text-center shadow-[0_6px_20px_rgba(22,34,57,0.08)]">
+            <p className="text-[#6B7280]">Internship not found</p>
           <button
             onClick={() => navigate('/marketplace')}
-            className="mt-4 text-blue-600 hover:text-blue-700"
+            className="mt-4 rounded-lg bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"
           >
             Back to Marketplace
           </button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center">
-            <button
-              onClick={() => navigate('/marketplace')}
-              className="text-gray-600 hover:text-gray-900 mr-4"
-            >
-              ← Back
-            </button>
-            <h1 className="text-xl font-bold text-gray-900">Apply for Internship</h1>
-          </div>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
 
-      {/* Internship Preview */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg text-white font-bold flex items-center justify-center mr-4">
-                {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
+      <div className="relative z-10">
+        <Header active="opportunities" />
+
+        <main className="mx-auto max-w-[1600px] px-6 py-7 xl:px-8">
+          <div className="rounded-3xl border border-[#DCE6FB] bg-gradient-to-r from-[#F6FAFF] via-white to-[#EEF4FF] p-6 shadow-[0_10px_25px_rgba(38,92,186,0.10)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="mr-4 inline-flex items-center rounded-full border border-[#D4E0FA] bg-white px-3 py-1.5 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#EEF2FD]"
+                >
+                  ← Back
+                </button>
+                <h1 className="font-display text-2xl font-bold text-[#1A1D27]">Apply for Internship</h1>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{internship.title}</h2>
-                <p className="text-gray-600">{internship.company?.name}</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                    {internship.specialization}
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                    {internship.type}
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                    {internship.location}
-                  </span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                    {internship.stipend}
-                  </span>
+
+              <div className="rounded-xl border border-[#D9E6FF] bg-white/90 px-4 py-2 text-sm font-semibold text-[#3B6FE8]">
+                Application Portal
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start">
+                <div className="mr-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-[#3B6FE8] to-[#2D5CD4] text-base font-bold text-white shadow-sm">
+                  {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#1A1D27]">{internship.title}</h2>
+                  <p className="text-[#6B7280]">{internship.company?.name}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
+                      {internship.specialization}
+                    </span>
+                    <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-xs font-semibold text-[#4B5563]">
+                      {internship.type}
+                    </span>
+                    <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-xs font-semibold text-[#4B5563]">
+                      {internship.location}
+                    </span>
+                    <span className="rounded-full bg-[#E8F7EE] px-3 py-1 text-xs font-semibold text-[#127A3A]">
+                      {internship.stipend}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Deadline</p>
-              <p className="font-medium text-gray-900">
-                {new Date(internship.deadline).toLocaleDateString()}
-              </p>
+
+              <div className="rounded-xl border border-[#E8EAF0] bg-[#FAFCFF] px-4 py-3 text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Deadline</p>
+                <p className="mt-1 font-semibold text-[#1A1D27]">
+                  {new Date(internship.deadline).toLocaleDateString()}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Application Form */}
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-            <p className="text-green-800 font-medium">{success}</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-red-800 font-medium">{error}</p>
-          </div>
-        )}
-
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">Application Details</h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+          <div className="mx-auto mt-7 max-w-[1100px]">
+            {success && (
+              <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <p className="font-medium text-green-800">{success}</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                  readOnly
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Resume URL
-                </label>
-                <input
-                  type="url"
-                  name="resume"
-                  value={formData.resume}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Link to your resume (optional)"
-                />
-              </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cover Letter *
-              </label>
-              <textarea
-                name="coverLetter"
-                value={formData.coverLetter}
-                onChange={handleChange}
-                rows={8}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Tell us why you're interested in this internship and why you'd be a great fit..."
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Explain your skills, experience, and why you're interested in this position.
-              </p>
-            </div>
+            {error && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <p className="font-medium text-red-800">{error}</p>
+              </div>
+            )}
 
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Submitting Application...
+            <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:p-7">
+              <h3 className="mb-6 text-lg font-bold text-[#1A1D27]">Application Details</h3>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      className="w-full rounded-lg border border-[#E5EAF3] bg-[#F7F8FA] px-4 py-2.5 text-sm text-[#6B7280]"
+                      readOnly
+                      disabled
+                      required
+                    />
                   </div>
-                ) : (
-                  'Submit Application'
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/marketplace')}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-[#E5EAF3] bg-[#F7F8FA] px-4 py-2.5 text-sm text-[#6B7280]"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      className="w-full rounded-lg border border-[#E5EAF3] bg-[#F7F8FA] px-4 py-2.5 text-sm text-[#6B7280]"
+                      readOnly
+                      disabled
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
+                      Resume (PDF) *
+                    </label>
+                    <div className="rounded-lg border border-[#D9E2F2] bg-white px-4 py-3 transition focus-within:border-[#3B6FE8] focus-within:ring-2 focus-within:ring-[#3B6FE8]/15">
+                      <input
+                        key={resumeInputKey}
+                        id="resume-upload"
+                        type="file"
+                        name="resume"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => {
+                          const selectedFile = e.target.files?.[0] || null
+                          setResumeFile(selectedFile)
+                        }}
+                        className="hidden"
+                        required
+                      />
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="min-w-0 flex-1 truncate text-sm text-[#3E4957]">
+                          {resumeFile ? resumeFile.name : 'No file selected'}
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <label
+                            htmlFor="resume-upload"
+                            className="cursor-pointer rounded-md border border-[#D4E0FA] bg-[#EEF2FD] px-3 py-1.5 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC]"
+                          >
+                            {resumeFile ? 'Change PDF' : 'Choose PDF'}
+                          </label>
+
+                          {resumeFile ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setResumeFile(null)
+                                setResumeInputKey((prev) => prev + 1)
+                              }}
+                              className="rounded-md border border-[#E5EAF3] bg-white px-3 py-1.5 text-sm font-semibold text-[#6B7280] transition hover:bg-[#F7F8FA]"
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-sm text-[#6B7280]">Only PDF files are accepted.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-[#1A1D27]">
+                    Cover Letter *
+                  </label>
+                  <textarea
+                    name="coverLetter"
+                    value={formData.coverLetter}
+                    onChange={handleChange}
+                    rows={8}
+                    className="w-full rounded-lg border border-[#D9E2F2] px-4 py-2.5 text-sm outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/15"
+                    placeholder="Tell us why you are interested in this internship and why you would be a great fit..."
+                    required
+                  />
+                  <p className="mt-1 text-sm text-[#6B7280]">
+                    Explain your skills, experience, and why you are interested in this position.
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 rounded-lg bg-[#3B6FE8] px-4 py-3 font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="mr-2 h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                        Submitting Application...
+                      </div>
+                    ) : (
+                      'Submit Application'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard')}
+                    className="flex-1 rounded-lg border border-[#D8DFEC] bg-white px-4 py-3 font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
+          </div>
+        </main>
       </div>
     </div>
   )

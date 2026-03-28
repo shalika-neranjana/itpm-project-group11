@@ -1,33 +1,48 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  BriefcaseBusiness,
+  Building2,
+  LogOut,
+  PencilLine,
+  Phone,
+  Save,
+  Users,
+  X
+} from 'lucide-react'
 import api from '../api'
+
+const panelClass = 'rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
+const inputClass =
+  'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8]'
+
+const resolveUploadUrl = (pathOrUrl) => {
+  if (!pathOrUrl) {
+    return ''
+  }
+
+  if (pathOrUrl.startsWith('http')) {
+    return pathOrUrl
+  }
+
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+  const origin = base.replace(/\/api\/?$/, '')
+  return `${origin}${pathOrUrl}`
+}
 
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
   const [applicants, setApplicants] = useState([])
   const [activeTab, setActiveTab] = useState('internships')
-  const [showPostForm, setShowPostForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [profileEditMode, setProfileEditMode] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
+  const [selectedInternship, setSelectedInternship] = useState(null)
+  const [isViewOpen, setIsViewOpen] = useState(false)
   const navigate = useNavigate()
-
-  const [internshipForm, setInternshipForm] = useState({
-    title: '',
-    specialization: 'Computer Science',
-    type: 'On-site',
-    duration: '',
-    location: '',
-    stipend: '',
-    deadline: '',
-    description: '',
-    duties: [],
-    requirements: [],
-    slots: 1
-  })
 
   const [companyForm, setCompanyForm] = useState({
     name: '',
@@ -41,7 +56,7 @@ const CompanyDashboard = () => {
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user') || '{}')
     const token = localStorage.getItem('token')
-    
+
     if (!token || localStorage.getItem('role') !== 'company') {
       navigate('/login')
       return
@@ -62,17 +77,18 @@ const CompanyDashboard = () => {
   const fetchCompanyInternships = async () => {
     try {
       const response = await api.get('/internships/company/my')
-      setInternships(response.data.data)
-      // Build applicants list from internships.applications
+      const internshipData = response.data.data || []
+      setInternships(internshipData)
+
       const allApplications = []
-      ;(response.data.data || []).forEach((internship) => {
+      internshipData.forEach((internship) => {
         ;(internship.applications || []).forEach((app) => {
           allApplications.push({
             ...app,
             internshipId: internship._id,
             internshipTitle: internship.title,
             internshipType: internship.type,
-            internshipLocation: internship.location,
+            internshipLocation: internship.location
           })
         })
       })
@@ -87,7 +103,6 @@ const CompanyDashboard = () => {
   const handleUpdateApplicationStatus = async (applicant, status) => {
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
-      // Refresh data so UI stays in sync
       fetchCompanyInternships()
       alert(`Application ${status.toLowerCase()} and student will see it in their profile.`)
     } catch (error) {
@@ -96,32 +111,27 @@ const CompanyDashboard = () => {
     }
   }
 
-  const handlePostInternship = async () => {
+  const handleViewInternship = (internship) => {
+    setSelectedInternship(internship)
+    setIsViewOpen(true)
+  }
+
+  const handleEditInternship = (internship) => {
+    navigate(`/company-dashboard/edit-internship/${internship._id}`)
+  }
+
+  const handleDeleteInternship = async (internshipId) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this internship?')
+    if (!confirmDelete) {
+      return
+    }
+
     try {
-      const internshipData = {
-        ...internshipForm,
-        status: 'Published'
-      }
-      const response = await api.post('/internships', internshipData)
-      if (response.data.success) {
-        setShowPostForm(false)
-        setInternshipForm({
-          title: '',
-          specialization: 'Computer Science',
-          type: 'On-site',
-          duration: '',
-          location: '',
-          stipend: '',
-          deadline: '',
-          description: '',
-          duties: [],
-          requirements: [],
-          slots: 1
-        })
-        fetchCompanyInternships()
-      }
+      await api.delete(`/internships/${internshipId}`)
+      await fetchCompanyInternships()
+      alert('Internship deleted successfully')
     } catch (error) {
-      console.error('Failed to post internship:', error)
+      alert(error.response?.data?.message || 'Failed to delete internship')
     }
   }
 
@@ -134,7 +144,7 @@ const CompanyDashboard = () => {
 
   const handleCompanyChange = (e) => {
     const { name, value } = e.target
-    setCompanyForm(prev => ({ ...prev, [name]: value }))
+    setCompanyForm((prev) => ({ ...prev, [name]: value }))
     setProfileError('')
     setProfileSuccess('')
   }
@@ -167,473 +177,490 @@ const CompanyDashboard = () => {
     }
   }
 
+  const tabs = [
+    { id: 'internships', label: 'Published internships', icon: BriefcaseBusiness },
+    { id: 'applicants', label: 'Applicants', icon: Users },
+    { id: 'profile', label: 'Company Profile', icon: Building2 }
+  ]
+
+  const pageTitles = {
+    internships: {
+      title: 'Company Dashboard',
+      subtitle: 'Manage internship opportunities and keep your hiring pipeline active.'
+    },
+    applicants: {
+      title: 'Applicants',
+      subtitle: 'Review student applications and update decisions quickly.'
+    },
+    profile: {
+      title: 'Company Profile',
+      subtitle: 'Maintain your public company information for students.'
+    }
+  }
+
+  const current = pageTitles[activeTab]
+  const mainClassName = 'mx-auto max-w-[1600px] px-6 py-7 xl:px-8'
+  const companyInitials =
+    user?.name
+      ?.split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase())
+      .join('') || 'CO'
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="relative flex min-h-screen items-center justify-center bg-[#e8edf6]">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-[#3B6FE8]" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg text-white font-bold text-sm flex items-center justify-center mr-3">
-                IC
+    <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/authbackgound.jpg')" }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-white/25 to-[#d8e6f8]/35" />
+
+      <header className="sticky top-0 z-50 border-b border-[#E8EAF0] bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-[64px] w-full max-w-[1600px] items-center justify-between px-6 xl:px-8">
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo_icon_only.png"
+              alt="InternConnect logo"
+              className="h-[36px] w-[36px] rounded-[10px] border border-[#E8EAF0] bg-white object-cover shadow-sm"
+            />
+            <span className="font-display text-[19px] font-bold text-[#1A1D27]">InternConnect</span>
+          </div>
+
+          <nav className="hidden flex-wrap gap-1 lg:flex">
+            {tabs.map(({ id, label, icon: Icon }) => {
+              const isActive = activeTab === id
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[#EEF2FD] text-[#3B6FE8]'
+                      : 'text-[#6B7280] hover:bg-[#F7F8FA] hover:text-[#1A1D27]'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                </button>
+              )
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 sm:flex">
+              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white shadow-sm">
+                {companyInitials}
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Company Dashboard</h1>
             </div>
             <button
               onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 font-medium"
+              className="flex items-center gap-2 rounded-lg border border-[#E8EAF0] bg-white px-3 py-2 text-[13px] font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
             >
+              <LogOut className="h-4 w-4" />
               Logout
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Company Info */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{user?.name}</h2>
-              <p className="text-gray-600">{user?.industry} · {user?.location}</p>
-            </div>
-            <button
-              onClick={() => setShowPostForm(true)}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700"
-            >
-              Post New Internship
-            </button>
-          </div>
+      <main className={`relative z-10 ${mainClassName}`}>
+        <div className="mb-6">
+          <h1 className="font-display text-[36px] font-bold text-[#0F1419]">{current.title}</h1>
+          <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('internships')}
-              className={`py-4 border-b-2 font-medium text-sm ${
-                activeTab === 'internships'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              My Internships
-            </button>
-            <button
-              onClick={() => setActiveTab('applicants')}
-              className={`py-4 border-b-2 font-medium text-sm ${
-                activeTab === 'applicants'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Applicants
-            </button>
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`py-4 border-b-2 font-medium text-sm ${
-                activeTab === 'profile'
-                  ? 'border-purple-600 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Company Profile
-            </button>
-          </div>
-        </div>
-      </div>
+        <section className="mb-6 flex flex-wrap gap-3 lg:hidden">
+          {tabs.map(({ id, label, icon: Icon }) => {
+            const isActive = activeTab === id
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[#EEF2FD] text-[#3B6FE8]'
+                    : 'bg-white text-[#6B7280] hover:bg-[#F7F8FA] hover:text-[#1A1D27]'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+              </button>
+            )
+          })}
+        </section>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
         {activeTab === 'internships' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {internships.map((internship) => (
-              <div key={internship._id} className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="font-bold text-gray-900 mb-2">{internship.title}</h3>
-                <div className="text-sm text-gray-600 mb-4">
-                  <div className="flex justify-between mb-1">
-                    <span>{internship.specialization}</span>
-                    <span>{internship.type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{internship.slots} slots</span>
-                    <span>{internship.applications?.length || 0} applications</span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg font-medium hover:bg-purple-200">
-                    View Details
-                  </button>
-                  <button className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200">
-                    Edit
-                  </button>
+          <section>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-xl font-bold text-[#1A1D27]">Published Internships</h2>
+              <button
+                onClick={() => navigate('/company-dashboard/post-internship')}
+                className="inline-flex items-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"
+              >
+                <span className="text-base leading-none">+</span>
+                Post New Internship
+              </button>
+            </div>
+
+            {internships.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {internships.map((internship) => (
+                  <article
+                    key={internship._id}
+                    className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="mb-5 border-b border-[#E8EAF0] pb-5">
+                      <div className="mb-2 inline-flex rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
+                        {internship.specialization}
+                      </div>
+                      <h3 className="text-lg font-bold text-[#1A1D27]">{internship.title}</h3>
+                      <span className="mt-2 inline-block rounded-full bg-[#F7F8FA] px-3 py-1 text-xs font-bold text-[#6B7280]">
+                        {internship.type}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Slots</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.slots}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Applications</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.applications?.length || 0}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.location || 'Not set'}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.duration || 'Not set'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleViewInternship(internship)}
+                        className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleEditInternship(internship)}
+                        className="rounded-[10px] border border-[#D4E0FA] bg-[#EEF2FD] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC]"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInternship(internship._id)}
+                        className="rounded-[10px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={panelClass}>
+                <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
+                  <h3 className="text-xl font-bold text-[#1A1D27]">No internships posted yet</h3>
+                  <p className="mt-2 text-[#6B7280]">Create your first internship to start attracting applicants.</p>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </section>
         )}
 
         {activeTab === 'applicants' && (
-          <div>
-            <h3 className="font-bold text-gray-900 mb-4">Applicants</h3>
-
+          <section className="space-y-4">
             {applicants.length > 0 ? (
-              <div className="space-y-4">
-                {applicants.map((applicant, index) => (
-                  <div key={`${applicant._id}-${index}`} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                    <div className="flex justify-between items-start mb-3">
+              applicants.map((applicant, index) => (
+                <article key={`${applicant._id}-${index}`} className={panelClass}>
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-4">
                       <div>
-                        <h4 className="font-semibold text-gray-900 text-lg">{applicant.name}</h4>
-                        <p className="text-gray-600">{applicant.email}</p>
-                        {applicant.phone && <p className="text-gray-600">{applicant.phone}</p>}
+                        <div className="mb-2 flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-bold text-[#1A1D27]">{applicant.name}</h3>
+                          <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
+                            {applicant.status || 'Pending'}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-sm text-[#6B7280]">
+                          <p>{applicant.email}</p>
+                          {applicant.phone ? <p>{applicant.phone}</p> : null}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="inline-block bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                          {applicant.status || 'Pending'}
-                        </span>
+
+                      <div className="rounded-xl bg-[#F7F8FA] p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Applied for</p>
+                        <p className="mt-2 font-semibold text-[#1A1D27]">{applicant.internshipTitle}</p>
+                        <p className="mt-1 text-sm text-[#6B7280]">
+                          {applicant.internshipLocation} • {applicant.internshipType}
+                        </p>
                       </div>
-                    </div>
 
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-500 mb-1">Applied for</p>
-                      <p className="font-medium text-gray-900">{applicant.internshipTitle}</p>
-                      <p className="text-sm text-gray-600">{applicant.internshipLocation} · {applicant.internshipType}</p>
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-500 mb-2">Cover Letter</p>
-                      <div className="bg-gray-50 rounded-lg p-3 text-gray-700 text-sm whitespace-pre-wrap">
-                        {applicant.coverLetter}
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Cover Letter</p>
+                        <div className="rounded-xl bg-[#F7F8FA] p-4 text-sm leading-6 text-[#1A1D27] whitespace-pre-wrap">
+                          {applicant.coverLetter}
+                        </div>
                       </div>
-                    </div>
 
-                    {applicant.resume && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-500 mb-1">Resume</p>
+                      {applicant.resume ? (
                         <a
-                          href={applicant.resume}
+                          href={resolveUploadUrl(applicant.resume)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-[#3B6FE8] transition-colors hover:text-[#2D5CD4]"
                         >
                           View Resume
                         </a>
-                      </div>
-                    )}
+                      ) : null}
+                    </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex min-w-[220px] flex-col gap-3">
                       <button
                         onClick={() => handleUpdateApplicationStatus(applicant, 'Accepted')}
                         disabled={applicant.status === 'Accepted'}
-                        className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-200 disabled:opacity-50"
+                        className="rounded-[10px] bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => handleUpdateApplicationStatus(applicant, 'Rejected')}
                         disabled={applicant.status === 'Rejected'}
-                        className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-medium hover:bg-red-200 disabled:opacity-50"
+                        className="rounded-[10px] bg-[#DC2626] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Reject
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </article>
+              ))
             ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No applicants yet. Post internships to attract talent!</p>
+              <div className={panelClass}>
+                <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
+                  <h3 className="text-xl font-bold text-[#1A1D27]">No applicants yet</h3>
+                  <p className="mt-2 text-[#6B7280]">Once students apply, they will appear here for review.</p>
+                </div>
               </div>
             )}
-          </div>
+          </section>
         )}
 
         {activeTab === 'profile' && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Company Information</h3>
-              <button
-                onClick={() => {
-                  setProfileEditMode(prev => !prev)
-                  setProfileError('')
-                  setProfileSuccess('')
-                }}
-                className="text-purple-600 hover:text-purple-700 font-medium text-sm"
-              >
-                {profileEditMode ? 'Cancel' : 'Edit'}
-              </button>
-            </div>
-
+          <section>
             {profileError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {profileError}
               </div>
             )}
+
             {profileSuccess && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+              <div className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
                 {profileSuccess}
               </div>
             )}
 
-            {!profileEditMode ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                  <p className="text-gray-900">{user?.name}</p>
+            <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+              <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-[28px] font-bold text-white">
+                  {companyInitials}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-                  <p className="text-gray-900">{user?.industry}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <p className="text-gray-900">{user?.location}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                  <p className="text-gray-900">{user?.website || '—'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <p className="text-gray-900">{user?.phone || '—'}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <p className="text-gray-900 whitespace-pre-wrap">{user?.description || '—'}</p>
+
+                <h2 className="text-lg font-bold text-[#1A1D27]">{user?.name || '-'}</h2>
+
+                <p className="mt-1 text-sm text-[#6B7280]">{user?.industry || 'Industry not added'}</p>
+
+                <div className="mt-6 rounded-xl bg-[#F7F8FA] p-4 text-left">
+                  <div className="mb-3">
+                    <p className="text-xs text-[#6B7280]">Location</p>
+                    <p className="text-sm font-semibold text-[#1A1D27]">{user?.location || '-'}</p>
+                  </div>
+
+                  <div className="mb-3">
+                    <p className="text-xs text-[#6B7280]">Phone</p>
+                    <p className="text-sm font-semibold text-[#1A1D27]">{user?.phone || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#6B7280]">Website</p>
+                    <p className="break-all text-sm font-semibold text-[#1A1D27]">{user?.website || '-'}</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={companyForm.name}
-                      onChange={handleCompanyChange}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-                    <input
-                      type="text"
-                      name="industry"
-                      value={companyForm.industry}
-                      onChange={handleCompanyChange}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={companyForm.location}
-                      onChange={handleCompanyChange}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                    <input
-                      type="url"
-                      name="website"
-                      value={companyForm.website}
-                      onChange={handleCompanyChange}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={companyForm.phone}
-                      onChange={handleCompanyChange}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    />
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    name="description"
-                    value={companyForm.description}
-                    onChange={handleCompanyChange}
-                    rows={4}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="Tell students about your company..."
-                  />
-                </div>
-
-                <div className="flex gap-3">
+              <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="font-display text-2xl font-bold text-[#1A1D27]">Edit Company Profile</h2>
                   <button
-                    onClick={handleSaveCompanyProfile}
-                    disabled={profileLoading}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50"
+                    onClick={() => {
+                      setProfileEditMode((prev) => !prev)
+                      setProfileError('')
+                      setProfileSuccess('')
+                    }}
+                    className="inline-flex items-center gap-2 rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-2 text-sm font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
                   >
-                    {profileLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    onClick={() => setProfileEditMode(false)}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200"
-                  >
-                    Cancel
+                    <PencilLine className="h-4 w-4" />
+                    {profileEditMode ? 'Cancel' : 'Edit Profile'}
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Post Internship Modal */}
-      {showPostForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Post New Internship</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Internship Title</label>
-                <input
-                  type="text"
-                  value={internshipForm.title}
-                  onChange={(e) => setInternshipForm({...internshipForm, title: e.target.value})}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g. Software Engineering Intern"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
-                  <select
-                    value={internshipForm.specialization}
-                    onChange={(e) => setInternshipForm({...internshipForm, specialization: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option>Computer Science</option>
-                    <option>Data Science</option>
-                    <option>Multimedia</option>
-                    <option>Software Engineering</option>
-                    <option>Cybersecurity</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    value={internshipForm.type}
-                    onChange={(e) => setInternshipForm({...internshipForm, type: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option>On-site</option>
-                    <option>Remote</option>
-                    <option>Hybrid</option>
-                  </select>
-                </div>
-              </div>
+                {!profileEditMode ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Company Name</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.name || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Industry</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.industry || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.location || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Website</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.website || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4 md:col-span-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
+                      <p className="mt-2 text-sm leading-6 text-[#1A1D27] whitespace-pre-wrap">{user?.description || '-'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Company Name</label>
+                        <input type="text" name="name" value={companyForm.name} onChange={handleCompanyChange} className={inputClass} />
+                      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                  <input
-                    type="text"
-                    value={internshipForm.duration}
-                    onChange={(e) => setInternshipForm({...internshipForm, duration: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="e.g. 3 months"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={internshipForm.location}
-                    onChange={(e) => setInternshipForm({...internshipForm, location: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="e.g. Kuala Lumpur"
-                  />
-                </div>
-              </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Industry</label>
+                        <input type="text" name="industry" value={companyForm.industry} onChange={handleCompanyChange} className={inputClass} />
+                      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Stipend</label>
-                  <input
-                    type="text"
-                    value={internshipForm.stipend}
-                    onChange={(e) => setInternshipForm({...internshipForm, stipend: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="e.g. RM 1000/month"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-                  <input
-                    type="date"
-                    value={internshipForm.deadline}
-                    onChange={(e) => setInternshipForm({...internshipForm, deadline: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                </div>
-              </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Location</label>
+                        <input type="text" name="location" value={companyForm.location} onChange={handleCompanyChange} className={inputClass} />
+                      </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={internshipForm.description}
-                  onChange={(e) => setInternshipForm({...internshipForm, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Describe the internship role..."
-                />
-              </div>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Website</label>
+                        <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} />
+                      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Number of Slots</label>
-                  <input
-                    type="number"
-                    value={internshipForm.slots}
-                    onChange={(e) => setInternshipForm({...internshipForm, slots: parseInt(e.target.value)})}
-                    min="1"
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Phone</label>
+                        <div className="relative">
+                          <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={companyForm.phone}
+                            onChange={handleCompanyChange}
+                            className={`${inputClass} pl-11`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Description</label>
+                      <textarea
+                        name="description"
+                        value={companyForm.description}
+                        onChange={handleCompanyChange}
+                        rows={5}
+                        className={inputClass}
+                        placeholder="Tell students about your company..."
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleSaveCompanyProfile}
+                      disabled={profileLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      <Save className="h-4 w-4" />
+                      {profileLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
+          </section>
+        )}
+      </main>
 
-            <div className="flex gap-4 mt-6">
+      {isViewOpen && selectedInternship ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Internship Details</h3>
               <button
-                onClick={handlePostInternship}
-                className="flex-1 bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700"
+                onClick={() => {
+                  setIsViewOpen(false)
+                  setSelectedInternship(null)
+                }}
+                className="rounded-lg border border-[#E8EAF0] p-2 text-[#6B7280] hover:bg-[#F7F8FA]"
               >
-                Post Internship
+                <X className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setShowPostForm(false)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
-              >
-                Cancel
-              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Title</p>
+                <p className="mt-1 text-base font-bold text-[#1A1D27]">{selectedInternship.title}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Specialization</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.specialization || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Type</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.type || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.duration || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.location || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Stipend</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.stipend || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">
+                  {selectedInternship.deadline ? new Date(selectedInternship.deadline).toLocaleDateString() : '-'}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
+                <p className="mt-1 text-sm text-[#1A1D27] whitespace-pre-wrap">{selectedInternship.description || '-'}</p>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
     </div>
   )
 }

@@ -99,6 +99,50 @@ const companyReviewSchema = new mongoose.Schema(
             enum: ["General", "Compensation", "Culture", "Technical Learning", "Other"],
             default: "General",
         },
+        comments: [
+            {
+                text: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                authorId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Student",
+                    required: true,
+                },
+                authorName: {
+                    type: String,
+                    default: "Anonymous",
+                },
+                replies: [
+                    {
+                        text: {
+                            type: String,
+                            required: true,
+                            trim: true,
+                        },
+                        authorId: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: "Student",
+                            required: true,
+                        },
+                        authorName: {
+                            type: String,
+                            default: "Anonymous",
+                        },
+                        createdAt: {
+                            type: Date,
+                            default: Date.now,
+                        },
+                    }
+                ],
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            }
+        ],
     },
     {
         timestamps: true,

@@ -9,6 +9,7 @@ const {
     getCompanyProfile,
     updateCompanyProfile,
 } = require("../controllers/companyController");
+const { uploadCompanyLogo } = require("../middleware/uploadMiddleware");
 
 const companyAuth = require("../middleware/companyMiddleware");
 
@@ -19,7 +20,7 @@ const router = express.Router();
  * @route   POST /api/company/register
  * @access  Public
  */
-router.post("/register", registerCompany);
+router.post("/register", uploadCompanyLogo, registerCompany);
 
 /**
  * @desc    Login company

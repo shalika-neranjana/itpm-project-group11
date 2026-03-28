@@ -1,9 +1,18 @@
+import { useNavigate } from 'react-router-dom'
+
 function CompanyReview({ review, onDelete, onEdit }) {
+  const navigate = useNavigate()
+  const descriptionPreview = (review.text || '').trim()
+  const shortDescription =
+    descriptionPreview.length > 160
+      ? `${descriptionPreview.slice(0, 160).trim()}...`
+      : descriptionPreview
+
   const renderStars = (rating) => {
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map(star => (
-          <span key={star} className={star <= rating ? 'text-yellow-400 text-lg' : 'text-gray-300 text-lg'}>
+          <span key={star} className={star <= rating ? 'text-yellow-400 text-sm' : 'text-gray-300 text-sm'}>
             ★
           </span>
         ))}
@@ -11,107 +20,84 @@ function CompanyReview({ review, onDelete, onEdit }) {
     )
   }
 
-  // Check if review can be deleted (within 7 days and written by current user)
+  // Check if review can be edited/deleted (written by current user)
   const canDeleteReview = () => {
-    if (!review.createdAt || !review.authorId) return false
+    if (!review.authorId) return false
     
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
-    const currentUserId = currentUser.id || currentUser.email || 'anonymous'
+    const currentUser = JSON.parse(localStorage.getItem('student') || '{}')
+    const currentUserId = currentUser._id || currentUser.id
     
-    // Check if user is the author
-    if (review.authorId !== currentUserId) return false
-    
-    // Check if within 7 days
-    const createdDate = new Date(review.createdAt)
-    const now = new Date()
-    const daysOld = (now - createdDate) / (1000 * 60 * 60 * 24)
-    
-    return daysOld <= 7
+    // Compare with database authorId (ObjectId or string)
+    return review.authorId === currentUserId || review.authorId._id === currentUserId
   }
 
-  const handleDelete = () => {
+  const handleDelete = (e) => {
+    e.stopPropagation()
     if (window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
-      onDelete(review.id)
+      onDelete(review._id || review.id)
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = (e) => {
+    e.stopPropagation()
     if (onEdit) {
       onEdit(review)
     }
   }
 
+  const handleCardClick = () => {
+    navigate(`/review/${review._id || review.id}`)
+  }
+
+  const canManage = canDeleteReview()
+
   return (
-    <div className={`rounded-lg border p-6 ${review.flagged ? 'border-orange-300 bg-orange-50' : 'border-[#E8EAF0] bg-white'}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div></div>
-        <div className="flex items-center gap-2">
-          {review.flagged && (
-            <span className="inline-block rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-              🚨 Flag: Culture Issue
-            </span>
-          )}
-          {review.verified && (
-            <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              ✓ Verified Intern
-            </span>
-          )}
+    <div 
+      onClick={handleCardClick}
+      className={`h-full rounded-2xl border p-6 flex flex-col min-h-[280px] shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer ${review.flagged ? 'border-orange-300 bg-orange-50' : 'border-[#E8EAF0] bg-white'}`}>
+      <div className="mb-5 border-b border-[#E8EAF0] pb-5">
+        <h3 className="text-lg font-bold text-[#1A1D27]">{review.company}</h3>
+        <p className="mt-1 text-sm text-[#6B7280]">{review.role}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="rounded-lg bg-[#F7F8FA] p-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Rating</p>
+          <div className="mt-1 flex items-center gap-0.5">
+            {renderStars(review.rating)}
+          </div>
+          <p className="mt-0.5 text-xs font-bold text-[#1A1D27]">{review.rating.toFixed(1)} / 5</p>
+        </div>
+        <div className="rounded-lg bg-[#F7F8FA] p-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Sentiment</p>
+          <p className="mt-1 text-xs font-bold text-[#1A1D27]">
+            {review.rating <= 2 ? 'Negative' : review.rating >= 4 ? 'Positive' : 'Neutral'}
+          </p>
         </div>
       </div>
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-[#1A1D27]">{review.company}</h3>
-          <p className="text-sm text-[#6B7280]">{review.role} · {review.date}</p>
-        </div>
+      <div className="flex-grow">
+        <p className="text-sm text-[#6B7280] leading-relaxed">{shortDescription || 'No description provided.'}</p>
       </div>
 
-      <div className="mt-3 flex items-center gap-3">
-        {renderStars(review.rating)}
-        <span className="text-sm font-semibold text-[#1A1D27]">{review.rating.toFixed(1)} / 5</span>
-      </div>
-
-      <p className="mt-4 text-[#6B7280] leading-relaxed">{review.text}</p>
-
-      {review.tags && review.tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {review.tags.map(tag => (
-            <span
-              key={tag}
-              className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs text-[#6B7280]"
-            >
-              {tag}
-            </span>
-          ))}
+      {canManage && (
+        <div className="mt-4 flex items-center justify-end gap-2 border-t border-[#E8EAF0] pt-3">
+          <button
+            onClick={handleEdit}
+            className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-100 cursor-pointer"
+            title="Edit review"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 cursor-pointer"
+            title="Delete review"
+          >
+            Delete
+          </button>
         </div>
       )}
-
-      <div className="mt-4 flex items-center justify-between text-xs text-[#6B7280] border-t border-[#E8EAF0] pt-3">
-        <span>Posted anonymously · {review.date}</span>
-        <div className="flex items-center gap-4">
-          <span className={`font-semibold ${review.flagged ? 'text-orange-600' : 'text-[#6B7280]'}`}>
-            {review.sentiment}
-          </span>
-          {canDeleteReview() && (
-            <>
-              <button
-                onClick={handleEdit}
-                className="text-blue-600 hover:text-blue-700 font-semibold transition"
-                title="Edit review (available for 7 days)"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="text-red-600 hover:text-red-700 font-semibold transition"
-                title="Delete review (available for 7 days)"
-              >
-                Delete
-              </button>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

@@ -2,6 +2,7 @@ export const guidanceTabs = [
   { key: 'examResults', label: 'Academic Performance' },
   { key: 'interests', label: 'My Interests' },
   { key: 'skills', label: 'Skills' },
+  { key: 'askInternConnect', label: 'Ask InternConnect' },
   { key: 'careers', label: 'Career Suggestions' },
 ]
 
