@@ -273,7 +273,7 @@ function Dashboard() {
         </div>
 
         {activeTab === 'opportunities' ? (
-          <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <>
             {/* Filters */}
             <div className="flex flex-wrap gap-4 mb-6">
               <input
@@ -281,24 +281,12 @@ function Dashboard() {
                 placeholder="Search internships..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <select
-                value={filters.specialization}
-                onChange={(e) => handleFilterChange('specialization', e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Specializations</option>
-                <option>Computer Science</option>
-                <option>Data Science</option>
-                <option>Multimedia</option>
-                <option>Software Engineering</option>
-                <option>Cybersecurity</option>
-              </select>
               <select
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">All Types</option>
                 <option>On-site</option>
@@ -368,7 +356,7 @@ function Dashboard() {
                 <p className="text-gray-500">No internships found matching your criteria.</p>
               </div>
             )}
-          </div>
+          </>
         ) : activeTab === 'reviews' ? (
           <div className="space-y-4">
             <div className="mb-6 flex items-center justify-between">
