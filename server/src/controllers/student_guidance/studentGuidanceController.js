@@ -15,28 +15,25 @@ const DEFAULT_SKILLS = [
 
 const CAREER_LIBRARY = [
     {
-        title: "Frontend Developer",
+        title: "Web Developer",
         matchTags: ["Software Engineering", "User Experience Design", "JavaScript", "React"],
-        summary: "Build responsive interfaces and collaborate closely with design teams.",
-        nextStep: "Strengthen component architecture and accessibility practices with a portfolio project.",
+        summary: "Build responsive, user-focused web experiences with modern frontend and backend tooling.",
+        nextStep: "Build and deploy one full web app with authentication, API integration, and accessibility checks.",
+        fixedScore: 80,
     },
     {
-        title: "Full Stack Developer",
-        matchTags: ["Software Engineering", "JavaScript", "SQL", "Database Systems", "React"],
-        summary: "Own features end-to-end across UI, APIs, and data storage.",
-        nextStep: "Add one full-stack project with authentication, CRUD flows, and deployment.",
+        title: "Mobile Apps Developer",
+        matchTags: ["Software Engineering", "JavaScript", "React", "Communication Skills"],
+        summary: "Create mobile-first applications with smooth user interactions and reliable performance.",
+        nextStep: "Create a mobile app prototype and implement core screens with navigation and state handling.",
+        fixedScore: 15,
     },
     {
-        title: "Data Analyst",
-        matchTags: ["Data Analysis", "SQL", "Mathematics for Computing", "Analytics"],
-        summary: "Turn data into dashboards, trends, and business recommendations.",
-        nextStep: "Practice SQL querying and present findings in a simple visual dashboard.",
-    },
-    {
-        title: "UI/UX Engineer",
-        matchTags: ["User Experience Design", "React", "Communication Skills"],
-        summary: "Bridge design and engineering by creating polished, user-centered experiences.",
-        nextStep: "Showcase interactive prototypes and document design decisions for each case study.",
+        title: "Desktop App Developer",
+        matchTags: ["Software Engineering", "Programming", "Database"],
+        summary: "Develop robust desktop applications with stable architecture and local/system integrations.",
+        nextStep: "Build a small desktop utility app with file handling and structured error management.",
+        fixedScore: 5,
     },
 ];
 
@@ -58,37 +55,13 @@ const buildCareerSuggestions = (guidance, examResults) => {
     );
     const tags = new Set([...interestTags, ...skillTags, ...subjectTags]);
 
-    const rankedSuggestions = CAREER_LIBRARY.map((career) => {
-        const score = career.matchTags.reduce(
-            (total, tag) => total + (tags.has(tag) ? 1 : 0),
-            0
-        );
-
-        return {
-            title: career.title,
-            summary: career.summary,
-            nextStep: career.nextStep,
-            matchScore: score,
-            matchedAreas: career.matchTags.filter((tag) => tags.has(tag)).slice(0, 4),
-        };
-    })
-        .filter((career) => career.matchScore > 0)
-        .sort((left, right) => right.matchScore - left.matchScore)
-        .slice(0, 3);
-
-    if (rankedSuggestions.length > 0) {
-        return rankedSuggestions;
-    }
-
-    return [
-        {
-            title: "Associate Software Engineer",
-            summary: "A balanced starting role that helps you keep exploring both technical depth and teamwork.",
-            nextStep: "Build one practical portfolio app and document what you learned from the implementation.",
-            matchScore: 1,
-            matchedAreas: ["Academic progress"],
-        },
-    ];
+    return CAREER_LIBRARY.map((career) => ({
+        title: career.title,
+        summary: career.summary,
+        nextStep: career.nextStep,
+        matchScore: career.fixedScore,
+        matchedAreas: career.matchTags.filter((tag) => tags.has(tag)).slice(0, 4),
+    }));
 };
 
 const buildResponse = (guidance, examResults) => ({
