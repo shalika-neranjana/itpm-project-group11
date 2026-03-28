@@ -34,10 +34,12 @@ const companySchema = new mongoose.Schema(
         },
         website: {
             type: String,
+            required: [true, "Website is required"],
             trim: true,
         },
         address: {
             type: String,
+            required: [true, "Address is required"],
             trim: true,
         },
         location: {
