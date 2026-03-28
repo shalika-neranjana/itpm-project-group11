@@ -6,9 +6,23 @@ import InternshipList from '../components/MyInternships/InternshipList'
 import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
 import StudentGuidancePage from '../components/student_guidance/StudentGuidancePage'
+import { X } from 'lucide-react'
 import api from '../api'
 
 const DASHBOARD_TABS = ['opportunities', 'myInternships', 'guidance', 'reviews', 'profile']
+
+const DURATION_RANGE_OPTIONS = [
+  { value: '0-3', label: '0-3 months', min: 0, max: 3 },
+  { value: '4-6', label: '4-6 months', min: 4, max: 6 },
+  { value: '7-12', label: '7-12 months', min: 7, max: 12 },
+  { value: '13+', label: '13+ months', min: 13, max: Number.POSITIVE_INFINITY }
+]
+const STIPEND_RANGE_OPTIONS = [
+  { value: '0-25000', label: 'LKR 0 - 25,000', min: 0, max: 25000 },
+  { value: '25001-50000', label: 'LKR 25,001 - 50,000', min: 25001, max: 50000 },
+  { value: '50001-100000', label: 'LKR 50,001 - 100,000', min: 50001, max: 100000 },
+  { value: '100001+', label: 'LKR 100,001+', min: 100001, max: Number.POSITIVE_INFINITY }
+]
 
 const getTabFromLocation = (location) => {
   const queryTab = new URLSearchParams(location.search).get('tab')
@@ -32,24 +46,28 @@ function Dashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(() => getTabFromLocation(location))
   const [internships, setInternships] = useState([])
+  const [selectedOpportunity, setSelectedOpportunity] = useState(null)
+  const [isOpportunityViewOpen, setIsOpportunityViewOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     search: '',
     specialization: '',
-    type: ''
+    type: '',
+    duration: '',
+    stipend: ''
   })
 
   const fetchInternships = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await api.get('/internships', { params: filters })
+      const response = await api.get('/internships')
       setInternships(response.data.data || [])
     } catch (error) {
       console.error('Failed to fetch internships:', error)
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [])
 
   useEffect(() => {
     if (activeTab === 'opportunities') {
@@ -89,8 +107,85 @@ function Dashboard() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
+  const parseDurationInMonths = (durationValue) => {
+    if (durationValue === null || durationValue === undefined) {
+      return null
+    }
+
+    if (typeof durationValue === 'number') {
+      return Number.isFinite(durationValue) ? durationValue : null
+    }
+
+    const matched = String(durationValue).match(/\d+/)
+    return matched ? Number(matched[0]) : null
+  }
+  
+  const parseStipendAmount = (stipendValue) => {
+    if (stipendValue === null || stipendValue === undefined) {
+      return null
+    }
+
+    if (typeof stipendValue === 'number') {
+      return Number.isFinite(stipendValue) ? stipendValue : null
+    }
+
+    const digitsOnly = String(stipendValue).replace(/[^\d]/g, '')
+    return digitsOnly ? Number(digitsOnly) : null
+  }
+
+  const specializationOptions = useMemo(() => {
+    return [...new Set(internships.map((internship) => internship.specialization).filter(Boolean))]
+  }, [internships])
+
+  const stipendOptions = useMemo(() => {
+    return [...new Set(internships.map((internship) => internship.stipend).filter(Boolean))]
+  }, [internships])
+
+  const filteredInternships = useMemo(() => {
+    const searchValue = filters.search.trim().toLowerCase()
+
+    return internships.filter((internship) => {
+      const matchesSearch =
+        !searchValue ||
+        internship.title?.toLowerCase().includes(searchValue) ||
+        internship.company?.name?.toLowerCase().includes(searchValue) ||
+        internship.location?.toLowerCase().includes(searchValue)
+
+      const matchesType = !filters.type || internship.type === filters.type
+      const matchesSpecialization =
+        !filters.specialization || internship.specialization === filters.specialization
+      const selectedDurationRange = DURATION_RANGE_OPTIONS.find((range) => range.value === filters.duration)
+      const durationInMonths = parseDurationInMonths(internship.duration)
+      const matchesDuration =
+        !selectedDurationRange ||
+        (durationInMonths !== null &&
+          durationInMonths >= selectedDurationRange.min &&
+          durationInMonths <= selectedDurationRange.max)
+      const selectedStipendRange = STIPEND_RANGE_OPTIONS.find((range) => range.value === filters.stipend)
+      const stipendAmount = parseStipendAmount(internship.stipend)
+      const matchesStipend =
+        !selectedStipendRange ||
+        (stipendAmount !== null &&
+          stipendAmount >= selectedStipendRange.min &&
+          stipendAmount <= selectedStipendRange.max)
+
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesSpecialization &&
+        matchesDuration &&
+        matchesStipend
+      )
+    })
+  }, [internships, filters])
+
   const handleApply = (internshipId) => {
     navigate(`/apply/${internshipId}`)
+  }
+
+  const handleViewOpportunity = (internship) => {
+    setSelectedOpportunity(internship)
+    setIsOpportunityViewOpen(true)
   }
 
   const [reviews, setReviews] = useState([])
@@ -102,9 +197,11 @@ function Dashboard() {
     email: '',
     phone: '',
     linkedin: '',
+    profileImage: '',
   })
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const [profileImageLoadFailed, setProfileImageLoadFailed] = useState(false)
 
   useEffect(() => {
     // Load user-submitted reviews from localStorage
@@ -125,6 +222,7 @@ function Dashboard() {
       email: student.email || '',
       phone: student.phone || '',
       linkedin: student.linkedin || '',
+      profileImage: student.profileImage || '',
     })
   }, [])
 
@@ -171,6 +269,7 @@ function Dashboard() {
         email: updatedStudent.email || '',
         phone: updatedStudent.phone || '',
         linkedin: updatedStudent.linkedin || '',
+        profileImage: updatedStudent.profileImage || '',
       })
       setProfileMessage('Profile updated successfully')
     } catch (err) {
@@ -284,6 +383,26 @@ function Dashboard() {
   const initials =
     `${profileFormData.firstName?.[0] || ''}${profileFormData.lastName?.[0] || ''}`.toUpperCase() || 'ST'
 
+  const profileImageUrl = useMemo(() => {
+    const profileImage = profileFormData.profileImage
+
+    if (!profileImage) {
+      return ''
+    }
+
+    if (profileImage.startsWith('http')) {
+      return profileImage
+    }
+
+    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    const origin = base.replace(/\/api\/?$/, '')
+    return `${origin}${profileImage}`
+  }, [profileFormData.profileImage])
+
+  useEffect(() => {
+    setProfileImageLoadFailed(false)
+  }, [profileImageUrl])
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#e8edf6]">
       <div
@@ -306,7 +425,7 @@ function Dashboard() {
         {activeTab === 'opportunities' ? (
           <>
             {/* Filters */}
-            <div className="flex flex-wrap gap-4 mb-6">
+            <div className="mb-6 flex flex-wrap gap-4">
               <input
                 type="text"
                 placeholder="Search internships..."
@@ -314,6 +433,18 @@ function Dashboard() {
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <select
+                value={filters.specialization}
+                onChange={(e) => handleFilterChange('specialization', e.target.value)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Specializations</option>
+                {specializationOptions.map((specialization) => (
+                  <option key={specialization} value={specialization}>
+                    {specialization}
+                  </option>
+                ))}
+              </select>
               <select
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
@@ -324,6 +455,30 @@ function Dashboard() {
                 <option>Remote</option>
                 <option>Hybrid</option>
               </select>
+              <select
+                value={filters.duration}
+                onChange={(e) => handleFilterChange('duration', e.target.value)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Durations</option>
+                {DURATION_RANGE_OPTIONS.map((durationRange) => (
+                  <option key={durationRange.value} value={durationRange.value}>
+                    {durationRange.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filters.stipend}
+                onChange={(e) => handleFilterChange('stipend', e.target.value)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Stipends</option>
+                {STIPEND_RANGE_OPTIONS.map((stipendRange) => (
+                  <option key={stipendRange.value} value={stipendRange.value}>
+                    {stipendRange.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Internship Cards */}
@@ -331,77 +486,56 @@ function Dashboard() {
               <div className="flex justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
-            ) : internships.length > 0 ? (
+            ) : filteredInternships.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {internships.map((internship) => (
-                  <div key={internship._id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-                    {/* Header with Logo and Title */}
-                    <div className="mb-5 pb-5 border-b border-gray-100">
-                      <div className="flex items-start gap-4 mb-3">
-                        {internship.company?.logo ? (
-                          <img 
-                            src={internship.company.logo.startsWith('http') ? internship.company.logo : `http://localhost:5000${internship.company.logo}`}
-                            alt={internship.company?.name}
-                            className="w-14 h-14 object-cover rounded-xl shadow-md"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextElementSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl text-white font-bold flex items-center justify-center shadow-md"
-                          style={internship.company?.logo ? { display: 'none' } : {}}
-                        >
-                          {internship.company?.name?.substring(0, 2).toUpperCase() || 'CO'}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">{internship.company?.name}</p>
-                          <h3 className="font-bold text-gray-900 text-base leading-tight mb-2">{internship.title}</h3>
-                          <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
-                            internship.type === 'Remote' ? 'bg-purple-100 text-purple-800' :
-                            internship.type === 'Hybrid' ? 'bg-amber-100 text-amber-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {internship.type}
-                          </span>
-                        </div>
+                {filteredInternships.map((internship) => (
+                  <article
+                    key={internship._id}
+                    className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="mb-5 border-b border-[#E8EAF0] pb-5">
+                      <div className="mb-2 inline-flex rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">
+                        {internship.specialization || 'General'}
+                      </div>
+                      <h3 className="text-lg font-bold text-[#1A1D27]">{internship.title}</h3>
+                      <span className="mt-2 inline-block rounded-full bg-[#F7F8FA] px-3 py-1 text-xs font-bold text-[#6B7280]">
+                        {internship.type || '-'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Slots</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.slots}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Stipend</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.stipend || 'Not set'}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.location || 'Not set'}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.duration || 'Not set'}</p>
                       </div>
                     </div>
 
-                    {/* Info Grid */}
-                    <div className="grid grid-cols-2 gap-3 mb-5 flex-grow">
-                      <div className="bg-gradient-to-br from-blue-50 to-transparent rounded-lg p-3">
-                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Duration</p>
-                        <p className="text-sm font-bold text-gray-900">{internship.duration}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-red-50 to-transparent rounded-lg p-3">
-                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Deadline</p>
-                        <p className="text-sm font-bold text-gray-900">{new Date(internship.deadline).toLocaleDateString()}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-green-50 to-transparent rounded-lg p-3">
-                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Stipend</p>
-                        <p className="text-sm font-bold text-gray-900">{internship.stipend}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-purple-50 to-transparent rounded-lg p-3">
-                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">Slots</p>
-                        <p className="text-sm font-bold text-gray-900">{internship.slots}</p>
-                      </div>
+                    <div className="mt-5 grid grid-cols-1 gap-3">
+                      <button
+                        onClick={() => handleViewOpportunity(internship)}
+                        className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                      >
+                        View
+                      </button>
                     </div>
-
-                    {/* Button */}
-                    <button
-                      onClick={() => handleApply(internship._id)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 active:scale-95 shadow-md"
-                    >
-                      Apply Now
-                    </button>
-                  </div>
+                  </article>
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-500">No internships found matching your criteria.</p>
+                <p className="text-gray-500">No internships found for selected filters.</p>
               </div>
             )}
           </>
@@ -454,9 +588,20 @@ function Dashboard() {
 
             <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
               <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-[28px] font-bold text-white">
-                  {initials}
-                </div>
+                {profileImageUrl && !profileImageLoadFailed ? (
+                  <img
+                    src={profileImageUrl}
+                    alt="Student profile"
+                    className="mx-auto mb-4 h-20 w-20 rounded-full border border-[#E8EAF0] object-cover"
+                    onError={() => setProfileImageLoadFailed(true)}
+                  />
+                ) : null}
+
+                {!profileImageUrl || profileImageLoadFailed ? (
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-[28px] font-bold text-white">
+                    {initials}
+                  </div>
+                ) : null}
 
                 <h2 className="text-lg font-bold text-[#1A1D27]">
                   {profileFormData.firstName} {profileFormData.lastName}
@@ -601,6 +746,71 @@ function Dashboard() {
           </div>
         )}
       </main>
+
+      {isOpportunityViewOpen && selectedOpportunity ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Internship Details</h3>
+              <button
+                onClick={() => {
+                  setIsOpportunityViewOpen(false)
+                  setSelectedOpportunity(null)
+                }}
+                className="rounded-lg border border-[#E8EAF0] p-2 text-[#6B7280] hover:bg-[#F7F8FA]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Title</p>
+                <p className="mt-1 text-base font-bold text-[#1A1D27]">{selectedOpportunity.title}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Specialization</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedOpportunity.specialization || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Type</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedOpportunity.type || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedOpportunity.duration || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedOpportunity.location || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Stipend</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedOpportunity.stipend || '-'}</p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">
+                  {selectedOpportunity.deadline ? new Date(selectedOpportunity.deadline).toLocaleDateString() : '-'}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
+                <p className="mt-1 text-sm text-[#1A1D27] whitespace-pre-wrap">{selectedOpportunity.description || '-'}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => handleApply(selectedOpportunity._id)}
+                className="rounded-[10px] bg-[#3B6FE8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"
+              >
+                Apply Now
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

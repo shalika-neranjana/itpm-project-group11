@@ -27,12 +27,11 @@ const registerStudent = async (req, res, next) => {
             linkedin,
             faculty,
             github,
-            profileImage,
         } = req.body;
         const normalizedStudentId = studentId?.trim().toUpperCase();
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedPhone = phone?.trim();
-        const uploadedProfileImage = getUploadedFilePath(req.file, "avatars", profileImage);
+        const uploadedProfileImage = getUploadedFilePath(req.file, "avatars");
 
         // Validate required fields
         if (!studentId || !firstName || !lastName || !email || !password || !phone) {

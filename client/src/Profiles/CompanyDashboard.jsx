@@ -6,44 +6,29 @@ import {
   LogOut,
   PencilLine,
   Phone,
-  Plus,
   Save,
-  Users
+  Users,
+  X
 } from 'lucide-react'
 import api from '../api'
 
 const panelClass = 'rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
 const inputClass =
   'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8]'
-const signupInputClass =
-  'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10'
 
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
   const [applicants, setApplicants] = useState([])
   const [activeTab, setActiveTab] = useState('internships')
-  const [showPostForm, setShowPostForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [profileEditMode, setProfileEditMode] = useState(false)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
+  const [selectedInternship, setSelectedInternship] = useState(null)
+  const [isViewOpen, setIsViewOpen] = useState(false)
   const navigate = useNavigate()
-
-  const [internshipForm, setInternshipForm] = useState({
-    title: '',
-    specialization: 'Computer Science',
-    type: 'On-site',
-    duration: '',
-    location: '',
-    stipend: '',
-    deadline: '',
-    description: '',
-    duties: [],
-    requirements: [],
-    slots: 1
-  })
 
   const [companyForm, setCompanyForm] = useState({
     name: '',
@@ -112,32 +97,27 @@ const CompanyDashboard = () => {
     }
   }
 
-  const handlePostInternship = async () => {
+  const handleViewInternship = (internship) => {
+    setSelectedInternship(internship)
+    setIsViewOpen(true)
+  }
+
+  const handleEditInternship = (internship) => {
+    navigate(`/company-dashboard/edit-internship/${internship._id}`)
+  }
+
+  const handleDeleteInternship = async (internshipId) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this internship?')
+    if (!confirmDelete) {
+      return
+    }
+
     try {
-      const internshipData = {
-        ...internshipForm,
-        status: 'Published'
-      }
-      const response = await api.post('/internships', internshipData)
-      if (response.data.success) {
-        setShowPostForm(false)
-        setInternshipForm({
-          title: '',
-          specialization: 'Computer Science',
-          type: 'On-site',
-          duration: '',
-          location: '',
-          stipend: '',
-          deadline: '',
-          description: '',
-          duties: [],
-          requirements: [],
-          slots: 1
-        })
-        fetchCompanyInternships()
-      }
+      await api.delete(`/internships/${internshipId}`)
+      await fetchCompanyInternships()
+      alert('Internship deleted successfully')
     } catch (error) {
-      console.error('Failed to post internship:', error)
+      alert(error.response?.data?.message || 'Failed to delete internship')
     }
   }
 
@@ -309,10 +289,10 @@ const CompanyDashboard = () => {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-xl font-bold text-[#1A1D27]">Published Internships</h2>
               <button
-                onClick={() => setShowPostForm(true)}
+                onClick={() => navigate('/company-dashboard/post-internship')}
                 className="inline-flex items-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"
               >
-                <Plus className="h-4 w-4" />
+                <span className="text-base leading-none">+</span>
                 Post New Internship
               </button>
             </div>
@@ -351,6 +331,27 @@ const CompanyDashboard = () => {
                         <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
                         <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.duration || 'Not set'}</p>
                       </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleViewInternship(internship)}
+                        className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-xs font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleEditInternship(internship)}
+                        className="rounded-[10px] border border-[#D4E0FA] bg-[#EEF2FD] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC]"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInternship(internship._id)}
+                        className="rounded-[10px] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -590,150 +591,62 @@ const CompanyDashboard = () => {
         )}
       </main>
 
-      {showPostForm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_20px_40px_rgba(15,23,42,0.18)]">
-            <div className="mb-6 flex flex-col items-center text-center">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[12px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
-                <Plus className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="font-display text-3xl font-bold text-[#1A1D27]">Post New Internship</h3>
-              <p className="mt-1 text-sm text-[#6B7280]">Create a new role for students using the same clean form style.</p>
-            </div>
-
-            <div className="mb-5 flex justify-end">
+      {isViewOpen && selectedInternship ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Internship Details</h3>
               <button
-                onClick={() => setShowPostForm(false)}
-                className="rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-2 text-sm font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
+                onClick={() => {
+                  setIsViewOpen(false)
+                  setSelectedInternship(null)
+                }}
+                className="rounded-lg border border-[#E8EAF0] p-2 text-[#6B7280] hover:bg-[#F7F8FA]"
               >
-                Close
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Internship Title</label>
-                <input
-                  type="text"
-                  value={internshipForm.title}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, title: e.target.value })}
-                  className={signupInputClass}
-                  placeholder="e.g. Software Engineering Intern"
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Title</p>
+                <p className="mt-1 text-base font-bold text-[#1A1D27]">{selectedInternship.title}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Specialization</label>
-                <select
-                  value={internshipForm.specialization}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, specialization: e.target.value })}
-                  className={signupInputClass}
-                >
-                  <option>Computer Science</option>
-                  <option>Data Science</option>
-                  <option>Multimedia</option>
-                  <option>Software Engineering</option>
-                  <option>Cybersecurity</option>
-                </select>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Specialization</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.specialization || '-'}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Type</label>
-                <select
-                  value={internshipForm.type}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, type: e.target.value })}
-                  className={signupInputClass}
-                >
-                  <option>On-site</option>
-                  <option>Remote</option>
-                  <option>Hybrid</option>
-                </select>
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Type</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.type || '-'}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Duration</label>
-                <input
-                  type="text"
-                  value={internshipForm.duration}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, duration: e.target.value })}
-                  className={signupInputClass}
-                  placeholder="e.g. 3 months"
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Duration</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.duration || '-'}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Location</label>
-                <input
-                  type="text"
-                  value={internshipForm.location}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, location: e.target.value })}
-                  className={signupInputClass}
-                  placeholder="e.g. Colombo"
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.location || '-'}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Stipend</label>
-                <input
-                  type="text"
-                  value={internshipForm.stipend}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, stipend: e.target.value })}
-                  className={signupInputClass}
-                  placeholder="e.g. LKR 50,000/month"
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Stipend</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">{selectedInternship.stipend || '-'}</p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Deadline</label>
-                <input
-                  type="date"
-                  value={internshipForm.deadline}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, deadline: e.target.value })}
-                  className={signupInputClass}
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
+                <p className="mt-1 text-sm font-semibold text-[#1A1D27]">
+                  {selectedInternship.deadline ? new Date(selectedInternship.deadline).toLocaleDateString() : '-'}
+                </p>
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Number of Slots</label>
-                <input
-                  type="number"
-                  value={internshipForm.slots}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, slots: parseInt(e.target.value, 10) || 1 })}
-                  min="1"
-                  className={signupInputClass}
-                />
+              <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
+                <p className="mt-1 text-sm text-[#1A1D27] whitespace-pre-wrap">{selectedInternship.description || '-'}</p>
               </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Description</label>
-                <textarea
-                  value={internshipForm.description}
-                  onChange={(e) => setInternshipForm({ ...internshipForm, description: e.target.value })}
-                  rows={5}
-                  className={signupInputClass}
-                  placeholder="Describe the internship role..."
-                />
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={handlePostInternship}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-4 py-3 font-semibold text-white transition hover:bg-[#2D5CD4]"
-              >
-                <Plus className="h-4 w-4" />
-                Post Internship
-              </button>
-              <button
-                onClick={() => setShowPostForm(false)}
-                className="flex-1 rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 font-semibold text-[#1A1D27] transition hover:bg-[#F7F8FA]"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>
       ) : null}
+
     </div>
   )
 }

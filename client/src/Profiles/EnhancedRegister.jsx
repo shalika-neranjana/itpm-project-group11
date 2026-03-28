@@ -280,6 +280,11 @@ const EnhancedRegister = () => {
       return
     }
 
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError('Image size must be 5MB or less.')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
       setSubmitError('')
@@ -586,6 +591,18 @@ const EnhancedRegister = () => {
 
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Field
+                      label="Email Address"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="you@email.com"
+                      required
+                      requiredIndicator
+                      error={fieldErrors.email}
+                      icon={<Mail className="h-4 w-4" />}
+                    />
+                    <Field
                       label="Phone"
                       name="phone"
                       type="tel"
@@ -597,6 +614,9 @@ const EnhancedRegister = () => {
                       error={fieldErrors.phone}
                       icon={<Phone className="h-4 w-4" />}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <Field
                       label="LinkedIn"
                       name="linkedin"
@@ -605,16 +625,15 @@ const EnhancedRegister = () => {
                       onChange={handleChange}
                       placeholder="https://linkedin.com/in/username"
                     />
+                    <Field
+                      label="GitHub"
+                      name="github"
+                      type="url"
+                      value={formData.github}
+                      onChange={handleChange}
+                      placeholder="https://github.com/username"
+                    />
                   </div>
-
-                  <Field
-                    label="GitHub"
-                    name="github"
-                    type="url"
-                    value={formData.github}
-                    onChange={handleChange}
-                    placeholder="https://github.com/username"
-                  />
 
                   <div className="space-y-2">
                     <label htmlFor="studentProfileImage" className="block text-sm font-semibold text-gray-700">
@@ -648,6 +667,32 @@ const EnhancedRegister = () => {
                       </label>
                     </div>
                     {fieldErrors.profileImage ? <p className="text-sm text-red-600">{fieldErrors.profileImage}</p> : null}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="Password"
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Minimum 8 characters with letters and numbers"
+                      required
+                      requiredIndicator
+                      error={fieldErrors.password}
+                      icon={<LockKeyhole className="h-4 w-4" />}
+                    />
+                    <Field
+                      label="Confirm Password"
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Repeat password"
+                      required
+                      error={fieldErrors.confirmPassword}
+                      icon={<LockKeyhole className="h-4 w-4" />}
+                    />
                   </div>
                   </>
                 ) : (
@@ -741,44 +786,48 @@ const EnhancedRegister = () => {
                 )}
               </div>
 
-              <Field
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@email.com"
-                required
-                requiredIndicator
-                error={fieldErrors.email}
-                icon={<Mail className="h-4 w-4" />}
-              />
+              {regRole === 'company' ? (
+                <>
+                  <Field
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="you@email.com"
+                    required
+                    requiredIndicator
+                    error={fieldErrors.email}
+                    icon={<Mail className="h-4 w-4" />}
+                  />
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <Field
-                  label="Password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Minimum 8 characters with letters and numbers"
-                  required
-                  requiredIndicator
-                  error={fieldErrors.password}
-                  icon={<LockKeyhole className="h-4 w-4" />}
-                />
-                <Field
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Repeat password"
-                  required
-                  error={fieldErrors.confirmPassword}
-                  icon={<LockKeyhole className="h-4 w-4" />}
-                />
-              </div>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Field
+                      label="Password"
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Minimum 8 characters with letters and numbers"
+                      required
+                      requiredIndicator
+                      error={fieldErrors.password}
+                      icon={<LockKeyhole className="h-4 w-4" />}
+                    />
+                    <Field
+                      label="Confirm Password"
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Repeat password"
+                      required
+                      error={fieldErrors.confirmPassword}
+                      icon={<LockKeyhole className="h-4 w-4" />}
+                    />
+                  </div>
+                </>
+              ) : null}
 
               <button
                 type="submit"
