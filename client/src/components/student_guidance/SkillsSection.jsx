@@ -70,6 +70,7 @@ function SkillsSection({ skills, onSave, saving }) {
   const [sortBy, setSortBy] = useState('nameAsc')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [levelFilter, setLevelFilter] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     setDraftSkills(skills)
@@ -131,6 +132,19 @@ function SkillsSection({ skills, onSave, saving }) {
 
   const displayedSkills = draftSkills
     .map((skill, index) => ({ ...skill, originalIndex: index }))
+    .filter((skill) => {
+      const query = searchTerm.trim().toLowerCase()
+
+      if (!query) {
+        return true
+      }
+
+      return (
+        skill.name.toLowerCase().includes(query) ||
+        skill.category.toLowerCase().includes(query) ||
+        skill.level.toLowerCase().includes(query)
+      )
+    })
     .filter((skill) => (categoryFilter === 'all' ? true : skill.category === categoryFilter))
     .filter((skill) => (levelFilter === 'all' ? true : skill.level === levelFilter))
     .sort((a, b) => {
@@ -167,7 +181,15 @@ function SkillsSection({ skills, onSave, saving }) {
 
       <div className="mt-6 space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search skills..."
+              className="rounded-[10px] border border-[#E8EAF0] bg-white px-3 py-2 text-sm text-[#1A1D27] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#3B6FE8]"
+            />
+
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value)}
