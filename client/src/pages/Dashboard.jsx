@@ -540,7 +540,7 @@ function Dashboard() {
             )}
           </>
         ) : activeTab === 'reviews' ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold text-[#1A1D27]">
                 Company Reviews
@@ -554,14 +554,16 @@ function Dashboard() {
               </button>
             </div>
             {reviews.length > 0 ? (
-              reviews.map((review) => (
-                <CompanyReview
-                  key={review.id}
-                  review={review}
-                  onDelete={handleDeleteReview}
-                  onEdit={handleEditReview}
-                />
-              ))
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                {reviews.map((review) => (
+                  <CompanyReview
+                    key={review.id}
+                    review={review}
+                    onDelete={handleDeleteReview}
+                    onEdit={handleEditReview}
+                  />
+                ))}
+              </div>
             ) : (
               <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
                 <p className="text-[#6B7280]">

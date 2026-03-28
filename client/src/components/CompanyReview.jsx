@@ -1,4 +1,10 @@
 function CompanyReview({ review, onDelete, onEdit }) {
+  const descriptionPreview = (review.text || '').trim()
+  const shortDescription =
+    descriptionPreview.length > 80
+      ? `${descriptionPreview.slice(0, 80).trim()}...`
+      : descriptionPreview
+
   const renderStars = (rating) => {
     return (
       <div className="flex gap-1">
@@ -41,77 +47,42 @@ function CompanyReview({ review, onDelete, onEdit }) {
     }
   }
 
+  const canManage = canDeleteReview()
+
   return (
-    <div className={`rounded-lg border p-6 ${review.flagged ? 'border-orange-300 bg-orange-50' : 'border-[#E8EAF0] bg-white'}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div></div>
-        <div className="flex items-center gap-2">
-          {review.flagged && (
-            <span className="inline-block rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-              🚨 Flag: Culture Issue
-            </span>
-          )}
-          {review.verified && (
-            <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              ✓ Verified Intern
-            </span>
-          )}
-        </div>
+    <div className={`h-full rounded-2xl border p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,20,25,0.08)] ${review.flagged ? 'border-orange-300 bg-orange-50' : 'border-[#E8EAF0] bg-white'}`}>
+      <div>
+        <h3 className="text-base font-semibold text-[#1A1D27]">{review.company}</h3>
+        <p className="mt-0.5 text-sm text-[#6B7280]">{review.role}</p>
       </div>
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-[#1A1D27]">{review.company}</h3>
-          <p className="text-sm text-[#6B7280]">{review.role} · {review.date}</p>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-2 flex items-center gap-2">
         {renderStars(review.rating)}
         <span className="text-sm font-semibold text-[#1A1D27]">{review.rating.toFixed(1)} / 5</span>
       </div>
 
-      <p className="mt-4 text-[#6B7280] leading-relaxed">{review.text}</p>
+      <p className="mt-2.5 text-sm text-[#6B7280] leading-relaxed">{shortDescription || 'No description provided.'}</p>
 
-      {review.tags && review.tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {review.tags.map(tag => (
-            <span
-              key={tag}
-              className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs text-[#6B7280]"
+      {canManage && (
+        <div className="mt-3 flex items-center justify-end border-t border-[#E8EAF0] pt-2.5 text-xs text-[#6B7280]">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleEdit}
+              className="text-blue-600 hover:text-blue-700 font-semibold transition"
+              title="Edit review (available for 7 days)"
             >
-              {tag}
-            </span>
-          ))}
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-red-600 hover:text-red-700 font-semibold transition"
+              title="Delete review (available for 7 days)"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       )}
-
-      <div className="mt-4 flex items-center justify-between text-xs text-[#6B7280] border-t border-[#E8EAF0] pt-3">
-        <span>Posted anonymously · {review.date}</span>
-        <div className="flex items-center gap-4">
-          <span className={`font-semibold ${review.flagged ? 'text-orange-600' : 'text-[#6B7280]'}`}>
-            {review.sentiment}
-          </span>
-          {canDeleteReview() && (
-            <>
-              <button
-                onClick={handleEdit}
-                className="text-blue-600 hover:text-blue-700 font-semibold transition"
-                title="Edit review (available for 7 days)"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                className="text-red-600 hover:text-red-700 font-semibold transition"
-                title="Delete review (available for 7 days)"
-              >
-                Delete
-              </button>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
