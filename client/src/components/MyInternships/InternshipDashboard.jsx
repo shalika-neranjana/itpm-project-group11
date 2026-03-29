@@ -16,6 +16,17 @@ const SUB_TABS = [
 export default function InternshipDashboard({ internship, onBack }) {
   const [activeSubTab, setActiveSubTab] = useState("info");
 
+  // ── Progress calculation (same logic as InternshipInfo) ──
+  const start = new Date(internship.startDate);
+  const end = internship.endDate
+    ? new Date(internship.endDate)
+    : new Date(start);
+  if (!internship.endDate) end.setMonth(end.getMonth() + internship.duration);
+  const progress = Math.min(
+    100,
+    Math.max(0, Math.round(((new Date() - start) / (end - start)) * 100)),
+  );
+
   const panels = {
     info: <InternshipInfo internship={internship} />,
     diary: <DailyDiary internshipId={internship._id} />,
@@ -33,6 +44,8 @@ export default function InternshipDashboard({ internship, onBack }) {
         internshipTitle={internship.title}
         supervisorEmail={internship.supervisorEmail}
         supervisorName={internship.supervisorName}
+        progress={progress}
+        internship={internship}
       />
     ),
   };

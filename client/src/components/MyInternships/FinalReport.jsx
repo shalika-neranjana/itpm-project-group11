@@ -196,11 +196,198 @@ function generateFinalPDF(report, studentName, studentId, internshipTitle) {
   return doc;
 }
 
+// ── Certificate Generator ────────────────────────────────────────────────────
+function generateCertificatePDF({
+  studentName,
+  studentId,
+  internshipTitle,
+  specialization,
+  supervisorName,
+  companyName,
+  startDate,
+  endDate,
+  duration,
+}) {
+  // Landscape A4
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const W = 297;
+  const H = 210;
+  const cx = W / 2;
+
+  // ── Background ──────────────────────────────────────────────────────────────
+  doc.setFillColor(250, 251, 255);
+  doc.rect(0, 0, W, H, "F");
+
+  // Outer decorative border (double line)
+  doc.setDrawColor(59, 111, 232);
+  doc.setLineWidth(3);
+  doc.rect(8, 8, W - 16, H - 16);
+  doc.setLineWidth(0.8);
+  doc.setDrawColor(180, 200, 245);
+  doc.rect(12, 12, W - 24, H - 24);
+
+  // Corner accent squares
+  const corners = [
+    [8, 8], [W - 18, 8], [8, H - 18], [W - 18, H - 18],
+  ];
+  doc.setFillColor(59, 111, 232);
+  corners.forEach(([x, y]) => doc.rect(x, y, 10, 10, "F"));
+
+  // ── Top accent bar ───────────────────────────────────────────────────────────
+  doc.setFillColor(59, 111, 232);
+  doc.rect(12, 12, W - 24, 18, "F");
+
+  // System name in bar
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("InternConnect — Intelligence Career Guidance System", cx, 23, { align: "center" });
+
+  // ── Certificate heading ──────────────────────────────────────────────────────
+  doc.setFontSize(28);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("CERTIFICATE OF COMPLETION", cx, 52, { align: "center" });
+
+  // Thin gold rule under heading
+  doc.setDrawColor(212, 175, 55);
+  doc.setLineWidth(1);
+  doc.line(cx - 70, 56, cx + 70, 56);
+
+  // ── Body text ────────────────────────────────────────────────────────────────
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80, 85, 105);
+  doc.text("This is to certify that", cx, 68, { align: "center" });
+
+  // Student name (large, primary colour)
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(59, 111, 232);
+  doc.text(studentName || "—", cx, 80, { align: "center" });
+
+  // Student ID
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(107, 114, 128);
+  doc.text(`Student ID: ${studentId || "—"}`, cx, 87, { align: "center" });
+
+  // Completion statement
+  doc.setFontSize(11);
+  doc.setTextColor(80, 85, 105);
+  doc.text("has successfully completed the internship programme", cx, 97, { align: "center" });
+
+  // Internship title
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  const titleLines = doc.splitTextToSize(internshipTitle || "—", 200);
+  doc.text(titleLines, cx, 107, { align: "center" });
+
+  const afterTitle = 107 + (titleLines.length - 1) * 7;
+
+  // Details row
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(107, 114, 128);
+
+  const detailY = afterTitle + 12;
+  // Left detail
+  doc.text("Specialization", 60, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  doc.text(specialization || "—", 60, detailY + 6, { align: "center" });
+
+  // Middle detail
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Duration", cx, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  const durationLabel = duration ? `${duration} month${duration > 1 ? "s" : ""}` : "—";
+  doc.text(durationLabel, cx, detailY + 6, { align: "center" });
+
+  // Right detail
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Period", W - 60, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  const fmtDate = (d) =>
+    d ? new Date(d).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  doc.text(`${fmtDate(startDate)} – ${fmtDate(endDate)}`, W - 60, detailY + 6, { align: "center" });
+
+  // Divider
+  doc.setDrawColor(232, 234, 240);
+  doc.setLineWidth(0.5);
+  doc.line(30, detailY + 14, W - 30, detailY + 14);
+
+  // ── Signature section ────────────────────────────────────────────────────────
+  const sigY = detailY + 28;
+
+  // Left signature — Supervisor
+  doc.setDrawColor(59, 111, 232);
+  doc.setLineWidth(0.8);
+  doc.line(50, sigY, 120, sigY);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text(supervisorName || "Supervisor", 85, sigY + 5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Internship Supervisor", 85, sigY + 10, { align: "center" });
+  if (companyName) {
+    doc.text(companyName, 85, sigY + 15, { align: "center" });
+  }
+
+  // Right signature — InternConnect
+  doc.setDrawColor(59, 111, 232);
+  doc.line(177, sigY, 247, sigY);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("InternConnect System", 212, sigY + 5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Authorised Issuing Authority", 212, sigY + 10, { align: "center" });
+  doc.text("Intelligence Career Guidance System", 212, sigY + 15, { align: "center" });
+
+  // ── Bottom bar ───────────────────────────────────────────────────────────────
+  doc.setFillColor(59, 111, 232);
+  doc.rect(12, H - 30, W - 24, 18, "F");
+
+  // Certificate ID + issue date
+  const certId = `IC-${studentId || "000"}-${Date.now().toString(36).toUpperCase()}`;
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255);
+  doc.text(`Certificate ID: ${certId}`, 20, H - 19);
+  doc.text(
+    `Issued on ${new Date().toLocaleDateString("en-MY", { year: "numeric", month: "long", day: "numeric" })} · InternConnect`,
+    cx,
+    H - 19,
+    { align: "center" },
+  );
+  doc.text("internconnect.system", W - 20, H - 19, { align: "right" });
+
+  return doc;
+}
+
 export default function FinalReport({
   internshipId,
   internshipTitle,
   supervisorEmail,
   supervisorName,
+  // New props passed from InternshipDashboard
+  progress,
+  internship,
 }) {
   const [report, setReport] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -210,6 +397,7 @@ export default function FinalReport({
   const [emailSent, setEmailSent] = useState(false);
   const [showEmailBox, setShowEmailBox] = useState(false);
   const [emailInput, setEmailInput] = useState("");
+  const [certStatus, setCertStatus] = useState(null);
 
   const studentData = JSON.parse(localStorage.getItem("student"));
   const studentName =
@@ -318,6 +506,34 @@ export default function FinalReport({
     } catch (err) {
       console.error("PDF error:", err);
       setPdfStatus(null);
+    }
+  };
+
+  // ── Certificate download ───────────────────────────────────────────────────
+  const canGenerateCertificate = progress >= 100 && report?.status === "submitted";
+
+  const handleGenerateCertificate = () => {
+    if (!canGenerateCertificate) return;
+    setCertStatus("generating");
+    try {
+      const doc = generateCertificatePDF({
+        studentName,
+        studentId,
+        internshipTitle,
+        specialization: internship?.specialization ?? "",
+        supervisorName: supervisorName ?? "",
+        companyName: internship?.companyName ?? internship?.company ?? "",
+        startDate: internship?.startDate,
+        endDate: internship?.endDate,
+        duration: internship?.duration,
+      });
+      const filename = `Certificate_${studentId}_${(internshipTitle || "Internship").replace(/\s+/g, "_")}.pdf`;
+      doc.save(filename);
+      setCertStatus("done");
+      setTimeout(() => setCertStatus(null), 3000);
+    } catch (err) {
+      console.error("Certificate error:", err);
+      setCertStatus(null);
     }
   };
 
@@ -699,6 +915,123 @@ export default function FinalReport({
           </p>
         </div>
       )}
+
+      {/* ── Generate Certificate ── */}
+      <div className="mt-6">
+        <div
+          className={`rounded-2xl border p-5 transition-colors ${
+            canGenerateCertificate
+              ? "border-[#D4E0FA] bg-gradient-to-r from-[#EEF2FD] to-[#F0FDF4]"
+              : "border-[#E8EAF0] bg-[#F7F8FA]"
+          }`}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              {/* Medal icon */}
+              <div
+                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xl ${
+                  canGenerateCertificate ? "bg-[#EEF2FD]" : "bg-[#E8EAF0]"
+                }`}
+              >
+                🏅
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1A1D27]">
+                  Certificate of Completion
+                </p>
+                {canGenerateCertificate ? (
+                  <p className="mt-0.5 text-xs text-[#16A34A] font-medium">
+                    ✅ You've completed the internship! Your certificate is ready to download.
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-[#6B7280]">
+                    Available once internship progress reaches 100% and the final report is submitted.
+                  </p>
+                )}
+
+                {/* Requirement checklist */}
+                {!canGenerateCertificate && (
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    <span
+                      className={`flex items-center gap-1 text-xs font-medium ${
+                        progress >= 100 ? "text-[#16A34A]" : "text-[#D97706]"
+                      }`}
+                    >
+                      {progress >= 100 ? "✅" : "⏳"} Progress 100%{" "}
+                      <span className="font-normal text-[#6B7280]">
+                        (currently {progress ?? 0}%)
+                      </span>
+                    </span>
+                    <span
+                      className={`flex items-center gap-1 text-xs font-medium ${
+                        report?.status === "submitted"
+                          ? "text-[#16A34A]"
+                          : "text-[#D97706]"
+                      }`}
+                    >
+                      {report?.status === "submitted" ? "✅" : "⏳"} Final
+                      report submitted
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Button */}
+            <button
+              onClick={handleGenerateCertificate}
+              disabled={!canGenerateCertificate || certStatus === "generating"}
+              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
+                canGenerateCertificate
+                  ? certStatus === "done"
+                    ? "bg-[#DCFCE7] text-[#16A34A]"
+                    : "bg-[#3B6FE8] text-white hover:bg-[#2D5CD4]"
+                  : "cursor-not-allowed bg-[#E8EAF0] text-[#9CA3AF]"
+              } disabled:opacity-70`}
+            >
+              {certStatus === "generating" ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Generating...
+                </>
+              ) : certStatus === "done" ? (
+                <>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Certificate Downloaded!
+                </>
+              ) : (
+                <>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="8" r="6" />
+                    <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+                  </svg>
+                  Generate Certificate
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
