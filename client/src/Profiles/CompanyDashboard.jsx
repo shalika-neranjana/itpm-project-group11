@@ -54,23 +54,19 @@ const CompanyDashboard = () => {
   })
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}')
+    console.log('CompanyDashboard useEffect called')
     const token = localStorage.getItem('token')
+    const role = localStorage.getItem('role')
+    console.log('Token:', !!token, 'Role:', role)
 
     if (!token || localStorage.getItem('role') !== 'company') {
+      console.log('Redirecting to login')
       navigate('/login')
       return
     }
 
-    setUser(userData)
-    setCompanyForm({
-      name: userData.name || '',
-      industry: userData.industry || '',
-      address: userData.address || '',
-      website: userData.website || '',
-      phone: userData.phone || '',
-      email: userData.email || ''
-    })
+    console.log('Calling fetchCompanyProfile and fetchCompanyInternships')
+    fetchCompanyProfile()
     fetchCompanyInternships()
   }, [navigate])
 
@@ -97,6 +93,47 @@ const CompanyDashboard = () => {
       console.error('Failed to fetch internships:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCompanyProfile = async () => {
+    try {
+      console.log('Fetching company profile...')
+      const token = localStorage.getItem('token')
+      console.log('Token exists:', !!token)
+      const response = await api.get('/company/profile')
+      console.log('API response:', response)
+      const companyData = response.data.data
+      console.log('Company profile data:', companyData)
+      console.log('Address field:', companyData.address)
+      console.log('All fields:', Object.keys(companyData))
+      console.log('Address value:', companyData.address || 'EMPTY')
+      setUser(companyData)
+      setCompanyForm({
+        name: companyData.name || '',
+        industry: companyData.industry || '',
+        address: companyData.address || '',
+        website: companyData.website || '',
+        phone: companyData.phone || '',
+        email: companyData.email || ''
+      })
+      // Update localStorage with fresh data
+      localStorage.setItem('user', JSON.stringify(companyData))
+    } catch (error) {
+      console.error('Failed to fetch company profile:', error)
+      console.error('Error details:', error.response?.data)
+      // Fallback to localStorage if API fails
+      const userData = JSON.parse(localStorage.getItem('user') || '{}')
+      console.log('Fallback to localStorage:', userData)
+      setUser(userData)
+      setCompanyForm({
+        name: userData.name || '',
+        industry: userData.industry || '',
+        address: userData.address || '',
+        website: userData.website || '',
+        phone: userData.phone || '',
+        email: userData.email || ''
+      })
     }
   }
 
