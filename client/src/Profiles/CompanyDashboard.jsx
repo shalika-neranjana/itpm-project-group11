@@ -47,10 +47,10 @@ const CompanyDashboard = () => {
   const [companyForm, setCompanyForm] = useState({
     name: '',
     industry: '',
-    location: '',
+    address: '',
     website: '',
     phone: '',
-    description: ''
+    email: ''
   })
 
   useEffect(() => {
@@ -66,10 +66,10 @@ const CompanyDashboard = () => {
     setCompanyForm({
       name: userData.name || '',
       industry: userData.industry || '',
-      location: userData.location || '',
+      address: userData.address || '',
       website: userData.website || '',
       phone: userData.phone || '',
-      description: userData.description || ''
+      email: userData.email || ''
     })
     fetchCompanyInternships()
   }, [navigate])
@@ -161,10 +161,10 @@ const CompanyDashboard = () => {
         setCompanyForm({
           name: response.data.data.name || '',
           industry: response.data.data.industry || '',
-          location: response.data.data.location || '',
+          address: response.data.data.address || '',
           website: response.data.data.website || '',
           phone: response.data.data.phone || '',
-          description: response.data.data.description || ''
+          email: response.data.data.email || ''
         })
         setProfileEditMode(false)
         setProfileSuccess('Company profile updated successfully')
@@ -174,6 +174,23 @@ const CompanyDashboard = () => {
       setProfileError(error.response?.data?.message || 'Failed to update company profile')
     } finally {
       setProfileLoading(false)
+    }
+  }
+
+  const handleDeleteCompany = async () => {
+    const confirmed = window.confirm('Are you sure you want to delete your company profile? This cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      const response = await api.delete('/company/profile')
+      if (response.data.success) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('role')
+        navigate('/login')
+      }
+    } catch (error) {
+      setProfileError(error.response?.data?.message || 'Failed to delete company profile')
     }
   }
 
@@ -484,11 +501,6 @@ const CompanyDashboard = () => {
 
                 <div className="mt-6 rounded-xl bg-[#F7F8FA] p-4 text-left">
                   <div className="mb-3">
-                    <p className="text-xs text-[#6B7280]">Location</p>
-                    <p className="text-sm font-semibold text-[#1A1D27]">{user?.location || '-'}</p>
-                  </div>
-
-                  <div className="mb-3">
                     <p className="text-xs text-[#6B7280]">Phone</p>
                     <p className="text-sm font-semibold text-[#1A1D27]">{user?.phone || '-'}</p>
                   </div>
@@ -527,16 +539,20 @@ const CompanyDashboard = () => {
                       <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.industry || '-'}</p>
                     </div>
                     <div className="rounded-xl bg-[#F7F8FA] p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Location</p>
-                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.location || '-'}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Email</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.email || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Phone</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.phone || '-'}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#F7F8FA] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Address</p>
+                      <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.address || '-'}</p>
                     </div>
                     <div className="rounded-xl bg-[#F7F8FA] p-4">
                       <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Website</p>
                       <p className="mt-2 text-sm font-bold text-[#1A1D27]">{user?.website || '-'}</p>
-                    </div>
-                    <div className="rounded-xl bg-[#F7F8FA] p-4 md:col-span-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
-                      <p className="mt-2 text-sm leading-6 text-[#1A1D27] whitespace-pre-wrap">{user?.description || '-'}</p>
                     </div>
                   </div>
                 ) : (
@@ -553,13 +569,18 @@ const CompanyDashboard = () => {
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Location</label>
-                        <input type="text" name="location" value={companyForm.location} onChange={handleCompanyChange} className={inputClass} />
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Email</label>
+                        <input type="email" name="email" value={companyForm.email} onChange={handleCompanyChange} className={inputClass} />
                       </div>
 
                       <div>
                         <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Website</label>
                         <input type="url" name="website" value={companyForm.website} onChange={handleCompanyChange} className={inputClass} />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Address</label>
+                        <input type="text" name="address" value={companyForm.address} onChange={handleCompanyChange} className={inputClass} />
                       </div>
 
                       <div className="md:col-span-2">
@@ -577,26 +598,24 @@ const CompanyDashboard = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Description</label>
-                      <textarea
-                        name="description"
-                        value={companyForm.description}
-                        onChange={handleCompanyChange}
-                        rows={5}
-                        className={inputClass}
-                        placeholder="Tell students about your company..."
-                      />
-                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={handleSaveCompanyProfile}
+                        disabled={profileLoading}
+                        className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        <Save className="h-4 w-4" />
+                        {profileLoading ? 'Saving...' : 'Save Changes'}
+                      </button>
 
-                    <button
-                      onClick={handleSaveCompanyProfile}
-                      disabled={profileLoading}
-                      className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <Save className="h-4 w-4" />
-                      {profileLoading ? 'Saving...' : 'Save Changes'}
-                    </button>
+                      <button
+                        onClick={handleDeleteCompany}
+                        disabled={profileLoading}
+                        className="inline-flex items-center justify-center gap-2 rounded-[10px] bg-[#DC2626] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

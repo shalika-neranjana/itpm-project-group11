@@ -251,9 +251,30 @@ const updateCompanyProfile = async (req, res, next) => {
     }
 };
 
+const deleteCompanyProfile = async (req, res, next) => {
+    try {
+        const company = await Company.findById(req.company._id);
+
+        if (!company) {
+            res.status(404);
+            throw new Error("Company not found");
+        }
+
+        await Company.findByIdAndDelete(req.company._id);
+
+        res.status(200).json({
+            success: true,
+            message: "Company profile deleted successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     registerCompany,
     loginCompany,
     getCompanyProfile,
     updateCompanyProfile,
+    deleteCompanyProfile,
 };

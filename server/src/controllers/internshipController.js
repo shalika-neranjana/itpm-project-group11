@@ -399,16 +399,27 @@ const updateApplicationStatus = async (req, res, next) => {
         await internship.save();
 
         // Create notification for the student
-        const message = status === "Accepted" 
-            ? `Your application for "${internship.title}" has been accepted!` 
+        const message = status === "Accepted"
+            ? `Your application for "${internship.title}" has been accepted!`
             : `Your application for "${internship.title}" has been rejected.`;
         const type = status === "Accepted" ? "application_accepted" : "application_rejected";
 
-        await Notification.create({
-            student: application.student,
-            message,
-            type,
-        });
+        let studentId = application.student
+        if (!studentId && application.email) {
+            const studentRecord = await Student.findOne({ email: application.email })
+            studentId = studentRecord ? studentRecord._id : null
+        }
+
+        if (studentId) {
+            await Notification.create({
+                student: studentId,
+                message,
+                type,
+            });
+        }
+        else {
+            console.warn("No student ID found for application, skipping notification creation", application._id)
+        }
 
         res.status(200).json({
             success: true,
