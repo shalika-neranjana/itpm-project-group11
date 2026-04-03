@@ -242,6 +242,7 @@ const EnhancedRegister = () => {
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [fieldErrors, setFieldErrors] = useState(initialErrors)
+  const [showErrorSummary, setShowErrorSummary] = useState(false)
   const [studentImageFile, setStudentImageFile] = useState(null)
   const [companyLogoFile, setCompanyLogoFile] = useState(null)
   const [studentImagePreview, setStudentImagePreview] = useState('')
@@ -282,6 +283,7 @@ const EnhancedRegister = () => {
     if (fieldErrors[name]) {
       setFieldErrors((previous) => ({ ...previous, [name]: '' }))
     }
+    setShowErrorSummary(false)
   }
 
   const resetCropState = () => {
@@ -404,8 +406,10 @@ const EnhancedRegister = () => {
     setSubmitError('')
 
     if (!validateForm()) {
+      setShowErrorSummary(true)
       return
     }
+    setShowErrorSummary(false)
 
     setLoading(true)
 
@@ -561,6 +565,17 @@ const EnhancedRegister = () => {
                 {submitError}
               </div>
             ) : null}
+
+            {showErrorSummary && (
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                <p className="mb-2 font-semibold">Please fix the following errors:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {Object.values(fieldErrors).filter(error => error !== '').map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               <div key={regRole} data-role={regRole} className="role-form-transition space-y-6">
