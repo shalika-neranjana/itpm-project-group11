@@ -436,13 +436,14 @@ const CompanyDashboard = () => {
                       {applicant.resume ? (
                         <a
                           href={resolveUploadUrl(applicant.resume)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          download={applicant.resume.split('/').pop()}
                           className="inline-flex items-center gap-2 text-sm font-semibold text-[#3B6FE8] transition-colors hover:text-[#2D5CD4]"
                         >
-                          View Resume
+                          📥 Download Resume
                         </a>
-                      ) : null}
+                      ) : (
+                        <p className="text-sm text-[#6B7280]">No resume uploaded</p>
+                      )}
                     </div>
 
                     <div className="flex min-w-[220px] flex-col gap-3">
