@@ -46,4 +46,5 @@ const protect = async (req, res, next) => {
     }
 };
 
+protect.protectStudent = protect;
 module.exports = protect;

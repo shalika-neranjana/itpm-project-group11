@@ -7,6 +7,9 @@ const EnhancedStudentProfile = () => {
   const [editMode, setEditMode] = useState(false)
   const [skillEditMode, setSkillEditMode] = useState(false)
   const [applications, setApplications] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
   const allowedSpecializations = [
     'Computer Science',
     'Software Engineering',
@@ -47,6 +50,7 @@ const EnhancedStudentProfile = () => {
 
     fetchStudentProfile()
     fetchApplications()
+    fetchNotifications()
   }, [navigate])
 
   const fetchStudentProfile = async () => {
@@ -121,6 +125,30 @@ const EnhancedStudentProfile = () => {
       skillsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       skillInputRef.current?.focus()
     }, 0)
+  }
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationsLoading(true)
+      const response = await api.get('/notifications/my')
+      setNotifications(response.data.data)
+      setNotificationsError('')
+    } catch (err) {
+      setNotificationsError(err.response?.data?.message || 'Failed to load notifications')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`)
+      setNotifications(notifications.map(notif => 
+        notif._id === id ? { ...notif, read: true } : notif
+      ))
+    } catch (err) {
+      console.error('Failed to mark notification as read', err)
+    }
   }
 
   const handleSave = async () => {
@@ -524,37 +552,39 @@ const EnhancedStudentProfile = () => {
             ) : (
               /* View Mode */
               <>
-                {/* Notifications (derived from application statuses; no DB changes) */}
+                {/* REAL Notifications from Database */}
                 <div className="bg-white rounded-2xl shadow-sm p-6">
                   <h3 className="font-bold text-gray-900 text-lg mb-4">Notifications</h3>
-                  {applications.some(a => a?.application?.status === 'Accepted' || a?.application?.status === 'Rejected') ? (
-                    <div className="space-y-3">
-                      {applications
-                        .filter(a => a?.application?.status === 'Accepted' || a?.application?.status === 'Rejected')
-                        .map((a, idx) => (
-                          <div
-                            key={`${a?._id || idx}`}
-                            className={`rounded-lg border p-3 ${
-                              a.application.status === 'Accepted'
-                                ? 'bg-green-50 border-green-200'
-                                : 'bg-red-50 border-red-200'
-                            }`}
-                          >
-                            <p className="text-sm text-gray-900">
-                              {a.application.status === 'Accepted'
-                                ? `Congratulations! Your application for "${a.title}" was accepted by ${a.company?.name || 'the company'}.`
-                                : `Your application for "${a.title}" was rejected by ${a.company?.name || 'the company'}.`}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {a.application?.appliedDate
-                                ? new Date(a.application.appliedDate).toLocaleString()
-                                : ''}
-                            </p>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
+                  {notificationsLoading ? (
+                    <div className="text-sm text-gray-500">Loading notifications...</div>
+                  ) : notificationsError ? (
+                    <div className="text-sm text-red-600">{notificationsError}</div>
+                  ) : notifications.length === 0 ? (
                     <p className="text-sm text-gray-500">No notifications yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.map((notif) => (
+                        <div 
+                          key={notif._id} 
+                          className={`rounded-lg border p-3 ${
+                            notif.read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'
+                          }`}
+                        >
+                          <p className="text-sm text-gray-900">{notif.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(notif.createdAt).toLocaleDateString()}
+                          </p>
+                          {!notif.read && (
+                            <button
+                              onClick={() => markNotificationAsRead(notif._id)}
+                              className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 

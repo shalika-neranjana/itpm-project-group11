@@ -39,7 +39,7 @@ function StudentProfile() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await api.get('/students/notifications', {
+        const response = await api.get('/notifications/my', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -91,7 +91,7 @@ function StudentProfile() {
 
   const markAsRead = async (id) => {
     try {
-      await api.put(`/students/notifications/${id}/read`, {}, {
+      await api.put(`/notifications/${id}/read`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
