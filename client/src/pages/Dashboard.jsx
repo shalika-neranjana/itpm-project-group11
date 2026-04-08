@@ -205,6 +205,9 @@ function Dashboard() {
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileImageLoadFailed, setProfileImageLoadFailed] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [notificationsError, setNotificationsError] = useState('')
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
 
   useEffect(() => {
     // Load all reviews from API (visible to all students)
@@ -237,6 +240,49 @@ function Dashboard() {
       profileImage: student.profileImage || '',
     })
   }, [])
+
+  const fetchNotifications = async () => {
+    setNotificationsLoading(true)
+    setNotificationsError('')
+
+    try {
+      const response = await api.get('/students/notifications')
+      setNotifications(response.data.data || [])
+    } catch (err) {
+      setNotificationsError(err.response?.data?.message || 'Failed to load notifications')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!token) return
+
+    fetchNotifications()
+
+    const onFocus = () => {
+      fetchNotifications()
+    }
+
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 15000)
+
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(interval)
+    }
+  }, [token])
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      await api.put(`/students/notifications/${id}/read`)
+      setNotifications((prev) => prev.map((item) => (item._id === id ? { ...item, read: true } : item)))
+    } catch (err) {
+      console.error('Failed to mark notification as read', err)
+    }
+  }
 
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm('Are you sure you want to delete this review?')) {
@@ -660,6 +706,52 @@ function Dashboard() {
                 {profileError}
               </div>
             )}
+
+            <div className="mb-5 rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#1A1D27]">Notifications</h3>
+                <span className="text-sm text-[#6B7280]">{notifications.filter((n) => !n.read).length} unread</span>
+              </div>
+
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs text-[#6B7280]">Updated at {new Date().toLocaleTimeString()}</span>
+                <button
+                  onClick={fetchNotifications}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                >
+                  Refresh
+                </button>
+              </div>
+              {notificationsLoading ? (
+                <div className="text-sm text-[#6B7280]">Loading notifications...</div>
+              ) : notificationsError ? (
+                <div className="text-sm text-red-600">{notificationsError}</div>
+              ) : notifications.length === 0 ? (
+                <div className="text-sm text-[#6B7280]">No notifications yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif._id}
+                      className={`rounded-lg border px-3 py-2 ${notif.read ? 'border-gray-200 bg-gray-50' : 'border-blue-200 bg-blue-50'}`}
+                    >
+                      <p className="text-sm text-[#1F2937]">{notif.message}</p>
+                      <div className="mt-1 flex items-center justify-between">
+                        <p className="text-xs text-[#6B7280]">{new Date(notif.createdAt).toLocaleString()}</p>
+                        {!notif.read && (
+                          <button
+                            onClick={() => markNotificationAsRead(notif._id)}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                          >
+                            Mark as read
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
               <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">

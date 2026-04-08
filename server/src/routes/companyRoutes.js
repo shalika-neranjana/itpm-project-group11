@@ -8,6 +8,7 @@ const {
     loginCompany,
     getCompanyProfile,
     updateCompanyProfile,
+    deleteCompanyProfile,
 } = require("../controllers/companyController");
 const { uploadCompanyLogo } = require("../middleware/uploadMiddleware");
 
@@ -42,5 +43,6 @@ router.get("/profile", companyAuth, getCompanyProfile);
  * @access  Private
  */
 router.put("/profile", companyAuth, updateCompanyProfile);
+router.delete("/profile", companyAuth, deleteCompanyProfile);
 
 module.exports = router;

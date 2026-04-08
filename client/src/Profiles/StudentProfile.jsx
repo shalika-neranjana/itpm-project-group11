@@ -19,6 +19,7 @@ function StudentProfile() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+  const [notifications, setNotifications] = useState([])
 
   useEffect(() => {
     const student = JSON.parse(localStorage.getItem('student'))
@@ -34,6 +35,25 @@ function StudentProfile() {
       linkedin: student.linkedin || '',
     })
   }, [])
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await api.get('/notifications/my', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setNotifications(response.data.data)
+      } catch (err) {
+        console.error('Failed to fetch notifications', err)
+      }
+    }
+
+    if (token) {
+      fetchNotifications()
+    }
+  }, [token])
 
   const handleChange = (e) => {
     setFormData({
@@ -67,6 +87,21 @@ function StudentProfile() {
     localStorage.removeItem('token')
     localStorage.removeItem('student')
     navigate('/')
+  }
+
+  const markAsRead = async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setNotifications(notifications.map(notif => 
+        notif._id === id ? { ...notif, read: true } : notif
+      ))
+    } catch (err) {
+      console.error('Failed to mark as read', err)
+    }
   }
 
   const initials =
@@ -110,6 +145,31 @@ function StudentProfile() {
             {error}
           </div>
         )}
+
+        {/* Notifications Section */}
+        <div className="mb-5 rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <h3 className="mb-4 text-lg font-semibold text-[#1F2937]">Notifications</h3>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-[#6B7280]">No notifications yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notif) => (
+                <div key={notif._id} className={`rounded-lg border p-3 ${notif.read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                  <p className="text-sm text-[#1F2937]">{notif.message}</p>
+                  <p className="mt-1 text-xs text-[#6B7280]">{new Date(notif.createdAt).toLocaleDateString()}</p>
+                  {!notif.read && (
+                    <button
+                      onClick={() => markAsRead(notif._id)}
+                      className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Mark as read
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
           <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">

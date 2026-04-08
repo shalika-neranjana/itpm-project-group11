@@ -4,6 +4,7 @@
 
 const Internship = require("../models/Internship");
 const Student = require("../models/Student");
+const Notification = require("../models/Notification");
 const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 
 /**
@@ -396,6 +397,29 @@ const updateApplicationStatus = async (req, res, next) => {
 
         application.status = status;
         await internship.save();
+
+        // Create notification for the student
+        const message = status === "Accepted"
+            ? `Your application for "${internship.title}" has been accepted!`
+            : `Your application for "${internship.title}" has been rejected.`;
+        const type = status === "Accepted" ? "application_accepted" : "application_rejected";
+
+        let studentId = application.student
+        if (!studentId && application.email) {
+            const studentRecord = await Student.findOne({ email: application.email })
+            studentId = studentRecord ? studentRecord._id : null
+        }
+
+        if (studentId) {
+            await Notification.create({
+                student: studentId,
+                message,
+                type,
+            });
+        }
+        else {
+            console.warn("No student ID found for application, skipping notification creation", application._id)
+        }
 
         res.status(200).json({
             success: true,
