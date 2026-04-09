@@ -284,7 +284,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   }
 
   return (
-    <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <section className="flex flex-col overflow-hidden rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:h-[calc(100vh-8rem)]">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E8EAF0] pb-5">
         <div>
           <h2 className="font-display text-2xl font-bold text-[#1A1D27]">Ask InternConnect</h2>
@@ -305,9 +305,9 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
-          <div className="h-[420px] overflow-y-auto pr-1">
+      <div className="mt-6 grid min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="flex min-h-0 flex-col rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
+          <div className="h-[50vh] min-h-0 overflow-y-auto pr-1 sm:h-[56vh] lg:h-auto lg:flex-1">
             <div className="space-y-3">
               {messages.map((message) => (
                 <article
@@ -378,7 +378,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
           </form>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
           <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Quick Prompts</p>
             <div className="mt-3 flex flex-wrap gap-2">
