@@ -165,32 +165,6 @@ const normalizeChatHistory = (history) => {
         .slice(-10);
 };
 
-const extractResponseText = (response) => {
-    if (typeof response?.output_text === "string" && response.output_text.trim()) {
-        return response.output_text.trim();
-    }
-
-    if (!Array.isArray(response?.output)) {
-        return "";
-    }
-
-    const textParts = [];
-
-    for (const outputItem of response.output) {
-        if (!Array.isArray(outputItem?.content)) {
-            continue;
-        }
-
-        for (const contentItem of outputItem.content) {
-            if (contentItem?.type === "output_text" && typeof contentItem.text === "string") {
-                textParts.push(contentItem.text);
-            }
-        }
-    }
-
-    return textParts.join("\n").trim();
-};
-
 const buildAcademicContext = async (studentId) => {
     const [studentProfile, guidance, examResults] = await Promise.all([
         Student.findById(studentId)
@@ -303,6 +277,24 @@ const updateStudentSkills = async (req, res, next) => {
 };
 
 const askInternConnect = async (req, res, next) => {
+    let streamClosed = false;
+
+    const sendEvent = (event, payload) => {
+        if (streamClosed) {
+            return;
+        }
+
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const closeStream = () => {
+        if (!streamClosed) {
+            streamClosed = true;
+            res.end();
+        }
+    };
+
     try {
         const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
 
@@ -313,13 +305,29 @@ const askInternConnect = async (req, res, next) => {
             });
         }
 
+        res.status(200);
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no");
+        res.flushHeaders?.();
+
+        req.on("close", () => {
+            streamClosed = true;
+        });
+
+        sendEvent("status", { message: "InternConnect is thinking..." });
+
         const history = normalizeChatHistory(req.body?.history);
         const context = await buildAcademicContext(req.student._id);
 
+        sendEvent("status", { message: "InternConnect is analysing..." });
+
         const client = getOpenAIClient();
-        const response = await client.responses.create({
+        const stream = await client.responses.create({
             model: process.env.OPENAI_MODEL || "gpt-5",
             reasoning: { effort: "medium" },
+            stream: true,
             instructions:
                 "You are Ask InternConnect, an academic and career assistant for internship readiness. Use only the student data provided in context. Do not invent grades, modules, or profile details. If data is missing, state that and suggest next steps. Keep answers practical, supportive, and concise.",
             input: [
@@ -332,24 +340,45 @@ const askInternConnect = async (req, res, next) => {
             ],
         });
 
-        const reply = extractResponseText(response);
+        sendEvent("status", { message: "InternConnect is generating response..." });
 
-        if (!reply) {
-            return res.status(502).json({
-                success: false,
-                message: "AI service returned an empty response",
-            });
+        let reply = "";
+
+        for await (const event of stream) {
+            if (streamClosed) {
+                break;
+            }
+
+            if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
+                reply += event.delta;
+                sendEvent("chunk", { delta: event.delta });
+            }
+
+            if (event.type === "response.error") {
+                throw new Error(event.error?.message || "OpenAI streaming error");
+            }
         }
 
-        return res.status(200).json({
-            success: true,
-            data: {
-                reply,
-                model: response.model,
-            },
+        if (!reply.trim()) {
+            sendEvent("error", { message: "AI service returned an empty response" });
+            return closeStream();
+        }
+
+        sendEvent("done", {
+            reply,
+            completed: true,
         });
+
+        return closeStream();
     } catch (error) {
-        next(error);
+        if (res.headersSent) {
+            sendEvent("error", {
+                message: error.message || "Streaming failed. Please try again.",
+            });
+            return closeStream();
+        }
+
+        return next(error);
     }
 };
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { sendAskInternConnectMessage } from '../../api/student_guidance/guidanceApi'
+import { streamAskInternConnectMessage } from '../../api/student_guidance/guidanceApi'
 
 const quickPromptOptions = [
   'How can I improve my internship profile?',
@@ -28,12 +28,57 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   const [messages, setMessages] = useState(() => [buildInitialMessage(student.name)])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [statusTag, setStatusTag] = useState('')
+  const [hasStartedStreaming, setHasStartedStreaming] = useState(false)
   const [chatHistory, setChatHistory] = useState([])
   const chatEndRef = useRef(null)
+  const chunkBufferRef = useRef('')
+  const chunkAnimationFrameRef = useRef(null)
+  const hasStartedStreamingRef = useRef(false)
+
+  const flushBufferedChunk = (assistantMessageId) => {
+    if (!chunkBufferRef.current) {
+      return
+    }
+
+    const bufferedChunk = chunkBufferRef.current
+    chunkBufferRef.current = ''
+
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === assistantMessageId ? { ...item, text: `${item.text}${bufferedChunk}` } : item,
+      ),
+    )
+  }
+
+  const queueChunkAppend = (assistantMessageId, delta) => {
+    if (!delta) {
+      return
+    }
+
+    chunkBufferRef.current += delta
+
+    if (chunkAnimationFrameRef.current) {
+      return
+    }
+
+    chunkAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      flushBufferedChunk(assistantMessageId)
+      chunkAnimationFrameRef.current = null
+    })
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, isTyping])
+
+  useEffect(() => {
+    return () => {
+      if (chunkAnimationFrameRef.current) {
+        window.cancelAnimationFrame(chunkAnimationFrameRef.current)
+      }
+    }
+  }, [])
 
   const sendMessage = async (rawText) => {
     const text = rawText.trim()
@@ -48,6 +93,14 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
       time: formatTimestamp(),
     }
 
+    const assistantMessageId = `assistant-stream-${Date.now()}`
+    const assistantPlaceholder = {
+      id: assistantMessageId,
+      role: 'assistant',
+      text: '',
+      time: formatTimestamp(),
+    }
+
     const history = messages
       .filter(
         (item) =>
@@ -57,40 +110,68 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
       .map((item) => ({ role: item.role, text: item.text }))
       .slice(-10)
 
-    setMessages((current) => [...current, userMessage])
+    setMessages((current) => [...current, userMessage, assistantPlaceholder])
     setChatHistory((current) => [...current, text])
     setInput('')
     setIsTyping(true)
+    hasStartedStreamingRef.current = false
+    setHasStartedStreaming(false)
+    setStatusTag('InternConnect is thinking...')
+    chunkBufferRef.current = ''
 
     try {
-      const response = await sendAskInternConnectMessage({
+      await streamAskInternConnectMessage({
         message: text,
         history,
+        onStatus: (statusMessage) => {
+          if (!hasStartedStreamingRef.current) {
+            setStatusTag(statusMessage)
+          }
+        },
+        onChunk: (delta) => {
+          if (!delta) {
+            return
+          }
+
+          hasStartedStreamingRef.current = true
+          setHasStartedStreaming(true)
+          setStatusTag('')
+          queueChunkAppend(assistantMessageId, delta)
+        },
+        onDone: (payload) => {
+          flushBufferedChunk(assistantMessageId)
+
+          if (!hasStartedStreamingRef.current && payload?.reply) {
+            setMessages((current) =>
+              current.map((item) =>
+                item.id === assistantMessageId ? { ...item, text: payload.reply } : item,
+              ),
+            )
+          }
+        },
+        onError: () => {
+          flushBufferedChunk(assistantMessageId)
+        },
       })
-
-      const assistantMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        text:
-          response.reply ||
-          'I could not generate a response right now. Please try again with a more specific question.',
-        time: formatTimestamp(),
-      }
-
-      setMessages((current) => [...current, assistantMessage])
     } catch (error) {
-      const fallbackMessage = {
-        id: `assistant-error-${Date.now()}`,
-        role: 'assistant',
-        text:
-          error.response?.data?.message ||
-          'I am unable to reach the AI service right now. Please try again in a moment.',
-        time: formatTimestamp(),
-      }
+      const fallbackText =
+        error.message || 'I am unable to reach the AI service right now. Please try again in a moment.'
 
-      setMessages((current) => [...current, fallbackMessage])
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === assistantMessageId
+            ? {
+                ...item,
+                text: item.text
+                  ? `${item.text}\n\n${fallbackText}`
+                  : fallbackText,
+              }
+            : item,
+        ),
+      )
     } finally {
       setIsTyping(false)
+      setStatusTag('')
     }
   }
 
@@ -100,9 +181,18 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   }
 
   const handleClearChat = () => {
+    if (chunkAnimationFrameRef.current) {
+      window.cancelAnimationFrame(chunkAnimationFrameRef.current)
+      chunkAnimationFrameRef.current = null
+    }
+
+    chunkBufferRef.current = ''
     setMessages([buildInitialMessage(student.name)])
     setInput('')
     setIsTyping(false)
+    hasStartedStreamingRef.current = false
+    setStatusTag('')
+    setHasStartedStreaming(false)
     setChatHistory([])
   }
 
@@ -152,9 +242,9 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
                 </article>
               ))}
 
-              {isTyping && (
+              {isTyping && !hasStartedStreaming && statusTag && (
                 <article className="mr-auto rounded-2xl border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#6B7280]">
-                  InternConnect is typing...
+                  {statusTag}
                 </article>
               )}
               <div ref={chatEndRef} />
