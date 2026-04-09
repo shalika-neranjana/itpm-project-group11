@@ -1,45 +1,21 @@
 const Result = require("../../models/Result");
 const Student = require("../../models/Student");
 const StudentGuidance = require("../../models/student_guidance/StudentGuidance");
+const Career = require("../../models/student_guidance/Career");
 const OpenAI = require("openai");
 
 let openAIClient;
 
-const DEFAULT_INTERESTS = [
-    { name: "Software Engineering", category: "Technology" },
-    { name: "User Experience Design", category: "Design" },
-    { name: "Data Analysis", category: "Analytics" },
-];
-
-const DEFAULT_SKILLS = [
-    { name: "JavaScript", category: "Programming", level: "Intermediate" },
-    { name: "React", category: "Frontend", level: "Intermediate" },
-    { name: "SQL", category: "Database", level: "Beginner" },
-];
-
-const CAREER_LIBRARY = [
-    {
-        title: "Web Developer",
-        matchTags: ["Software Engineering", "User Experience Design", "JavaScript", "React"],
-        summary: "Build responsive, user-focused web experiences with modern frontend and backend tooling.",
-        nextStep: "Build and deploy one full web app with authentication, API integration, and accessibility checks.",
-        fixedScore: 80,
-    },
-    {
-        title: "Mobile Apps Developer",
-        matchTags: ["Software Engineering", "JavaScript", "React", "Communication Skills"],
-        summary: "Create mobile-first applications with smooth user interactions and reliable performance.",
-        nextStep: "Create a mobile app prototype and implement core screens with navigation and state handling.",
-        fixedScore: 15,
-    },
-    {
-        title: "Desktop App Developer",
-        matchTags: ["Software Engineering", "Programming", "Database"],
-        summary: "Develop robust desktop applications with stable architecture and local/system integrations.",
-        nextStep: "Build a small desktop utility app with file handling and structured error management.",
-        fixedScore: 5,
-    },
-];
+const MARKDOWN_RESPONSE_GUIDELINES = [
+    "Return ONLY Markdown.",
+    "Use clear section headings with ## and ###.",
+    "Break long paragraphs into short, scannable sentences.",
+    "Use bullet points or numbered steps for actionable content.",
+    "Use **bold** for key terms, priorities, and warnings.",
+    "Use emojis sparingly for clarity such as  ✅, 📌.",
+    "Preserve meaning and never invent academic facts not present in context.",
+    "Tone must be professional, clear, supportive, and student-friendly.",
+].join(" ");
 
 const normalizeItems = (items, mapper) => {
     if (!Array.isArray(items)) {
@@ -51,7 +27,7 @@ const normalizeItems = (items, mapper) => {
         .filter((item) => item && Object.values(item).every(Boolean));
 };
 
-const buildCareerSuggestions = (guidance, examResults) => {
+const buildCareerSuggestions = async (guidance, examResults) => {
     const interestTags = guidance.interests.map((interest) => interest.name);
     const skillTags = guidance.skills.flatMap((skill) => [skill.name, skill.category]);
     const subjectTags = examResults.flatMap((semester) =>
@@ -59,21 +35,24 @@ const buildCareerSuggestions = (guidance, examResults) => {
     );
     const tags = new Set([...interestTags, ...skillTags, ...subjectTags]);
 
-    return CAREER_LIBRARY.map((career) => ({
+    // Fetch active careers from database
+    const careers = await Career.find({ isActive: true }).lean();
+
+    return careers.map((career) => ({
         title: career.title,
         summary: career.summary,
         nextStep: career.nextStep,
-        matchScore: career.fixedScore,
+        matchScore: career.matchScore,
         matchedAreas: career.matchTags.filter((tag) => tags.has(tag)).slice(0, 4),
     }));
 };
 
-const buildResponse = (guidance, examResults) => ({
+const buildResponse = async (guidance, examResults) => ({
     examResults,
     interests: guidance.interests,
     skills: guidance.skills,
     aspirations: guidance.aspirations,
-    careerSuggestions: buildCareerSuggestions(guidance, examResults),
+    careerSuggestions: await buildCareerSuggestions(guidance, examResults),
 });
 
 const sortSubjects = (left, right) =>
@@ -142,8 +121,8 @@ const getOrCreateStudentGuidance = async (studentId) => {
     if (!guidance) {
         guidance = await StudentGuidance.create({
             student: studentId,
-            interests: DEFAULT_INTERESTS,
-            skills: DEFAULT_SKILLS,
+            interests: [],
+            skills: [],
             aspirations: "I want to build a strong technical foundation and choose a career path that fits my strengths.",
         });
     }
@@ -216,10 +195,11 @@ const getStudentGuidance = async (req, res, next) => {
     try {
         const guidance = await getOrCreateStudentGuidance(req.student._id);
         const examResults = await getStudentExamResults(req.student._id);
+        const responseData = await buildResponse(guidance, examResults);
 
         res.status(200).json({
             success: true,
-            data: buildResponse(guidance, examResults),
+            data: responseData,
         });
     } catch (error) {
         next(error);
@@ -242,11 +222,12 @@ const updateStudentInterests = async (req, res, next) => {
 
         await guidance.save();
         const examResults = await getStudentExamResults(req.student._id);
+        const responseData = await buildResponse(guidance, examResults);
 
         res.status(200).json({
             success: true,
             message: "Interests updated successfully",
-            data: buildResponse(guidance, examResults),
+            data: responseData,
         });
     } catch (error) {
         next(error);
@@ -265,11 +246,12 @@ const updateStudentSkills = async (req, res, next) => {
 
         await guidance.save();
         const examResults = await getStudentExamResults(req.student._id);
+        const responseData = await buildResponse(guidance, examResults);
 
         res.status(200).json({
             success: true,
             message: "Skills updated successfully",
-            data: buildResponse(guidance, examResults),
+            data: responseData,
         });
     } catch (error) {
         next(error);
@@ -329,7 +311,7 @@ const askInternConnect = async (req, res, next) => {
             reasoning: { effort: "medium" },
             stream: true,
             instructions:
-                "You are Ask InternConnect, an academic and career assistant for internship readiness. Use only the student data provided in context. Do not invent grades, modules, or profile details. If data is missing, state that and suggest next steps. Keep answers practical, supportive, and concise.",
+                `You are Ask InternConnect, an academic and career assistant for internship readiness. Use only the student data provided in context. Do not invent grades, modules, or profile details. If data is missing, state that and suggest next steps. ${MARKDOWN_RESPONSE_GUIDELINES}`,
             input: [
                 {
                     role: "developer",

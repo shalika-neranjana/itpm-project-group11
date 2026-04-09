@@ -1,18 +1,99 @@
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { streamAskInternConnectMessage } from '../../api/student_guidance/guidanceApi'
-
-const quickPromptOptions = [
-  'How can I improve my internship profile?',
-  'What skills should I learn next?',
-  'Help me prepare for internship interviews',
-  'Suggest career paths from my interests',
-]
 
 function formatTimestamp(date = new Date()) {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function generateDynamicPrompts(chatHistory, interests, skills, examResults) {
+  const messageCount = chatHistory.length
+  const hasInterests = interests && interests.length > 0
+  const hasSkills = skills && skills.length > 0
+  const hasExamResults = examResults && examResults.length > 0
+  
+  // Detect chat topics from recent messages
+  const recentChat = chatHistory.slice(-2).join(' ').toLowerCase()
+  const topics = {
+    skills: recentChat.includes('skill') || recentChat.includes('learn') || recentChat.includes('capability'),
+    career: recentChat.includes('career') || recentChat.includes('path') || recentChat.includes('role'),
+    interview: recentChat.includes('interview') || recentChat.includes('prepare') || recentChat.includes('practice'),
+    profile: recentChat.includes('profile') || recentChat.includes('improve') || recentChat.includes('strengthen'),
+    internship: recentChat.includes('internship') || recentChat.includes('placement') || recentChat.includes('opportunity'),
+  }
+
+  const prompts = []
+
+  // First few messages - foundational questions
+  if (messageCount === 0) {
+    prompts.push(
+      'How can I improve my internship profile?',
+      'What skills should I focus on learning?',
+      'Help me prepare for internship interviews'
+    )
+    if (hasInterests) {
+      prompts.push('Suggest career paths based on my interests')
+    }
+  }
+  // After initial questions - follow-ups based on topic
+  else if (messageCount === 1) {
+    if (!topics.profile) {
+      prompts.push('How can I strengthen my profile?')
+    }
+    if (!topics.interview) {
+      prompts.push('Give me interview preparation tips')
+    }
+    if (!topics.skills && hasSkills) {
+      prompts.push('What new technical skills should I learn?')
+    }
+    if (!topics.internship) {
+      prompts.push('What makes a strong internship application?')
+    }
+  }
+  // Mid-conversation - deeper dives
+  else if (messageCount <= 4) {
+    if (topics.skills) {
+      prompts.push(
+        'How do I build projects to showcase my skills?',
+        'What certifications would help my career?'
+      )
+    } else if (topics.career) {
+      prompts.push(
+        'What companies are hiring in my field?',
+        'What growth opportunities exist in these roles?'
+      )
+    } else if (topics.interview) {
+      prompts.push(
+        'How should I answer behavioral questions?',
+        'What questions should I ask interviewers?'
+      )
+    } else {
+      prompts.push(
+        'What are the current trends in tech?',
+        'How can I network effectively?'
+      )
+    }
+  }
+  // Later conversations - advanced topics
+  else {
+    if (hasExamResults) {
+      prompts.push('How can I improve my academic performance?')
+    }
+    if (hasInterests) {
+      prompts.push('How do my interests align with market demand?')
+    }
+    prompts.push(
+      'What next steps should I take after this internship?',
+      'How do I create a 6-month learning roadmap?'
+    )
+  }
+
+  // Shuffle and return top 4 unique prompts
+  return [...new Set(prompts)].sort(() => Math.random() - 0.5).slice(0, 4)
 }
 
 function buildInitialMessage(studentName) {
@@ -31,6 +112,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   const [statusTag, setStatusTag] = useState('')
   const [hasStartedStreaming, setHasStartedStreaming] = useState(false)
   const [chatHistory, setChatHistory] = useState([])
+  const [dynamicPrompts, setDynamicPrompts] = useState([])
   const chatEndRef = useRef(null)
   const chunkBufferRef = useRef('')
   const chunkAnimationFrameRef = useRef(null)
@@ -80,6 +162,11 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
     }
   }, [])
 
+  // Update dynamic prompts based on chat history and student context
+  useEffect(() => {
+    const prompts = generateDynamicPrompts(chatHistory, interests, skills, examResults)
+    setDynamicPrompts(prompts)
+  }, [chatHistory, interests, skills, examResults])
   const sendMessage = async (rawText) => {
     const text = rawText.trim()
     if (!text || isTyping) {
@@ -231,7 +318,26 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
                       : 'ml-auto bg-[#3B6FE8] text-white'
                   }`}
                 >
-                  <p>{message.text}</p>
+                  {message.role === 'assistant' ? (
+                    <div className="text-[#1A1D27]">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h2: ({ ...props }) => <h2 className="mt-3 mb-2 text-base font-bold" {...props} />,
+                          h3: ({ ...props }) => <h3 className="mt-3 mb-2 text-sm font-bold" {...props} />,
+                          p: ({ ...props }) => <p className="my-2 text-sm leading-6" {...props} />,
+                          ul: ({ ...props }) => <ul className="my-2 list-disc pl-5 text-sm leading-6" {...props} />,
+                          ol: ({ ...props }) => <ol className="my-2 list-decimal pl-5 text-sm leading-6" {...props} />,
+                          li: ({ ...props }) => <li className="my-1" {...props} />,
+                          strong: ({ ...props }) => <strong className="font-semibold text-[#0F172A]" {...props} />,
+                        }}
+                      >
+                        {message.text}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.text}</p>
+                  )}
                   <p
                     className={`mt-2 text-[11px] font-semibold ${
                       message.role === 'assistant' ? 'text-[#8092B5]' : 'text-[#DBE8FF]'
@@ -276,7 +382,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
           <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Quick Prompts</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {quickPromptOptions.map((prompt) => (
+                {dynamicPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"

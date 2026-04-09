@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed:careers": "node src/seeds/seedCareers.js"
   },
   "keywords": [],
   "author": "",
