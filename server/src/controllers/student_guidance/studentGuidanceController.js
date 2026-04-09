@@ -1,5 +1,9 @@
 const Result = require("../../models/Result");
+const Student = require("../../models/Student");
 const StudentGuidance = require("../../models/student_guidance/StudentGuidance");
+const OpenAI = require("openai");
+
+let openAIClient;
 
 const DEFAULT_INTERESTS = [
     { name: "Software Engineering", category: "Technology" },
@@ -75,6 +79,18 @@ const buildResponse = (guidance, examResults) => ({
 const sortSubjects = (left, right) =>
     left.subjectCode.localeCompare(right.subjectCode) || left.subject.localeCompare(right.subject);
 
+const getOpenAIClient = () => {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error("OPENAI_API_KEY is not configured on the server environment");
+    }
+
+    if (!openAIClient) {
+        openAIClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+
+    return openAIClient;
+};
+
 const getStudentExamResults = async (studentId) => {
     const results = await Result.find({ student: studentId })
         .populate({
@@ -133,6 +149,93 @@ const getOrCreateStudentGuidance = async (studentId) => {
     }
 
     return guidance;
+};
+
+const normalizeChatHistory = (history) => {
+    if (!Array.isArray(history)) {
+        return [];
+    }
+
+    return history
+        .map((item) => ({
+            role: item?.role === "assistant" ? "assistant" : "user",
+            text: typeof item?.text === "string" ? item.text.trim() : "",
+        }))
+        .filter((item) => item.text)
+        .slice(-10);
+};
+
+const extractResponseText = (response) => {
+    if (typeof response?.output_text === "string" && response.output_text.trim()) {
+        return response.output_text.trim();
+    }
+
+    if (!Array.isArray(response?.output)) {
+        return "";
+    }
+
+    const textParts = [];
+
+    for (const outputItem of response.output) {
+        if (!Array.isArray(outputItem?.content)) {
+            continue;
+        }
+
+        for (const contentItem of outputItem.content) {
+            if (contentItem?.type === "output_text" && typeof contentItem.text === "string") {
+                textParts.push(contentItem.text);
+            }
+        }
+    }
+
+    return textParts.join("\n").trim();
+};
+
+const buildAcademicContext = async (studentId) => {
+    const [studentProfile, guidance, examResults] = await Promise.all([
+        Student.findById(studentId)
+            .select("firstName lastName studentId email university faculty specialization gpa skills")
+            .lean(),
+        getOrCreateStudentGuidance(studentId),
+        getStudentExamResults(studentId),
+    ]);
+
+    const allSubjects = examResults.flatMap((semesterResult) => semesterResult.subjects);
+    const averageCa =
+        allSubjects.length > 0
+            ? Number(
+                  (
+                      allSubjects.reduce(
+                          (total, subject) => total + Number(subject.caPercentage || 0),
+                          0
+                      ) / allSubjects.length
+                  ).toFixed(2)
+              )
+            : null;
+
+    return {
+        student: {
+            name: `${studentProfile?.firstName || ""} ${studentProfile?.lastName || ""}`.trim(),
+            studentId: studentProfile?.studentId || "",
+            email: studentProfile?.email || "",
+            university: studentProfile?.university || "",
+            faculty: studentProfile?.faculty || "",
+            specialization: studentProfile?.specialization || "",
+            gpa: studentProfile?.gpa ?? null,
+            studentSkills: Array.isArray(studentProfile?.skills) ? studentProfile.skills : [],
+        },
+        studentGuidance: {
+            aspirations: guidance?.aspirations || "",
+            interests: Array.isArray(guidance?.interests) ? guidance.interests : [],
+            skills: Array.isArray(guidance?.skills) ? guidance.skills : [],
+        },
+        examResults,
+        summary: {
+            totalSemesters: examResults.length,
+            totalSubjects: allSubjects.length,
+            averageCaPercentage: averageCa,
+        },
+    };
 };
 
 const getStudentGuidance = async (req, res, next) => {
@@ -199,7 +302,59 @@ const updateStudentSkills = async (req, res, next) => {
     }
 };
 
+const askInternConnect = async (req, res, next) => {
+    try {
+        const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+
+        if (!message) {
+            return res.status(400).json({
+                success: false,
+                message: "Message is required",
+            });
+        }
+
+        const history = normalizeChatHistory(req.body?.history);
+        const context = await buildAcademicContext(req.student._id);
+
+        const client = getOpenAIClient();
+        const response = await client.responses.create({
+            model: process.env.OPENAI_MODEL || "gpt-5",
+            reasoning: { effort: "medium" },
+            instructions:
+                "You are Ask InternConnect, an academic and career assistant for internship readiness. Use only the student data provided in context. Do not invent grades, modules, or profile details. If data is missing, state that and suggest next steps. Keep answers practical, supportive, and concise.",
+            input: [
+                {
+                    role: "developer",
+                    content: `Student academic context (JSON): ${JSON.stringify(context)}`,
+                },
+                ...history.map((item) => ({ role: item.role, content: item.text })),
+                { role: "user", content: message },
+            ],
+        });
+
+        const reply = extractResponseText(response);
+
+        if (!reply) {
+            return res.status(502).json({
+                success: false,
+                message: "AI service returned an empty response",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                reply,
+                model: response.model,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
+    askInternConnect,
     getStudentGuidance,
     updateStudentInterests,
     updateStudentSkills,

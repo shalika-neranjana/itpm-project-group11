@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { sendAskInternConnectMessage } from '../../api/student_guidance/guidanceApi'
 
 const quickPromptOptions = [
   'How can I improve my internship profile?',
@@ -23,61 +24,6 @@ function buildInitialMessage(studentName) {
   }
 }
 
-function createAssistantReply(input, context) {
-  const query = input.toLowerCase()
-  const primaryInterest = context.interests[0]?.name
-  const primarySkill = context.skills[0]?.name
-  const weakSubjects = context.examResults
-    .filter((result) => Number(result.score) < 60)
-    .map((result) => result.moduleCode || result.moduleName)
-    .filter(Boolean)
-
-  if (query.includes('skill')) {
-    return [
-      'Start with one technical skill and one communication skill this month.',
-      primarySkill
-        ? `Since you already have ${primarySkill}, build a project that proves it with real deliverables.`
-        : 'Add at least one core technical skill in your profile with a clear proficiency level.',
-      'Use this pattern: learn, build, publish, and reflect in your internship portfolio.',
-    ].join(' ')
-  }
-
-  if (query.includes('interview')) {
-    return [
-      'For internship interviews, prepare concise stories using Situation, Action, and Result.',
-      'Practice answers for: teamwork, deadlines, and handling feedback.',
-      weakSubjects.length > 0
-        ? `Also be ready to explain your improvement plan for ${weakSubjects.slice(0, 2).join(' and ')}.`
-        : 'Highlight a recent module or project where you solved a practical problem.',
-    ].join(' ')
-  }
-
-  if (query.includes('career') || query.includes('path')) {
-    return [
-      primaryInterest
-        ? `Based on your interest in ${primaryInterest}, shortlist 2 to 3 role families and map their required skills.`
-        : 'Start by choosing 2 role families you are curious about, then compare required skills and tools.',
-      'Create a 6-week growth plan with weekly milestones and one project outcome.',
-    ].join(' ')
-  }
-
-  if (query.includes('profile') || query.includes('resume') || query.includes('cv')) {
-    return [
-      'To strengthen your internship profile, make outcomes visible: what you built, measured, or improved.',
-      'Use short bullets with metrics where possible.',
-      'Include links to projects, GitHub repos, or case studies and keep your skills section current.',
-    ].join(' ')
-  }
-
-  return [
-    'Great question. A strong next step is to align your interests, skills, and target internship roles into one action plan.',
-    primaryInterest
-      ? `Your current interests such as ${primaryInterest} can guide your project and role selection.`
-      : 'Add a few interests to unlock more personalized career suggestions.',
-    'If you want, ask me for a week-by-week preparation plan and I will draft one.',
-  ].join(' ')
-}
-
 function AskInternConnectSection({ student, interests, skills, examResults }) {
   const [messages, setMessages] = useState(() => [buildInitialMessage(student.name)])
   const [input, setInput] = useState('')
@@ -85,16 +31,11 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   const [chatHistory, setChatHistory] = useState([])
   const chatEndRef = useRef(null)
 
-  const context = useMemo(
-    () => ({ interests, skills, examResults }),
-    [interests, skills, examResults],
-  )
-
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, isTyping])
 
-  const sendMessage = (rawText) => {
+  const sendMessage = async (rawText) => {
     const text = rawText.trim()
     if (!text || isTyping) {
       return
@@ -107,22 +48,50 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
       time: formatTimestamp(),
     }
 
+    const history = messages
+      .filter(
+        (item) =>
+          (item.role === 'user' || item.role === 'assistant') &&
+          !String(item.id).startsWith('assistant-welcome-'),
+      )
+      .map((item) => ({ role: item.role, text: item.text }))
+      .slice(-10)
+
     setMessages((current) => [...current, userMessage])
     setChatHistory((current) => [...current, text])
     setInput('')
     setIsTyping(true)
 
-    window.setTimeout(() => {
-      const reply = {
+    try {
+      const response = await sendAskInternConnectMessage({
+        message: text,
+        history,
+      })
+
+      const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        text: createAssistantReply(text, context),
+        text:
+          response.reply ||
+          'I could not generate a response right now. Please try again with a more specific question.',
         time: formatTimestamp(),
       }
 
-      setMessages((current) => [...current, reply])
+      setMessages((current) => [...current, assistantMessage])
+    } catch (error) {
+      const fallbackMessage = {
+        id: `assistant-error-${Date.now()}`,
+        role: 'assistant',
+        text:
+          error.response?.data?.message ||
+          'I am unable to reach the AI service right now. Please try again in a moment.',
+        time: formatTimestamp(),
+      }
+
+      setMessages((current) => [...current, fallbackMessage])
+    } finally {
       setIsTyping(false)
-    }, 700)
+    }
   }
 
   const handleSubmit = (event) => {
@@ -148,7 +117,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">Frontend Demo</span>
+          <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">AI Powered</span>
           <button
             type="button"
             onClick={handleClearChat}

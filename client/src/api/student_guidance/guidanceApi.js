@@ -24,3 +24,8 @@ export const updateStudentSkills = async (payload) => {
   const response = await api.put('/student-guidance/skills', payload, getAuthConfig())
   return response.data.data
 }
+
+export const sendAskInternConnectMessage = async (payload) => {
+  const response = await api.post('/student-guidance/chat', payload, getAuthConfig())
+  return response.data.data
+}
