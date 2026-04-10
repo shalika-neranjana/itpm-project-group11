@@ -115,6 +115,18 @@ const companyReviewSchema = new mongoose.Schema(
                     type: String,
                     default: "Anonymous",
                 },
+                upvotedBy: [
+                    {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "Student",
+                    }
+                ],
+                downvotedBy: [
+                    {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "Student",
+                    }
+                ],
                 replies: [
                     {
                         text: {
@@ -131,6 +143,18 @@ const companyReviewSchema = new mongoose.Schema(
                             type: String,
                             default: "Anonymous",
                         },
+                        upvotedBy: [
+                            {
+                                type: mongoose.Schema.Types.ObjectId,
+                                ref: "Student",
+                            }
+                        ],
+                        downvotedBy: [
+                            {
+                                type: mongoose.Schema.Types.ObjectId,
+                                ref: "Student",
+                            }
+                        ],
                         createdAt: {
                             type: Date,
                             default: Date.now,

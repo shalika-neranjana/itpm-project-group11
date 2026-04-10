@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { careerRoadmaps } from './careerRoadmaps'
 
 const normalizeScore = (value) => {
   const parsed = Number.parseInt(String(value).replace(/[^\d]/g, ''), 10)
@@ -37,11 +36,11 @@ const getScoreTone = (score) => {
   }
 }
 
-function CareerSuggestionsSection({ aspirations, interests, skills }) {
+function CareerSuggestionsSection({ aspirations, interests, skills, careerSuggestions, onRefresh, refreshing }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('scoreHigh')
-  const effectiveCareerSuggestions = careerRoadmaps
+  const effectiveCareerSuggestions = Array.isArray(careerSuggestions) ? careerSuggestions : []
 
   const topScore = effectiveCareerSuggestions.length
     ? Math.max(...effectiveCareerSuggestions.map((career) => normalizeScore(career.matchScore)))
@@ -58,7 +57,7 @@ function CareerSuggestionsSection({ aspirations, interests, skills }) {
           !query ||
           career.title.toLowerCase().includes(query) ||
           String(career.summary || '').toLowerCase().includes(query) ||
-          career.matchedAreas.some((area) => area.toLowerCase().includes(query))
+          (career.matchedAreas || []).some((area) => area.toLowerCase().includes(query))
         const matchesStatus = statusFilter === 'all' || tone === statusFilter
 
         return matchesSearch && matchesStatus
@@ -98,9 +97,20 @@ function CareerSuggestionsSection({ aspirations, interests, skills }) {
                 Personalized role recommendations generated from your interests, skills, and academic performance.
               </p>
             </div>
-            <div className="rounded-xl border border-[#D9E6FF] bg-white/90 px-4 py-3 text-right shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Best Match</p>
-              <p className="mt-1 text-2xl font-bold text-[#1A1D27]">{topScore}%</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="rounded-[10px] border border-[#D4E0FA] bg-white px-4 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {refreshing ? 'Refreshing...' : 'Refresh AI Suggestions'}
+              </button>
+
+              <div className="rounded-xl border border-[#D9E6FF] bg-white/90 px-4 py-3 text-right shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Best Match</p>
+                <p className="mt-1 text-2xl font-bold text-[#1A1D27]">{topScore}%</p>
+              </div>
             </div>
           </div>
 
@@ -198,17 +208,19 @@ function CareerSuggestionsSection({ aspirations, interests, skills }) {
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-[#5F6C80]">{career.summary}</p>
-                <Link
-                  to={`/student-guidance/career/${career.id}`}
-                  className="mt-3 inline-flex rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
-                >
-                  View comprehensive guide
-                </Link>
+                {career.id ? (
+                  <Link
+                    to={`/student-guidance/career/${career.id}`}
+                    className="mt-3 inline-flex rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
+                  >
+                    View comprehensive guide
+                  </Link>
+                ) : null}
 
                 <div className="mt-5">
                   <p className="text-sm font-semibold text-[#1A1D27]">Why the AI recommends this</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {career.matchedAreas.map((area) => (
+                    {(career.matchedAreas || []).map((area) => (
                       <span key={area} className="rounded-full border border-[#DCE6FB] bg-[#F6F9FF] px-3 py-1 text-xs font-medium text-[#355188]">
                         {area}
                       </span>

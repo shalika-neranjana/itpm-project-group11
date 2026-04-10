@@ -22,6 +22,27 @@ const mapReviewData = (dbReview) => {
   }
 }
 
+const mapReplyData = (reply) => ({
+  _id: reply._id,
+  text: reply.text,
+  authorId: reply.authorId,
+  authorName: reply.authorName,
+  upvotes: reply.upvotedBy?.length || 0,
+  downvotes: reply.downvotedBy?.length || 0,
+  date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+})
+
+const mapCommentData = (comment) => ({
+  _id: comment._id,
+  text: comment.text,
+  authorId: comment.authorId,
+  authorName: comment.authorName,
+  upvotes: comment.upvotedBy?.length || 0,
+  downvotes: comment.downvotedBy?.length || 0,
+  date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+  replies: (comment.replies || []).map(mapReplyData),
+})
+
 /**
  * Create a new company review
  */
@@ -160,24 +181,11 @@ export const markReviewUnhelpful = async (id) => {
 /**
  * Get all comments for a review
  */
-export const getReviewComments = async (reviewId) => {
+export const getReviewComments = async (reviewId, sort = 'newest') => {
   try {
-    const response = await api.get(`/reviews/${reviewId}/comments`)
+    const response = await api.get(`/reviews/${reviewId}/comments`, { params: { sort } })
     const comments = response.data.data || []
-    return comments.map((comment) => ({
-      _id: comment._id,
-      text: comment.text,
-      authorId: comment.authorId,
-      authorName: comment.authorName,
-      date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      replies: (comment.replies || []).map((reply) => ({
-        _id: reply._id,
-        text: reply.text,
-        authorId: reply.authorId,
-        authorName: reply.authorName,
-        date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      })),
-    }))
+    return comments.map(mapCommentData)
   } catch (error) {
     throw error.response?.data || error
   }
@@ -191,15 +199,7 @@ export const createReviewComment = async (reviewId, commentData) => {
     const response = await api.post(`/reviews/${reviewId}/comments`, {
       text: commentData.text,
     })
-    const comment = response.data.data
-    return {
-      _id: comment._id,
-      text: comment.text,
-      authorId: comment.authorId,
-      authorName: comment.authorName,
-      date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      replies: [],
-    }
+    return mapCommentData(response.data.data)
   } catch (error) {
     throw error.response?.data || error
   }
@@ -213,21 +213,65 @@ export const replyToComment = async (reviewId, commentId, replyData) => {
     const response = await api.post(`/reviews/${reviewId}/comments/${commentId}/reply`, {
       text: replyData.text,
     })
-    const comment = response.data.data
-    return {
-      _id: comment._id,
-      text: comment.text,
-      authorId: comment.authorId,
-      authorName: comment.authorName,
-      date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      replies: (comment.replies || []).map((reply) => ({
-        _id: reply._id,
-        text: reply.text,
-        authorId: reply.authorId,
-        authorName: reply.authorName,
-        date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      })),
-    }
+    return mapCommentData(response.data.data)
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const updateReviewComment = async (reviewId, commentId, commentData) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}`, {
+      text: commentData.text,
+    })
+    return mapCommentData(response.data.data)
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const deleteReviewComment = async (reviewId, commentId) => {
+  try {
+    await api.delete(`/reviews/${reviewId}/comments/${commentId}`)
+    return true
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const updateReviewReply = async (reviewId, commentId, replyId, replyData) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`, {
+      text: replyData.text,
+    })
+    return mapCommentData(response.data.data)
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const deleteReviewReply = async (reviewId, commentId, replyId) => {
+  try {
+    const response = await api.delete(`/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`)
+    return mapCommentData(response.data.data)
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const voteReviewComment = async (reviewId, commentId, vote) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}/vote`, { vote })
+    return mapCommentData(response.data.data)
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const voteReviewReply = async (reviewId, commentId, replyId, vote) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}/replies/${replyId}/vote`, { vote })
+    return mapCommentData(response.data.data)
   } catch (error) {
     throw error.response?.data || error
   }
@@ -244,4 +288,13 @@ export default {
   flagReview,
   markReviewHelpful,
   markReviewUnhelpful,
+  getReviewComments,
+  createReviewComment,
+  replyToComment,
+  updateReviewComment,
+  deleteReviewComment,
+  updateReviewReply,
+  deleteReviewReply,
+  voteReviewComment,
+  voteReviewReply,
 }
