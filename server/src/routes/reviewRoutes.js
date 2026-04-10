@@ -20,6 +20,8 @@ const {
     getReviewComments,
     createReviewComment,
     replyToComment,
+    voteComment,
+    voteReply,
 } = require("../controllers/reviewController");
 const protect = require("../middleware/authMiddleware");
 
@@ -72,5 +74,11 @@ router.post("/:id/comments", protect, createReviewComment);
 
 // Reply to a comment on a review
 router.post("/:id/comments/:commentId/reply", protect, replyToComment);
+
+// Vote on a comment in a review thread
+router.put("/:id/comments/:commentId/vote", protect, voteComment);
+
+// Vote on a reply in a review thread
+router.put("/:id/comments/:commentId/replies/:replyId/vote", protect, voteReply);
 
 module.exports = router;

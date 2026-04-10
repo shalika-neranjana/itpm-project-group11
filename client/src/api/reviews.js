@@ -160,21 +160,25 @@ export const markReviewUnhelpful = async (id) => {
 /**
  * Get all comments for a review
  */
-export const getReviewComments = async (reviewId) => {
+export const getReviewComments = async (reviewId, sort = 'newest') => {
   try {
-    const response = await api.get(`/reviews/${reviewId}/comments`)
+    const response = await api.get(`/reviews/${reviewId}/comments`, { params: { sort } })
     const comments = response.data.data || []
     return comments.map((comment) => ({
       _id: comment._id,
       text: comment.text,
       authorId: comment.authorId,
       authorName: comment.authorName,
+      upvotes: comment.upvotedBy?.length || 0,
+      downvotes: comment.downvotedBy?.length || 0,
       date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       replies: (comment.replies || []).map((reply) => ({
         _id: reply._id,
         text: reply.text,
         authorId: reply.authorId,
         authorName: reply.authorName,
+        upvotes: reply.upvotedBy?.length || 0,
+        downvotes: reply.downvotedBy?.length || 0,
         date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       })),
     }))
@@ -197,8 +201,18 @@ export const createReviewComment = async (reviewId, commentData) => {
       text: comment.text,
       authorId: comment.authorId,
       authorName: comment.authorName,
+      upvotes: comment.upvotedBy?.length || 0,
+      downvotes: comment.downvotedBy?.length || 0,
       date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
-      replies: [],
+      replies: (comment.replies || []).map((reply) => ({
+        _id: reply._id,
+        text: reply.text,
+        authorId: reply.authorId,
+        authorName: reply.authorName,
+        upvotes: reply.upvotedBy?.length || 0,
+        downvotes: reply.downvotedBy?.length || 0,
+        date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      })),
     }
   } catch (error) {
     throw error.response?.data || error
@@ -219,12 +233,70 @@ export const replyToComment = async (reviewId, commentId, replyData) => {
       text: comment.text,
       authorId: comment.authorId,
       authorName: comment.authorName,
+      upvotes: comment.upvotedBy?.length || 0,
+      downvotes: comment.downvotedBy?.length || 0,
       date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       replies: (comment.replies || []).map((reply) => ({
         _id: reply._id,
         text: reply.text,
         authorId: reply.authorId,
         authorName: reply.authorName,
+        upvotes: reply.upvotedBy?.length || 0,
+        downvotes: reply.downvotedBy?.length || 0,
+        date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      })),
+    }
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const voteReviewComment = async (reviewId, commentId, vote) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}/vote`, { vote })
+    const comment = response.data.data
+    return {
+      _id: comment._id,
+      text: comment.text,
+      authorId: comment.authorId,
+      authorName: comment.authorName,
+      upvotes: comment.upvotedBy?.length || 0,
+      downvotes: comment.downvotedBy?.length || 0,
+      date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      replies: (comment.replies || []).map((reply) => ({
+        _id: reply._id,
+        text: reply.text,
+        authorId: reply.authorId,
+        authorName: reply.authorName,
+        upvotes: reply.upvotedBy?.length || 0,
+        downvotes: reply.downvotedBy?.length || 0,
+        date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      })),
+    }
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
+export const voteReviewReply = async (reviewId, commentId, replyId, vote) => {
+  try {
+    const response = await api.put(`/reviews/${reviewId}/comments/${commentId}/replies/${replyId}/vote`, { vote })
+    const comment = response.data.data
+    return {
+      _id: comment._id,
+      text: comment.text,
+      authorId: comment.authorId,
+      authorName: comment.authorName,
+      upvotes: comment.upvotedBy?.length || 0,
+      downvotes: comment.downvotedBy?.length || 0,
+      date: comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+      replies: (comment.replies || []).map((reply) => ({
+        _id: reply._id,
+        text: reply.text,
+        authorId: reply.authorId,
+        authorName: reply.authorName,
+        upvotes: reply.upvotedBy?.length || 0,
+        downvotes: reply.downvotedBy?.length || 0,
         date: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
       })),
     }
@@ -244,4 +316,9 @@ export default {
   flagReview,
   markReviewHelpful,
   markReviewUnhelpful,
+  getReviewComments,
+  createReviewComment,
+  replyToComment,
+  voteReviewComment,
+  voteReviewReply,
 }

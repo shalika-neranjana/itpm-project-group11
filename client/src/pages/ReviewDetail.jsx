@@ -45,7 +45,7 @@ function ReviewDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F7F8FA] to-white">
+      <div className="min-h-screen bg-gradient-to-b from-[#F7F8FA] to-white lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <button
             onClick={() => navigate(-1)}
@@ -64,7 +64,7 @@ function ReviewDetail() {
 
   if (error || !review) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F7F8FA] to-white">
+      <div className="min-h-screen bg-gradient-to-b from-[#F7F8FA] to-white lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <button
             onClick={() => navigate(-1)}
@@ -83,7 +83,7 @@ function ReviewDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F7F8FA] to-white">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
@@ -94,9 +94,9 @@ function ReviewDetail() {
         </button>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:h-full lg:items-start">
           {/* Left Side - Full Review */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 lg:h-full lg:overflow-y-auto">
             <div className="rounded-2xl border border-[#E8EAF0] bg-white p-8 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
               {/* Header */}
               <div className="mb-6 border-b border-[#E8EAF0] pb-6">
@@ -140,7 +140,7 @@ function ReviewDetail() {
           </div>
 
           {/* Right Side - Comments */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 lg:h-full lg:sticky lg:top-8">
             <ReviewComments reviewId={review._id || review.id} reviewAuthorId={review.authorId} />
           </div>
         </div>
