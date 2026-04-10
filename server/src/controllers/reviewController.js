@@ -7,6 +7,12 @@ const mongoose = require("mongoose");
 const CompanyReview = require("../models/Review");
 const Student = require("../models/Student");
 
+const getVoteScore = (item) => {
+    const upvotes = item.upvotedBy?.length || 0;
+    const downvotes = item.downvotedBy?.length || 0;
+    return upvotes - downvotes;
+};
+
 /**
  * @desc    Create a new company review
  * @route   POST /api/reviews
@@ -440,6 +446,7 @@ const getCompanyStats = async (req, res, next) => {
 const getReviewComments = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const { sort = "newest" } = req.query;
 
         const review = await CompanyReview.findById(id);
         if (!review) {
@@ -447,9 +454,24 @@ const getReviewComments = async (req, res, next) => {
             throw new Error("Review not found");
         }
 
+        const comments = [...(review.comments || [])];
+        if (sort === "top") {
+            comments.sort((a, b) => {
+                const scoreDiff = getVoteScore(b) - getVoteScore(a);
+                if (scoreDiff !== 0) {
+                    return scoreDiff;
+                }
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+        } else if (sort === "oldest") {
+            comments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        } else {
+            comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
         res.status(200).json({
             success: true,
-            data: review.comments || [],
+            data: comments,
         });
     } catch (error) {
         next(error);
@@ -485,6 +507,8 @@ const createReviewComment = async (req, res, next) => {
             text: text.trim(),
             authorId: req.student._id,
             authorName: authorName,
+            upvotedBy: [],
+            downvotedBy: [],
             replies: [],
         };
 
@@ -524,12 +548,6 @@ const replyToComment = async (req, res, next) => {
             throw new Error("Review not found");
         }
 
-        // Check if user is the review author
-        if (review.authorId.toString() !== req.student._id.toString()) {
-            res.status(403);
-            throw new Error("Only the review author can reply to comments");
-        }
-
         // Find the comment
         const comment = review.comments.find(c => c._id.toString() === commentId);
         if (!comment) {
@@ -545,12 +563,327 @@ const replyToComment = async (req, res, next) => {
             text: text.trim(),
             authorId: req.student._id,
             authorName: authorName,
+            upvotedBy: [],
+            downvotedBy: [],
         };
 
         comment.replies.push(newReply);
         await review.save();
 
         res.status(201).json({
+            success: true,
+            data: comment,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Update a comment on a review
+ * @route   PUT /api/reviews/:id/comments/:commentId
+ * @access  Private (comment author only)
+ */
+const updateReviewComment = async (req, res, next) => {
+    try {
+        const { id, commentId } = req.params;
+        const { text } = req.body;
+
+        if (!text || !text.trim()) {
+            res.status(400);
+            throw new Error("Comment text is required");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        if (comment.authorId.toString() !== req.student._id.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to edit this comment");
+        }
+
+        comment.text = text.trim();
+        await review.save();
+
+        res.status(200).json({
+            success: true,
+            data: comment,
+            message: "Comment updated successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Delete a comment on a review
+ * @route   DELETE /api/reviews/:id/comments/:commentId
+ * @access  Private (comment author only)
+ */
+const deleteReviewComment = async (req, res, next) => {
+    try {
+        const { id, commentId } = req.params;
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        if (comment.authorId.toString() !== req.student._id.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to delete this comment");
+        }
+
+        review.comments = review.comments.filter((c) => c._id.toString() !== commentId);
+        await review.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Comment deleted successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Update a reply in a review thread
+ * @route   PUT /api/reviews/:id/comments/:commentId/replies/:replyId
+ * @access  Private (reply author only)
+ */
+const updateReviewReply = async (req, res, next) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const { text } = req.body;
+
+        if (!text || !text.trim()) {
+            res.status(400);
+            throw new Error("Reply text is required");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        const reply = (comment.replies || []).find((r) => r._id.toString() === replyId);
+        if (!reply) {
+            res.status(404);
+            throw new Error("Reply not found");
+        }
+
+        if (reply.authorId.toString() !== req.student._id.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to edit this reply");
+        }
+
+        reply.text = text.trim();
+        await review.save();
+
+        res.status(200).json({
+            success: true,
+            data: comment,
+            message: "Reply updated successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Delete a reply in a review thread
+ * @route   DELETE /api/reviews/:id/comments/:commentId/replies/:replyId
+ * @access  Private (reply author only)
+ */
+const deleteReviewReply = async (req, res, next) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        const reply = (comment.replies || []).find((r) => r._id.toString() === replyId);
+        if (!reply) {
+            res.status(404);
+            throw new Error("Reply not found");
+        }
+
+        if (reply.authorId.toString() !== req.student._id.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to delete this reply");
+        }
+
+        comment.replies = (comment.replies || []).filter((r) => r._id.toString() !== replyId);
+        await review.save();
+
+        res.status(200).json({
+            success: true,
+            data: comment,
+            message: "Reply deleted successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Vote on a review comment
+ * @route   PUT /api/reviews/:id/comments/:commentId/vote
+ * @access  Private
+ */
+const voteComment = async (req, res, next) => {
+    try {
+        const { id, commentId } = req.params;
+        const { vote } = req.body;
+
+        if (!["up", "down"].includes(vote)) {
+            res.status(400);
+            throw new Error("Vote must be 'up' or 'down'");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        const userId = req.student._id.toString();
+        const upIndex = (comment.upvotedBy || []).findIndex((v) => v.toString() === userId);
+        const downIndex = (comment.downvotedBy || []).findIndex((v) => v.toString() === userId);
+
+        if (vote === "up") {
+            if (upIndex > -1) {
+                comment.upvotedBy.splice(upIndex, 1);
+            } else {
+                comment.upvotedBy.push(req.student._id);
+                if (downIndex > -1) {
+                    comment.downvotedBy.splice(downIndex, 1);
+                }
+            }
+        }
+
+        if (vote === "down") {
+            if (downIndex > -1) {
+                comment.downvotedBy.splice(downIndex, 1);
+            } else {
+                comment.downvotedBy.push(req.student._id);
+                if (upIndex > -1) {
+                    comment.upvotedBy.splice(upIndex, 1);
+                }
+            }
+        }
+
+        await review.save();
+
+        res.status(200).json({
+            success: true,
+            data: comment,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * @desc    Vote on a review reply
+ * @route   PUT /api/reviews/:id/comments/:commentId/replies/:replyId/vote
+ * @access  Private
+ */
+const voteReply = async (req, res, next) => {
+    try {
+        const { id, commentId, replyId } = req.params;
+        const { vote } = req.body;
+
+        if (!["up", "down"].includes(vote)) {
+            res.status(400);
+            throw new Error("Vote must be 'up' or 'down'");
+        }
+
+        const review = await CompanyReview.findById(id);
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const comment = review.comments.find((c) => c._id.toString() === commentId);
+        if (!comment) {
+            res.status(404);
+            throw new Error("Comment not found");
+        }
+
+        const reply = (comment.replies || []).find((r) => r._id.toString() === replyId);
+        if (!reply) {
+            res.status(404);
+            throw new Error("Reply not found");
+        }
+
+        const userId = req.student._id.toString();
+        const upIndex = (reply.upvotedBy || []).findIndex((v) => v.toString() === userId);
+        const downIndex = (reply.downvotedBy || []).findIndex((v) => v.toString() === userId);
+
+        if (vote === "up") {
+            if (upIndex > -1) {
+                reply.upvotedBy.splice(upIndex, 1);
+            } else {
+                reply.upvotedBy.push(req.student._id);
+                if (downIndex > -1) {
+                    reply.downvotedBy.splice(downIndex, 1);
+                }
+            }
+        }
+
+        if (vote === "down") {
+            if (downIndex > -1) {
+                reply.downvotedBy.splice(downIndex, 1);
+            } else {
+                reply.downvotedBy.push(req.student._id);
+                if (upIndex > -1) {
+                    reply.upvotedBy.splice(upIndex, 1);
+                }
+            }
+        }
+
+        await review.save();
+
+        res.status(200).json({
             success: true,
             data: comment,
         });
@@ -574,4 +907,10 @@ module.exports = {
     getReviewComments,
     createReviewComment,
     replyToComment,
+    updateReviewComment,
+    deleteReviewComment,
+    updateReviewReply,
+    deleteReviewReply,
+    voteComment,
+    voteReply,
 };
