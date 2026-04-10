@@ -20,6 +20,10 @@ const {
     getReviewComments,
     createReviewComment,
     replyToComment,
+    updateReviewComment,
+    deleteReviewComment,
+    updateReviewReply,
+    deleteReviewReply,
     voteComment,
     voteReply,
 } = require("../controllers/reviewController");
@@ -74,6 +78,18 @@ router.post("/:id/comments", protect, createReviewComment);
 
 // Reply to a comment on a review
 router.post("/:id/comments/:commentId/reply", protect, replyToComment);
+
+// Edit a comment on a review
+router.put("/:id/comments/:commentId", protect, updateReviewComment);
+
+// Delete a comment on a review
+router.delete("/:id/comments/:commentId", protect, deleteReviewComment);
+
+// Edit a reply in a review thread
+router.put("/:id/comments/:commentId/replies/:replyId", protect, updateReviewReply);
+
+// Delete a reply in a review thread
+router.delete("/:id/comments/:commentId/replies/:replyId", protect, deleteReviewReply);
 
 // Vote on a comment in a review thread
 router.put("/:id/comments/:commentId/vote", protect, voteComment);
