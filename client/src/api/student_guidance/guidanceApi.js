@@ -25,6 +25,11 @@ export const updateStudentSkills = async (payload) => {
   return response.data.data
 }
 
+export const refreshCareerSuggestions = async () => {
+  const response = await api.post('/student-guidance/career-suggestions/refresh', {}, getAuthConfig())
+  return response.data.data
+}
+
 export const streamAskInternConnectMessage = async ({
   message,
   history,

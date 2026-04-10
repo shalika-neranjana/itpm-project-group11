@@ -2,9 +2,11 @@ const Result = require("../../models/Result");
 const Student = require("../../models/Student");
 const StudentGuidance = require("../../models/student_guidance/StudentGuidance");
 const Career = require("../../models/student_guidance/Career");
+const StudentCareerSuggestion = require("../../models/student_guidance/StudentCareerSuggestion");
 const OpenAI = require("openai");
 
 let openAIClient;
+const CAREER_SUGGESTION_LIMIT = 6;
 
 const MARKDOWN_RESPONSE_GUIDELINES = [
     "Return ONLY Markdown.",
@@ -47,12 +49,133 @@ const buildCareerSuggestions = async (guidance, examResults) => {
     }));
 };
 
-const buildResponse = async (guidance, examResults) => ({
+const extractJsonFromText = (text) => {
+    if (typeof text !== "string") {
+        return null;
+    }
+
+    const trimmed = text.trim();
+    const fencedMatch = trimmed.match(/```json\s*([\s\S]*?)```/i);
+    const candidate = fencedMatch ? fencedMatch[1].trim() : trimmed;
+
+    try {
+        return JSON.parse(candidate);
+    } catch {
+        return null;
+    }
+};
+
+const sanitizeAISuggestions = (items) => {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    return items
+        .map((item) => ({
+            title: typeof item?.title === "string" ? item.title.trim() : "",
+            summary: typeof item?.summary === "string" ? item.summary.trim() : "",
+            nextStep: typeof item?.nextStep === "string" ? item.nextStep.trim() : "",
+            matchScore: Number(item?.matchScore),
+            matchedAreas: Array.isArray(item?.matchedAreas)
+                ? item.matchedAreas
+                      .map((area) => (typeof area === "string" ? area.trim() : ""))
+                      .filter(Boolean)
+                      .slice(0, 5)
+                : [],
+        }))
+        .filter(
+            (item) =>
+                item.title &&
+                item.summary &&
+                item.nextStep &&
+                Number.isFinite(item.matchScore)
+        )
+        .map((item) => ({
+            ...item,
+            matchScore: Math.max(0, Math.min(100, Math.round(item.matchScore))),
+        }))
+        .slice(0, CAREER_SUGGESTION_LIMIT);
+};
+
+const generateAICareerSuggestions = async (context, catalogCareers) => {
+    const client = getOpenAIClient();
+
+    const response = await client.responses.create({
+        model: process.env.OPENAI_MODEL || "gpt-5",
+        reasoning: { effort: "medium" },
+        input: [
+            {
+                role: "developer",
+                content:
+                    "You generate personalized internship career suggestions for one student. Return only strict JSON with this shape: {\"suggestions\":[{\"title\":string,\"summary\":string,\"nextStep\":string,\"matchScore\":number,\"matchedAreas\":string[]}]}. No markdown.",
+            },
+            {
+                role: "developer",
+                content: `Career catalog (JSON): ${JSON.stringify(catalogCareers)}`,
+            },
+            {
+                role: "developer",
+                content: `Student context (JSON): ${JSON.stringify(context)}`,
+            },
+            {
+                role: "user",
+                content: `Generate ${CAREER_SUGGESTION_LIMIT} career suggestions ranked by fit. Use only relevant data from context and catalog.`,
+            },
+        ],
+    });
+
+    const payload = extractJsonFromText(response.output_text || "");
+    return sanitizeAISuggestions(payload?.suggestions);
+};
+
+const getStoredCareerSuggestions = async (studentId) => {
+    const record = await StudentCareerSuggestion.findOne({ student: studentId }).lean();
+    return Array.isArray(record?.suggestions) ? record.suggestions : [];
+};
+
+const refreshCareerSuggestionsForStudent = async (studentId, guidance, examResults) => {
+    const [context, catalogCareers] = await Promise.all([
+        buildAcademicContext(studentId),
+        Career.find({ isActive: true })
+            .select("title summary nextStep matchTags matchScore")
+            .lean(),
+    ]);
+
+    let aiSuggestions = [];
+
+    try {
+        aiSuggestions = await generateAICareerSuggestions(context, catalogCareers);
+    } catch {
+        aiSuggestions = [];
+    }
+
+    const fallbackSuggestions = await buildCareerSuggestions(guidance, examResults);
+    const nextSuggestions = aiSuggestions.length ? aiSuggestions : fallbackSuggestions;
+
+    await StudentCareerSuggestion.findOneAndUpdate(
+        { student: studentId },
+        {
+            student: studentId,
+            suggestions: nextSuggestions,
+            generatedAt: new Date(),
+            source: aiSuggestions.length ? "ai" : "fallback",
+        },
+        {
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true,
+        }
+    );
+
+    return nextSuggestions;
+};
+
+const buildResponse = async (guidance, examResults, careerSuggestions = []) => ({
     examResults,
     interests: guidance.interests,
     skills: guidance.skills,
     aspirations: guidance.aspirations,
-    careerSuggestions: await buildCareerSuggestions(guidance, examResults),
+    careerSuggestions,
 });
 
 const sortSubjects = (left, right) =>
@@ -195,7 +318,17 @@ const getStudentGuidance = async (req, res, next) => {
     try {
         const guidance = await getOrCreateStudentGuidance(req.student._id);
         const examResults = await getStudentExamResults(req.student._id);
-        const responseData = await buildResponse(guidance, examResults);
+        let careerSuggestions = await getStoredCareerSuggestions(req.student._id);
+
+        if (!careerSuggestions.length) {
+            careerSuggestions = await refreshCareerSuggestionsForStudent(
+                req.student._id,
+                guidance,
+                examResults
+            );
+        }
+
+        const responseData = await buildResponse(guidance, examResults, careerSuggestions);
 
         res.status(200).json({
             success: true,
@@ -222,7 +355,8 @@ const updateStudentInterests = async (req, res, next) => {
 
         await guidance.save();
         const examResults = await getStudentExamResults(req.student._id);
-        const responseData = await buildResponse(guidance, examResults);
+        const careerSuggestions = await getStoredCareerSuggestions(req.student._id);
+        const responseData = await buildResponse(guidance, examResults, careerSuggestions);
 
         res.status(200).json({
             success: true,
@@ -246,11 +380,33 @@ const updateStudentSkills = async (req, res, next) => {
 
         await guidance.save();
         const examResults = await getStudentExamResults(req.student._id);
-        const responseData = await buildResponse(guidance, examResults);
+        const careerSuggestions = await getStoredCareerSuggestions(req.student._id);
+        const responseData = await buildResponse(guidance, examResults, careerSuggestions);
 
         res.status(200).json({
             success: true,
             message: "Skills updated successfully",
+            data: responseData,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const refreshCareerSuggestions = async (req, res, next) => {
+    try {
+        const guidance = await getOrCreateStudentGuidance(req.student._id);
+        const examResults = await getStudentExamResults(req.student._id);
+        const careerSuggestions = await refreshCareerSuggestionsForStudent(
+            req.student._id,
+            guidance,
+            examResults
+        );
+        const responseData = await buildResponse(guidance, examResults, careerSuggestions);
+
+        res.status(200).json({
+            success: true,
+            message: "Career suggestions refreshed successfully",
             data: responseData,
         });
     } catch (error) {
@@ -367,6 +523,7 @@ const askInternConnect = async (req, res, next) => {
 module.exports = {
     askInternConnect,
     getStudentGuidance,
+    refreshCareerSuggestions,
     updateStudentInterests,
     updateStudentSkills,
 };
