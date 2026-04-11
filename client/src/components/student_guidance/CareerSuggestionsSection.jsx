@@ -36,11 +36,28 @@ const getScoreTone = (score) => {
   }
 }
 
+const createCareerIdentifier = (career, index = 0) => {
+  if (typeof career?.id === 'string' && career.id.trim()) {
+    return career.id.trim()
+  }
+
+  const titleSlug = String(career?.title || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+
+  return titleSlug || `career-${index + 1}`
+}
+
 function CareerSuggestionsSection({ aspirations, interests, skills, careerSuggestions, onRefresh, refreshing }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('scoreHigh')
-  const effectiveCareerSuggestions = Array.isArray(careerSuggestions) ? careerSuggestions : []
+  const effectiveCareerSuggestions = useMemo(
+    () => (Array.isArray(careerSuggestions) ? careerSuggestions : []),
+    [careerSuggestions]
+  )
 
   const topScore = effectiveCareerSuggestions.length
     ? Math.max(...effectiveCareerSuggestions.map((career) => normalizeScore(career.matchScore)))
@@ -178,13 +195,14 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
 
       {effectiveCareerSuggestions.length > 0 ? (
         <div className="grid gap-5 xl:grid-cols-3">
-          {visibleSuggestions.map((career) => {
+          {visibleSuggestions.map((career, index) => {
             const score = normalizeScore(career.matchScore)
             const tone = getScoreTone(score)
+            const careerId = createCareerIdentifier(career, index)
 
             return (
               <article
-                key={career.title}
+                key={careerId}
                 className={`rounded-2xl border border-l-4 border-[#E8EAF0] p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(22,34,57,0.08)] ${tone.accent}`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -208,14 +226,12 @@ function CareerSuggestionsSection({ aspirations, interests, skills, careerSugges
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-[#5F6C80]">{career.summary}</p>
-                {career.id ? (
-                  <Link
-                    to={`/student-guidance/career/${career.id}`}
-                    className="mt-3 inline-flex rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
-                  >
-                    View comprehensive guide
-                  </Link>
-                ) : null}
+                <Link
+                  to={`/student-guidance/career/${encodeURIComponent(careerId)}`}
+                  className="mt-3 inline-flex rounded-[10px] border border-[#D4E0FA] px-3 py-2 text-xs font-semibold text-[#3B6FE8] transition hover:border-[#BFD4FF] hover:bg-[#EEF2FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8DB2FF] focus-visible:ring-offset-2"
+                >
+                  View full AI analysis
+                </Link>
 
                 <div className="mt-5">
                   <p className="text-sm font-semibold text-[#1A1D27]">Why the AI recommends this</p>

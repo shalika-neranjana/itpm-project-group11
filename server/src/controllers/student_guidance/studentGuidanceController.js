@@ -3,10 +3,12 @@ const Student = require("../../models/Student");
 const StudentGuidance = require("../../models/student_guidance/StudentGuidance");
 const Career = require("../../models/student_guidance/Career");
 const StudentCareerSuggestion = require("../../models/student_guidance/StudentCareerSuggestion");
+const StudentCareerAnalysis = require("../../models/student_guidance/StudentCareerAnalysis");
 const OpenAI = require("openai");
 
 let openAIClient;
 const CAREER_SUGGESTION_LIMIT = 6;
+const CAREER_ROADMAP_PHASE_LIMIT = 6;
 
 const MARKDOWN_RESPONSE_GUIDELINES = [
     "Return ONLY Markdown.",
@@ -29,6 +31,59 @@ const normalizeItems = (items, mapper) => {
         .filter((item) => item && Object.values(item).every(Boolean));
 };
 
+const normalizeText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const toSlug = (value) =>
+    normalizeText(String(value || ""))
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
+const buildCareerIdentifier = (idCandidate, title, fallbackIndex = 0) => {
+    const directId = normalizeText(idCandidate ? String(idCandidate) : "");
+
+    if (directId) {
+        return directId;
+    }
+
+    const titleSlug = toSlug(title);
+
+    if (titleSlug) {
+        return titleSlug;
+    }
+
+    return `career-${fallbackIndex + 1}`;
+};
+
+const sanitizeStringArray = (items, limit = 8) => {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    return items
+        .map((item) => normalizeText(item))
+        .filter(Boolean)
+        .slice(0, limit);
+};
+
+const sanitizeRoadmapSteps = (steps) => {
+    if (!Array.isArray(steps)) {
+        return [];
+    }
+
+    return steps
+        .map((step, index) => ({
+            phase: normalizeText(step?.phase) || `Phase ${index + 1}`,
+            timeline: normalizeText(step?.timeline),
+            objective:
+                normalizeText(step?.objective) || normalizeText(step?.outcome),
+            actions: sanitizeStringArray(step?.actions, 5),
+            milestone: normalizeText(step?.milestone),
+        }))
+        .filter((step) => step.phase && step.objective)
+        .slice(0, CAREER_ROADMAP_PHASE_LIMIT);
+};
+
 const buildCareerSuggestions = async (guidance, examResults) => {
     const interestTags = guidance.interests.map((interest) => interest.name);
     const skillTags = guidance.skills.flatMap((skill) => [skill.name, skill.category]);
@@ -40,12 +95,15 @@ const buildCareerSuggestions = async (guidance, examResults) => {
     // Fetch active careers from database
     const careers = await Career.find({ isActive: true }).lean();
 
-    return careers.map((career) => ({
-        title: career.title,
-        summary: career.summary,
-        nextStep: career.nextStep,
-        matchScore: career.matchScore,
-        matchedAreas: career.matchTags.filter((tag) => tags.has(tag)).slice(0, 4),
+    return careers.map((career, index) => ({
+        id: buildCareerIdentifier(career?._id, career?.title, index),
+        title: normalizeText(career?.title),
+        summary: normalizeText(career?.summary),
+        nextStep: normalizeText(career?.nextStep),
+        matchScore: Number(career?.matchScore),
+        matchedAreas: Array.isArray(career?.matchTags)
+            ? career.matchTags.filter((tag) => tags.has(tag)).slice(0, 4)
+            : [],
     }));
 };
 
@@ -71,20 +129,17 @@ const sanitizeAISuggestions = (items) => {
     }
 
     return items
-        .map((item) => ({
-            title: typeof item?.title === "string" ? item.title.trim() : "",
-            summary: typeof item?.summary === "string" ? item.summary.trim() : "",
-            nextStep: typeof item?.nextStep === "string" ? item.nextStep.trim() : "",
+        .map((item, index) => ({
+            id: buildCareerIdentifier(item?.id, item?.title, index),
+            title: normalizeText(item?.title),
+            summary: normalizeText(item?.summary),
+            nextStep: normalizeText(item?.nextStep),
             matchScore: Number(item?.matchScore),
-            matchedAreas: Array.isArray(item?.matchedAreas)
-                ? item.matchedAreas
-                      .map((area) => (typeof area === "string" ? area.trim() : ""))
-                      .filter(Boolean)
-                      .slice(0, 5)
-                : [],
+            matchedAreas: sanitizeStringArray(item?.matchedAreas, 5),
         }))
         .filter(
             (item) =>
+                item.id &&
                 item.title &&
                 item.summary &&
                 item.nextStep &&
@@ -107,7 +162,7 @@ const generateAICareerSuggestions = async (context, catalogCareers) => {
             {
                 role: "developer",
                 content:
-                    "You generate personalized internship career suggestions for one student. Return only strict JSON with this shape: {\"suggestions\":[{\"title\":string,\"summary\":string,\"nextStep\":string,\"matchScore\":number,\"matchedAreas\":string[]}]}. No markdown.",
+                    "You generate personalized internship career suggestions for one student. Return only strict JSON with this shape: {\"suggestions\":[{\"id\":string,\"title\":string,\"summary\":string,\"nextStep\":string,\"matchScore\":number,\"matchedAreas\":string[]}]}. Use id values exactly from the provided career catalog. No markdown.",
             },
             {
                 role: "developer",
@@ -128,18 +183,288 @@ const generateAICareerSuggestions = async (context, catalogCareers) => {
     return sanitizeAISuggestions(payload?.suggestions);
 };
 
+const sanitizeAICareerDetail = (payload, selectedSuggestion) => {
+    if (!payload || typeof payload !== "object") {
+        return null;
+    }
+
+    const roadmap = sanitizeRoadmapSteps(payload.roadmap);
+    const comprehensiveDescription = normalizeText(payload.comprehensiveDescription);
+    const nextStep =
+        normalizeText(payload.nextStep) || normalizeText(selectedSuggestion?.nextStep);
+
+    const selectedMatchScore = Number(selectedSuggestion?.matchScore);
+
+    const normalizedDetail = {
+        id: buildCareerIdentifier(selectedSuggestion?.id, selectedSuggestion?.title),
+        title: normalizeText(selectedSuggestion?.title),
+        summary: normalizeText(selectedSuggestion?.summary),
+        matchScore: Number.isFinite(selectedMatchScore)
+            ? Math.max(0, Math.min(100, Math.round(selectedMatchScore)))
+            : 0,
+        matchedAreas: sanitizeStringArray(selectedSuggestion?.matchedAreas, 6),
+        comprehensiveDescription,
+        strengthsToLeverage: sanitizeStringArray(payload.strengthsToLeverage, 6),
+        skillGaps: sanitizeStringArray(payload.skillGaps, 6),
+        guidelines: sanitizeStringArray(payload.guidelines, 8),
+        roadmap,
+        nextStep,
+        confidenceNote: normalizeText(payload.confidenceNote),
+    };
+
+    if (
+        !normalizedDetail.title ||
+        !normalizedDetail.comprehensiveDescription ||
+        !normalizedDetail.guidelines.length ||
+        !normalizedDetail.roadmap.length ||
+        !normalizedDetail.nextStep
+    ) {
+        return null;
+    }
+
+    return normalizedDetail;
+};
+
+const buildFallbackCareerDetail = (selectedSuggestion, context) => {
+    const interestSignals = sanitizeStringArray(
+        context?.studentGuidance?.interests?.map((item) => item?.name),
+        3
+    );
+    const skillSignals = sanitizeStringArray(
+        context?.studentGuidance?.skills?.map((item) => item?.name),
+        3
+    );
+    const matchedAreas = sanitizeStringArray(selectedSuggestion?.matchedAreas, 6);
+
+    const strengthsToLeverage =
+        sanitizeStringArray(
+            [...interestSignals, ...skillSignals, ...matchedAreas],
+            6
+        ) || [];
+
+    return {
+        id: buildCareerIdentifier(selectedSuggestion?.id, selectedSuggestion?.title),
+        title: normalizeText(selectedSuggestion?.title),
+        summary: normalizeText(selectedSuggestion?.summary),
+        matchScore: Number.isFinite(Number(selectedSuggestion?.matchScore))
+            ? Math.max(0, Math.min(100, Math.round(Number(selectedSuggestion?.matchScore))))
+            : 0,
+        matchedAreas,
+        comprehensiveDescription:
+            `${normalizeText(selectedSuggestion?.title)} aligns with your profile based on your selected interests, ` +
+            "skills, and academic progress. Follow this guided plan to build practical capability, " +
+            "close key gaps, and create portfolio evidence for internship applications.",
+        strengthsToLeverage:
+            strengthsToLeverage.length > 0
+                ? strengthsToLeverage
+                : [
+                      "Consistent learning habits",
+                      "Structured project execution",
+                      "Clear communication of technical decisions",
+                  ],
+        skillGaps: [
+            "Real-world project depth with measurable outcomes",
+            "Interview-focused problem solving under time constraints",
+            "Documentation and presentation of implementation decisions",
+        ],
+        guidelines: [
+            "Set one measurable weekly objective and track completion status.",
+            "Translate each concept into a practical mini-project before moving forward.",
+            "Request feedback from mentors or peers every two weeks and apply improvements.",
+            "Document each project using clear architecture notes, trade-offs, and results.",
+            "Align portfolio work with internship role descriptions and assessment criteria.",
+        ],
+        roadmap: [
+            {
+                phase: "Phase 1: Direction & Baseline",
+                timeline: "Week 1",
+                objective:
+                    "Define role targets, assess current level, and prioritize required competencies.",
+                actions: [
+                    "Review internship job descriptions for this role and list required skills.",
+                    "Run a personal skill audit and identify top three improvement priorities.",
+                    "Create a weekly study and build schedule with milestones.",
+                ],
+                milestone: "Approved 8-10 week learning plan with clear outcomes.",
+            },
+            {
+                phase: "Phase 2: Core Skill Build",
+                timeline: "Weeks 2-3",
+                objective:
+                    "Strengthen technical fundamentals and complete focused practice tasks.",
+                actions: [
+                    "Study core concepts daily and complete short implementation exercises.",
+                    "Build two feature-focused mini projects to verify understanding.",
+                    "Capture common mistakes and corrective patterns in learning notes.",
+                ],
+                milestone: "Two working mini projects demonstrating core competencies.",
+            },
+            {
+                phase: "Phase 3: Guided Project Sprint",
+                timeline: "Weeks 4-5",
+                objective:
+                    "Build one portfolio-ready project with realistic workflow and delivery standards.",
+                actions: [
+                    "Define project scope, user stories, and implementation plan.",
+                    "Ship features in weekly increments and maintain quality checks.",
+                    "Record design decisions and technical trade-offs.",
+                ],
+                milestone: "Portfolio project v1 delivered with documentation.",
+            },
+            {
+                phase: "Phase 4: Industry Readiness",
+                timeline: "Weeks 6-7",
+                objective:
+                    "Improve reliability, testing discipline, and communication quality.",
+                actions: [
+                    "Add validation and test critical scenarios where possible.",
+                    "Refine UX and performance using mentor or peer feedback.",
+                    "Prepare a concise project walkthrough and technical summary.",
+                ],
+                milestone: "Production-quality project iteration with polished presentation.",
+            },
+            {
+                phase: "Phase 5: Interview & Application Sprint",
+                timeline: "Weeks 8-9",
+                objective:
+                    "Translate project evidence into interview and application readiness.",
+                actions: [
+                    "Build role-specific resume bullets with measurable impact statements.",
+                    "Practice behavioral and technical interview questions.",
+                    "Prepare STAR stories from project decisions and outcomes.",
+                ],
+                milestone:
+                    "Application package completed with portfolio, resume, and interview narratives.",
+            },
+            {
+                phase: "Phase 6: Launch & Iterate",
+                timeline: "Week 10",
+                objective:
+                    "Apply to targeted internships and continuously refine based on outcomes.",
+                actions: [
+                    "Submit applications in focused batches and track responses.",
+                    "Review rejection/feedback signals and update weak areas quickly.",
+                    "Set the next 30-day upskilling plan while interviewing.",
+                ],
+                milestone: "Active internship pipeline with a repeatable improvement loop.",
+            },
+        ],
+        nextStep:
+            normalizeText(selectedSuggestion?.nextStep) ||
+            "Start Phase 1 today by defining your target role checklist and weekly plan.",
+        confidenceNote:
+            "AI detail generation was unavailable, so this roadmap was auto-generated from your saved profile context.",
+    };
+};
+
+const generateAICareerDetail = async (
+    context,
+    selectedSuggestion,
+    allSuggestions = []
+) => {
+    const client = getOpenAIClient();
+
+    const alternatives = sanitizeAISuggestions(allSuggestions)
+        .filter((item) => item.id !== selectedSuggestion.id)
+        .slice(0, 3)
+        .map((item) => ({
+            id: item.id,
+            title: item.title,
+            summary: item.summary,
+            matchScore: item.matchScore,
+        }));
+
+    const response = await client.responses.create({
+        model: process.env.OPENAI_MODEL || "gpt-5",
+        reasoning: { effort: "medium" },
+        input: [
+            {
+                role: "developer",
+                content:
+                    "You generate a complete personalized career analysis and guided roadmap for one student. Return only strict JSON with this shape: {\"comprehensiveDescription\":string,\"strengthsToLeverage\":string[],\"skillGaps\":string[],\"guidelines\":string[],\"roadmap\":[{\"phase\":string,\"timeline\":string,\"objective\":string,\"actions\":string[],\"milestone\":string}],\"nextStep\":string,\"confidenceNote\":string}. No markdown.",
+            },
+            {
+                role: "developer",
+                content:
+                    "Use only the student context provided. Do not invent grades, modules, or profile facts.",
+            },
+            {
+                role: "developer",
+                content: `Student academic context (JSON): ${JSON.stringify(context)}`,
+            },
+            {
+                role: "developer",
+                content: `Selected career suggestion (JSON): ${JSON.stringify(selectedSuggestion)}`,
+            },
+            {
+                role: "developer",
+                content: `Alternative career suggestions (JSON): ${JSON.stringify(alternatives)}`,
+            },
+            {
+                role: "user",
+                content:
+                    "Generate a full analysis with a complete guided roadmap for the selected career suggestion.",
+            },
+        ],
+    });
+
+    const payload = extractJsonFromText(response.output_text || "");
+    return sanitizeAICareerDetail(payload, selectedSuggestion);
+};
+
+const getStoredCareerAnalysis = async (studentId, careerId) => {
+    return StudentCareerAnalysis.findOne({
+        student: studentId,
+        careerId,
+    }).lean();
+};
+
+const saveCareerAnalysis = async ({ studentId, careerId, report, source }) => {
+    if (!report || typeof report !== "object") {
+        return null;
+    }
+
+    return StudentCareerAnalysis.findOneAndUpdate(
+        {
+            student: studentId,
+            careerId,
+        },
+        {
+            student: studentId,
+            careerId,
+            report,
+            source: source === "fallback" ? "fallback" : "ai",
+            generatedAt: new Date(),
+        },
+        {
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true,
+        }
+    );
+};
+
 const getStoredCareerSuggestions = async (studentId) => {
     const record = await StudentCareerSuggestion.findOne({ student: studentId }).lean();
-    return Array.isArray(record?.suggestions) ? record.suggestions : [];
+    return sanitizeAISuggestions(record?.suggestions || []);
 };
 
 const refreshCareerSuggestionsForStudent = async (studentId, guidance, examResults) => {
-    const [context, catalogCareers] = await Promise.all([
+    const [context, catalogCareersRaw] = await Promise.all([
         buildAcademicContext(studentId),
         Career.find({ isActive: true })
             .select("title summary nextStep matchTags matchScore")
             .lean(),
     ]);
+
+    const catalogCareers = catalogCareersRaw.map((career, index) => ({
+        id: buildCareerIdentifier(career?._id, career?.title, index),
+        title: normalizeText(career?.title),
+        summary: normalizeText(career?.summary),
+        nextStep: normalizeText(career?.nextStep),
+        matchTags: sanitizeStringArray(career?.matchTags, 10),
+        matchScore: Number(career?.matchScore),
+    }));
 
     let aiSuggestions = [];
 
@@ -150,7 +475,9 @@ const refreshCareerSuggestionsForStudent = async (studentId, guidance, examResul
     }
 
     const fallbackSuggestions = await buildCareerSuggestions(guidance, examResults);
-    const nextSuggestions = aiSuggestions.length ? aiSuggestions : fallbackSuggestions;
+    const nextSuggestions = sanitizeAISuggestions(
+        aiSuggestions.length ? aiSuggestions : fallbackSuggestions
+    );
 
     await StudentCareerSuggestion.findOneAndUpdate(
         { student: studentId },
@@ -414,6 +741,112 @@ const refreshCareerSuggestions = async (req, res, next) => {
     }
 };
 
+const getCareerAnalysis = async (req, res, next) => {
+    try {
+        const requestedCareerId = normalizeText(req.params?.careerId);
+        const refreshQuery = normalizeText(req.query?.refresh).toLowerCase();
+        const forceRefresh = ["1", "true", "yes", "refresh", "regenerate"].includes(
+            refreshQuery
+        );
+
+        if (!requestedCareerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Career id is required",
+            });
+        }
+
+        const guidance = await getOrCreateStudentGuidance(req.student._id);
+        const examResults = await getStudentExamResults(req.student._id);
+        let careerSuggestions = await getStoredCareerSuggestions(req.student._id);
+
+        if (!careerSuggestions.length) {
+            careerSuggestions = await refreshCareerSuggestionsForStudent(
+                req.student._id,
+                guidance,
+                examResults
+            );
+        }
+
+        const selectedSuggestion =
+            careerSuggestions.find((item) => item.id === requestedCareerId) ||
+            careerSuggestions.find(
+                (item) =>
+                    toSlug(item.title) === requestedCareerId ||
+                    buildCareerIdentifier(item.id, item.title) === requestedCareerId
+            );
+
+        if (!selectedSuggestion) {
+            return res.status(404).json({
+                success: false,
+                message: "Career guide not found for this suggestion",
+            });
+        }
+
+        if (!forceRefresh) {
+            const cachedAnalysis = await getStoredCareerAnalysis(
+                req.student._id,
+                selectedSuggestion.id
+            );
+
+            const cachedReport = sanitizeAICareerDetail(
+                cachedAnalysis?.report,
+                selectedSuggestion
+            );
+
+            if (cachedReport) {
+                return res.status(200).json({
+                    success: true,
+                    data: cachedReport,
+                    meta: {
+                        source: cachedAnalysis?.source || "ai",
+                        cached: true,
+                        generatedAt: cachedAnalysis?.generatedAt || null,
+                    },
+                });
+            }
+        }
+
+        const context = await buildAcademicContext(req.student._id);
+
+        let aiDetail = null;
+
+        try {
+            aiDetail = await generateAICareerDetail(
+                context,
+                selectedSuggestion,
+                careerSuggestions
+            );
+        } catch {
+            aiDetail = null;
+        }
+
+        const responseData =
+            aiDetail || buildFallbackCareerDetail(selectedSuggestion, context);
+
+        const analysisSource = aiDetail ? "ai" : "fallback";
+
+        await saveCareerAnalysis({
+            studentId: req.student._id,
+            careerId: selectedSuggestion.id,
+            report: responseData,
+            source: analysisSource,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: responseData,
+            meta: {
+                source: analysisSource,
+                cached: false,
+                generatedAt: new Date(),
+            },
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 const askInternConnect = async (req, res, next) => {
     let streamClosed = false;
 
@@ -522,6 +955,7 @@ const askInternConnect = async (req, res, next) => {
 
 module.exports = {
     askInternConnect,
+    getCareerAnalysis,
     getStudentGuidance,
     refreshCareerSuggestions,
     updateStudentInterests,

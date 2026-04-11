@@ -30,6 +30,20 @@ export const refreshCareerSuggestions = async () => {
   return response.data.data
 }
 
+export const fetchCareerAnalysis = async (careerId, options = {}) => {
+  const params = options.forceRefresh ? { refresh: 'true' } : undefined
+
+  const response = await api.get(
+    `/student-guidance/career-suggestions/${encodeURIComponent(careerId)}/analysis`,
+    {
+      ...getAuthConfig(),
+      params,
+    }
+  )
+
+  return response.data.data
+}
+
 export const streamAskInternConnectMessage = async ({
   message,
   history,
