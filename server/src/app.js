@@ -5,11 +5,25 @@
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const authRoutes = require("./routes/authRoutes");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const studentRoutes = require("./routes/studentRoutes");
+const adminRoutes = require("./routes/Profiles/adminRoutes");
+const companyRoutes = require("./routes/companyRoutes");
+const internshipRoutes = require("./routes/internshipRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const studentGuidanceRoutes = require("./routes/student_guidance/studentGuidanceRoutes");
+
+/* MyInternships routes */
+const myInternshipsRoutes = require("./routes/MyInternships/internshipRoutes");
+const dailyDiaryRoutes = require("./routes/MyInternships/dailyDiaryRoutes");
+const taskRoutes = require("./routes/MyInternships/taskRoutes");
+const monthlyReportRoutes = require("./routes/MyInternships/monthlyReportRoutes");
+const finalReportRoutes = require("./routes/MyInternships/finalReportRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -19,7 +33,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 app.use("/api/students", studentRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/company", companyRoutes);
+app.use("/api/internships", internshipRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/student-guidance", studentGuidanceRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+/**
+ * My Internships routes
+ */
+
+app.use("/api/my-internships", myInternshipsRoutes);
+app.use("/api/diary", dailyDiaryRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/monthly-reports", monthlyReportRoutes);
+app.use("/api/final-reports", finalReportRoutes);
 
 /**
  * Health check route
