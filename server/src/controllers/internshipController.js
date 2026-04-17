@@ -5,7 +5,7 @@
 const Internship = require("../models/Internship");
 const Student = require("../models/Student");
 const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
-const { createNotificationWithWhatsApp } = require("./notificationController");
+const { createNotification } = require("./notificationController");
 
 /**
  * @desc    Get all internships (public)
@@ -411,7 +411,7 @@ const updateApplicationStatus = async (req, res, next) => {
         }
 
         if (studentId) {
-            await createNotificationWithWhatsApp(studentId, message, type);
+            await createNotification(studentId, message, type);
         } else {
             console.warn("No student ID found for application, skipping notification creation", application._id);
         }
