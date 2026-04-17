@@ -1,4 +1,6 @@
 const Notification = require("../models/Notification");
+const Student = require("../models/Student");
+const { sendWhatsAppMessage } = require("../utils/whatsappUtils");
 
 const getMyNotifications = async (req, res, next) => {
     try {
@@ -35,7 +37,35 @@ const markNotificationAsRead = async (req, res, next) => {
     }
 };
 
+const createNotificationWithWhatsApp = async (studentId, message, type) => {
+    try {
+        // Create the notification
+        const notification = await Notification.create({
+            student: studentId,
+            message,
+            type,
+        });
+
+        // Get student phone number
+        const student = await Student.findById(studentId);
+        if (student && student.phone && student.phone.trim()) {
+            try {
+                await sendWhatsAppMessage(student.phone, message);
+            } catch (whatsappError) {
+                console.error('Failed to send WhatsApp message:', whatsappError);
+                // Don't fail if WhatsApp fails
+            }
+        }
+
+        return notification;
+    } catch (error) {
+        console.error('Error creating notification:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getMyNotifications,
     markNotificationAsRead,
+    createNotificationWithWhatsApp,
 };
