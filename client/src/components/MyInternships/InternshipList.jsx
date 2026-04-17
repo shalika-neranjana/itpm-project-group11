@@ -4,6 +4,7 @@ import {
   deleteInternship,
   updateInternship,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 import EditInternshipForm from "./EditInternshipForm";
 
 export default function InternshipList({ studentId, onOpen, onAddNew }) {
@@ -37,7 +38,8 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
   }, [studentId]);
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this internship?")) return;
+    const ok = await swalConfirm('Delete this internship?')
+    if (!ok) return
     await deleteInternship(id);
     setInternships((prev) => prev.filter((i) => i._id !== id));
   };

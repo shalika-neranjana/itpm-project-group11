@@ -1,6 +1,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { getEntries, addEntry, updateEntry, deleteEntry } from '../../api/myInternships'
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const EMPTY = {
   date: '', title: '', description: '',
@@ -92,7 +93,8 @@ export default function DailyDiary({ internshipId }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this entry?')) return
+    const ok = await swalConfirm('Delete this entry?')
+    if (!ok) return
     await deleteEntry(id)
     setEntries(prev => prev.filter(e => e._id !== id))
   }

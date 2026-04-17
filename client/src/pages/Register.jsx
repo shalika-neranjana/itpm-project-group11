@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 
 function Register() {
     const navigate = useNavigate()
@@ -107,9 +108,12 @@ function Register() {
             localStorage.setItem('token', token)
             localStorage.setItem('student', JSON.stringify(studentData))
 
+            try { swalToast('Registration successful') } catch (e) {}
             navigate('/dashboard')
         } catch (err) {
-            setServerError(err.response?.data?.message || 'Registration failed')
+            const msg = err.response?.data?.message || 'Registration failed'
+            setServerError(msg)
+            try { swalError(msg) } catch (e) {}
         } finally {
             setLoading(false)
         }

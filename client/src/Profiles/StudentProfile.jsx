@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import api from '../api/axios'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 
 function StudentProfile() {
   const navigate = useNavigate()
@@ -77,9 +78,12 @@ function StudentProfile() {
       const updatedStudent = response.data.data
       localStorage.setItem('student', JSON.stringify(updatedStudent))
       setMessage('Profile updated successfully')
+      try { swalToast('Profile updated successfully') } catch (e) {}
       setIsEditing(false)
     } catch (err) {
-      setError(err.response?.data?.message || 'Update failed')
+      const msg = err.response?.data?.message || 'Update failed'
+      setError(msg)
+      try { swalError(msg) } catch (e) {}
     }
   }
 

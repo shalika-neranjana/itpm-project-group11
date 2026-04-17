@@ -7,6 +7,7 @@ import {
   updateReport,
   deleteReport,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const MONTHS = [
   "January",
@@ -271,7 +272,8 @@ export default function MonthlyReport({
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Delete this report?")) return;
+    const ok = await swalConfirm('Delete this report?')
+    if (!ok) return
     await deleteReport(id);
     setReports((prev) => prev.filter((r) => r._id !== id));
   };
