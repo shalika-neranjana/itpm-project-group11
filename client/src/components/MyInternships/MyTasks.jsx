@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import { getTasks, addTask, updateTask, deleteTask } from '../../api/myInternships'
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const PRIORITIES = ['High', 'Medium', 'Low']
 const EMPTY = { taskName: '', priority: 'Medium', dueDate: '' }

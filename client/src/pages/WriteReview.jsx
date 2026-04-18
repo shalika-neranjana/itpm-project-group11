@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, MessageSquare, Send } from 'lucide-react'
 import { createReview, updateReview } from '../api/reviews'
+import { warning as swalWarning, success as swalSuccess, error as swalError } from '../utils/swal'
 
 const signupInputClass =
   'w-full rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none transition focus:border-[#3B6FE8] focus:ring-2 focus:ring-[#3B6FE8]/10'
@@ -43,7 +44,7 @@ function WriteReview() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.company || !formData.role || !formData.experience || !formData.rating) {
-      alert('Please fill all fields')
+      swalWarning('Please fill all fields')
       return
     }
 
@@ -52,16 +53,16 @@ function WriteReview() {
       if (editingReview) {
         // Update existing review
         await updateReview(editingReview._id, formData)
-        alert('Review updated successfully')
+        swalSuccess('Review updated successfully')
       } else {
         // Create new review
         await createReview(formData)
-        alert('Review submitted successfully')
+        swalSuccess('Review submitted successfully')
       }
       navigate('/dashboard?tab=reviews')
     } catch (error) {
       console.error('Error submitting review:', error)
-      alert(error.message || 'Failed to submit review. Please try again.')
+      swalError(error.message || 'Failed to submit review. Please try again.')
     } finally {
       setLoading(false)
     }

@@ -5,6 +5,7 @@ import {
   deleteInternship,
   updateInternship,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 import EditInternshipForm from "./EditInternshipForm";
 
 export default function InternshipList({ studentId, onOpen, onAddNew }) {

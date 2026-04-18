@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react'
 import api from '../../api'
 import InputField from './InputField'
+import { toast as swalToast, error as swalError } from '../../utils/swal'
 
 function detectUserRole(email) {
   if (!email) return null
@@ -83,6 +84,8 @@ function LoginPage() {
 
         localStorage.setItem('role', activeRole)
 
+        // Show non-blocking success toast, then navigate
+        try { swalToast('Login successful') } catch (e) {}
         if (activeRole === 'student' && response.data.data.email === 'admin@internconnect.com') {
           navigate('/admin')
         } else if (activeRole === 'student') {
@@ -92,7 +95,9 @@ function LoginPage() {
         }
       }
     } catch (error) {
-      setSubmitError(error.response?.data?.message || 'Login failed')
+      const msg = error.response?.data?.message || 'Login failed'
+      setSubmitError(msg)
+      try { swalError(msg) } catch (e) {}
     } finally {
       setLoading(false)
     }

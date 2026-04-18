@@ -35,7 +35,22 @@ const markNotificationAsRead = async (req, res, next) => {
     }
 };
 
+const createNotification = async (studentId, message, type) => {
+    try {
+        const notification = await Notification.create({
+            student: studentId,
+            message,
+            type,
+        });
+
+        return notification;
+    } catch (error) {
+        throw error;
+    }
+};
+
 module.exports = {
     getMyNotifications,
     markNotificationAsRead,
+    createNotification,
 };

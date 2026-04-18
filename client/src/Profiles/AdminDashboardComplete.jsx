@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { confirm as swalConfirm, toast as swalToast } from '../utils/swal'
 
 function AdminDashboardComplete() {
   const navigate = useNavigate()
@@ -68,11 +69,13 @@ function AdminDashboardComplete() {
   }
 
   const handleSuspendStudent = async (studentId) => {
-    if (!confirm('Are you sure you want to suspend this student account?')) return
+    const ok = await swalConfirm('Are you sure you want to suspend this student account?')
+    if (!ok) return
 
     try {
       await api.put(`/admin/students/${studentId}/suspend`, {})
       setSuccess('Student account suspended successfully')
+      try { swalToast('Student account suspended successfully') } catch (e) {}
       fetchDashboardData()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to suspend student')
@@ -83,6 +86,7 @@ function AdminDashboardComplete() {
     try {
       await api.put(`/admin/students/${studentId}/unsuspend`, {})
       setSuccess('Student account unsuspended successfully')
+      try { swalToast('Student account unsuspended successfully') } catch (e) {}
       fetchDashboardData()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to unsuspend student')
@@ -90,11 +94,13 @@ function AdminDashboardComplete() {
   }
 
   const handleDeleteStudent = async (studentId) => {
-    if (!confirm('Are you sure you want to delete this student account? This action cannot be undone.')) return
+    const ok = await swalConfirm('Are you sure you want to delete this student account? This action cannot be undone.')
+    if (!ok) return
 
     try {
       await api.delete(`/admin/students/${studentId}`)
       setSuccess('Student account deleted successfully')
+      try { swalToast('Student account deleted successfully') } catch (e) {}
       fetchDashboardData()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete student')
@@ -102,11 +108,13 @@ function AdminDashboardComplete() {
   }
 
   const handleDeleteCompany = async (companyId) => {
-    if (!confirm('Are you sure you want to delete this company account? This action cannot be undone.')) return
+    const ok = await swalConfirm('Are you sure you want to delete this company account? This action cannot be undone.')
+    if (!ok) return
 
     try {
       await api.delete(`/admin/companies/${companyId}`)
       setSuccess('Company account deleted successfully')
+      try { swalToast('Company account deleted successfully') } catch (e) {}
       fetchDashboardData()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete company')

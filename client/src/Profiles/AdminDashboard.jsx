@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { confirm as swalConfirm, toast as swalToast } from '../utils/swal'
 
 function AdminDashboard() {
   const navigate = useNavigate()
@@ -64,12 +65,14 @@ function AdminDashboard() {
   }
 
   const handleSuspend = async (studentId) => {
-    if (!confirm('Are you sure you want to suspend this student account?')) return
+    const ok = await swalConfirm('Are you sure you want to suspend this student account?')
+    if (!ok) return
 
     try {
       await api.put(`/admin/students/${studentId}/suspend`, {})
       
       setSuccess('Student account suspended successfully')
+      try { swalToast('Student account suspended successfully') } catch (e) {}
       fetchStudents()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to suspend student')
@@ -81,6 +84,7 @@ function AdminDashboard() {
       await api.put(`/admin/students/${studentId}/unsuspend`, {})
       
       setSuccess('Student account unsuspended successfully')
+      try { swalToast('Student account unsuspended successfully') } catch (e) {}
       fetchStudents()
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to unsuspend student')
@@ -88,12 +92,14 @@ function AdminDashboard() {
   }
 
   const handleDelete = async (studentId) => {
-    if (!confirm('Are you sure you want to delete this student account? This action cannot be undone.')) return
+    const ok = await swalConfirm('Are you sure you want to delete this student account? This action cannot be undone.')
+    if (!ok) return
 
     try {
       await api.delete(`/admin/students/${studentId}`)
       
       setSuccess('Student account deleted successfully')
+      try { swalToast('Student account deleted successfully') } catch (e) {}
       fetchStudents()
       setShowProfileModal(false)
     } catch (err) {

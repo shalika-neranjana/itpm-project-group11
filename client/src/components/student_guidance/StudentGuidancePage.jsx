@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   fetchStudentGuidance,
+  refreshCareerSuggestions,
   updateStudentInterests,
   updateStudentSkills,
 } from '../../api/student_guidance/guidanceApi'
@@ -24,7 +25,7 @@ function StudentGuidancePage() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [saveState, setSaveState] = useState({ interests: false, skills: false })
+  const [saveState, setSaveState] = useState({ interests: false, skills: false, careers: false })
 
   const student = useMemo(() => {
     try {
@@ -91,6 +92,19 @@ function StudentGuidancePage() {
     }
   }
 
+  const handleCareerRefresh = async () => {
+    try {
+      setError('')
+      setSaveState((current) => ({ ...current, careers: true }))
+      const updatedGuidance = await refreshCareerSuggestions()
+      setGuidance(updatedGuidance)
+    } catch (refreshError) {
+      setError(refreshError.response?.data?.message || 'Unable to refresh career suggestions.')
+    } finally {
+      setSaveState((current) => ({ ...current, careers: false }))
+    }
+  }
+
   const content = {
     examResults: <ExamResultsSection student={student} examResults={guidance.examResults} />,
     interests: (
@@ -122,6 +136,8 @@ function StudentGuidancePage() {
         interests={guidance.interests}
         skills={guidance.skills}
         careerSuggestions={guidance.careerSuggestions}
+        onRefresh={handleCareerRefresh}
+        refreshing={saveState.careers}
       />
     ),
   }

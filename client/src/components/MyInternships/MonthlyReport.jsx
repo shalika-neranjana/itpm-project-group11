@@ -8,6 +8,7 @@ import {
   updateReport,
   deleteReport,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
