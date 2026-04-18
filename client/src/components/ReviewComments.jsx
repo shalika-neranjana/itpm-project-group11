@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react'
-import { getReviewComments, createReviewComment, replyToComment } from '../api/reviews'
-import { error as swalError } from '../utils/swal'
-import { MessageCircle, Send } from 'lucide-react'
 import {
   getReviewComments,
   createReviewComment,
@@ -13,6 +10,7 @@ import {
   voteReviewComment,
   voteReviewReply,
 } from '../api/reviews'
+import { error as swalError } from '../utils/swal'
 import { MessageCircle, Send, ThumbsUp, ThumbsDown } from 'lucide-react'
 
 function ReviewComments({ reviewId, reviewAuthorId }) {
