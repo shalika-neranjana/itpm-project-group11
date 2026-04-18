@@ -1,17 +1,99 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-
-const quickPromptOptions = [
-  'How can I improve my internship profile?',
-  'What skills should I learn next?',
-  'Help me prepare for internship interviews',
-  'Suggest career paths from my interests',
-]
+import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { streamAskInternConnectMessage } from '../../api/student_guidance/guidanceApi'
 
 function formatTimestamp(date = new Date()) {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function generateDynamicPrompts(chatHistory, interests, skills, examResults) {
+  const messageCount = chatHistory.length
+  const hasInterests = interests && interests.length > 0
+  const hasSkills = skills && skills.length > 0
+  const hasExamResults = examResults && examResults.length > 0
+  
+  // Detect chat topics from recent messages
+  const recentChat = chatHistory.slice(-2).join(' ').toLowerCase()
+  const topics = {
+    skills: recentChat.includes('skill') || recentChat.includes('learn') || recentChat.includes('capability'),
+    career: recentChat.includes('career') || recentChat.includes('path') || recentChat.includes('role'),
+    interview: recentChat.includes('interview') || recentChat.includes('prepare') || recentChat.includes('practice'),
+    profile: recentChat.includes('profile') || recentChat.includes('improve') || recentChat.includes('strengthen'),
+    internship: recentChat.includes('internship') || recentChat.includes('placement') || recentChat.includes('opportunity'),
+  }
+
+  const prompts = []
+
+  // First few messages - foundational questions
+  if (messageCount === 0) {
+    prompts.push(
+      'How can I improve my internship profile?',
+      'What skills should I focus on learning?',
+      'Help me prepare for internship interviews'
+    )
+    if (hasInterests) {
+      prompts.push('Suggest career paths based on my interests')
+    }
+  }
+  // After initial questions - follow-ups based on topic
+  else if (messageCount === 1) {
+    if (!topics.profile) {
+      prompts.push('How can I strengthen my profile?')
+    }
+    if (!topics.interview) {
+      prompts.push('Give me interview preparation tips')
+    }
+    if (!topics.skills && hasSkills) {
+      prompts.push('What new technical skills should I learn?')
+    }
+    if (!topics.internship) {
+      prompts.push('What makes a strong internship application?')
+    }
+  }
+  // Mid-conversation - deeper dives
+  else if (messageCount <= 4) {
+    if (topics.skills) {
+      prompts.push(
+        'How do I build projects to showcase my skills?',
+        'What certifications would help my career?'
+      )
+    } else if (topics.career) {
+      prompts.push(
+        'What companies are hiring in my field?',
+        'What growth opportunities exist in these roles?'
+      )
+    } else if (topics.interview) {
+      prompts.push(
+        'How should I answer behavioral questions?',
+        'What questions should I ask interviewers?'
+      )
+    } else {
+      prompts.push(
+        'What are the current trends in tech?',
+        'How can I network effectively?'
+      )
+    }
+  }
+  // Later conversations - advanced topics
+  else {
+    if (hasExamResults) {
+      prompts.push('How can I improve my academic performance?')
+    }
+    if (hasInterests) {
+      prompts.push('How do my interests align with market demand?')
+    }
+    prompts.push(
+      'What next steps should I take after this internship?',
+      'How do I create a 6-month learning roadmap?'
+    )
+  }
+
+  // Shuffle and return top 4 unique prompts
+  return [...new Set(prompts)].sort(() => Math.random() - 0.5).slice(0, 4)
 }
 
 function buildInitialMessage(studentName) {
@@ -23,78 +105,69 @@ function buildInitialMessage(studentName) {
   }
 }
 
-function createAssistantReply(input, context) {
-  const query = input.toLowerCase()
-  const primaryInterest = context.interests[0]?.name
-  const primarySkill = context.skills[0]?.name
-  const weakSubjects = context.examResults
-    .filter((result) => Number(result.score) < 60)
-    .map((result) => result.moduleCode || result.moduleName)
-    .filter(Boolean)
-
-  if (query.includes('skill')) {
-    return [
-      'Start with one technical skill and one communication skill this month.',
-      primarySkill
-        ? `Since you already have ${primarySkill}, build a project that proves it with real deliverables.`
-        : 'Add at least one core technical skill in your profile with a clear proficiency level.',
-      'Use this pattern: learn, build, publish, and reflect in your internship portfolio.',
-    ].join(' ')
-  }
-
-  if (query.includes('interview')) {
-    return [
-      'For internship interviews, prepare concise stories using Situation, Action, and Result.',
-      'Practice answers for: teamwork, deadlines, and handling feedback.',
-      weakSubjects.length > 0
-        ? `Also be ready to explain your improvement plan for ${weakSubjects.slice(0, 2).join(' and ')}.`
-        : 'Highlight a recent module or project where you solved a practical problem.',
-    ].join(' ')
-  }
-
-  if (query.includes('career') || query.includes('path')) {
-    return [
-      primaryInterest
-        ? `Based on your interest in ${primaryInterest}, shortlist 2 to 3 role families and map their required skills.`
-        : 'Start by choosing 2 role families you are curious about, then compare required skills and tools.',
-      'Create a 6-week growth plan with weekly milestones and one project outcome.',
-    ].join(' ')
-  }
-
-  if (query.includes('profile') || query.includes('resume') || query.includes('cv')) {
-    return [
-      'To strengthen your internship profile, make outcomes visible: what you built, measured, or improved.',
-      'Use short bullets with metrics where possible.',
-      'Include links to projects, GitHub repos, or case studies and keep your skills section current.',
-    ].join(' ')
-  }
-
-  return [
-    'Great question. A strong next step is to align your interests, skills, and target internship roles into one action plan.',
-    primaryInterest
-      ? `Your current interests such as ${primaryInterest} can guide your project and role selection.`
-      : 'Add a few interests to unlock more personalized career suggestions.',
-    'If you want, ask me for a week-by-week preparation plan and I will draft one.',
-  ].join(' ')
-}
-
 function AskInternConnectSection({ student, interests, skills, examResults }) {
   const [messages, setMessages] = useState(() => [buildInitialMessage(student.name)])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [statusTag, setStatusTag] = useState('')
+  const [hasStartedStreaming, setHasStartedStreaming] = useState(false)
   const [chatHistory, setChatHistory] = useState([])
+  const [dynamicPrompts, setDynamicPrompts] = useState([])
   const chatEndRef = useRef(null)
+  const chunkBufferRef = useRef('')
+  const chunkAnimationFrameRef = useRef(null)
+  const hasStartedStreamingRef = useRef(false)
 
-  const context = useMemo(
-    () => ({ interests, skills, examResults }),
-    [interests, skills, examResults],
-  )
+  const flushBufferedChunk = (assistantMessageId) => {
+    if (!chunkBufferRef.current) {
+      return
+    }
+
+    const bufferedChunk = chunkBufferRef.current
+    chunkBufferRef.current = ''
+
+    setMessages((current) =>
+      current.map((item) =>
+        item.id === assistantMessageId ? { ...item, text: `${item.text}${bufferedChunk}` } : item,
+      ),
+    )
+  }
+
+  const queueChunkAppend = (assistantMessageId, delta) => {
+    if (!delta) {
+      return
+    }
+
+    chunkBufferRef.current += delta
+
+    if (chunkAnimationFrameRef.current) {
+      return
+    }
+
+    chunkAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      flushBufferedChunk(assistantMessageId)
+      chunkAnimationFrameRef.current = null
+    })
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages, isTyping])
 
-  const sendMessage = (rawText) => {
+  useEffect(() => {
+    return () => {
+      if (chunkAnimationFrameRef.current) {
+        window.cancelAnimationFrame(chunkAnimationFrameRef.current)
+      }
+    }
+  }, [])
+
+  // Update dynamic prompts based on chat history and student context
+  useEffect(() => {
+    const prompts = generateDynamicPrompts(chatHistory, interests, skills, examResults)
+    setDynamicPrompts(prompts)
+  }, [chatHistory, interests, skills, examResults])
+  const sendMessage = async (rawText) => {
     const text = rawText.trim()
     if (!text || isTyping) {
       return
@@ -107,22 +180,86 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
       time: formatTimestamp(),
     }
 
-    setMessages((current) => [...current, userMessage])
+    const assistantMessageId = `assistant-stream-${Date.now()}`
+    const assistantPlaceholder = {
+      id: assistantMessageId,
+      role: 'assistant',
+      text: '',
+      time: formatTimestamp(),
+    }
+
+    const history = messages
+      .filter(
+        (item) =>
+          (item.role === 'user' || item.role === 'assistant') &&
+          !String(item.id).startsWith('assistant-welcome-'),
+      )
+      .map((item) => ({ role: item.role, text: item.text }))
+      .slice(-10)
+
+    setMessages((current) => [...current, userMessage, assistantPlaceholder])
     setChatHistory((current) => [...current, text])
     setInput('')
     setIsTyping(true)
+    hasStartedStreamingRef.current = false
+    setHasStartedStreaming(false)
+    setStatusTag('InternConnect is thinking...')
+    chunkBufferRef.current = ''
 
-    window.setTimeout(() => {
-      const reply = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        text: createAssistantReply(text, context),
-        time: formatTimestamp(),
-      }
+    try {
+      await streamAskInternConnectMessage({
+        message: text,
+        history,
+        onStatus: (statusMessage) => {
+          if (!hasStartedStreamingRef.current) {
+            setStatusTag(statusMessage)
+          }
+        },
+        onChunk: (delta) => {
+          if (!delta) {
+            return
+          }
 
-      setMessages((current) => [...current, reply])
+          hasStartedStreamingRef.current = true
+          setHasStartedStreaming(true)
+          setStatusTag('')
+          queueChunkAppend(assistantMessageId, delta)
+        },
+        onDone: (payload) => {
+          flushBufferedChunk(assistantMessageId)
+
+          if (!hasStartedStreamingRef.current && payload?.reply) {
+            setMessages((current) =>
+              current.map((item) =>
+                item.id === assistantMessageId ? { ...item, text: payload.reply } : item,
+              ),
+            )
+          }
+        },
+        onError: () => {
+          flushBufferedChunk(assistantMessageId)
+        },
+      })
+    } catch (error) {
+      const fallbackText =
+        error.message || 'I am unable to reach the AI service right now. Please try again in a moment.'
+
+      setMessages((current) =>
+        current.map((item) =>
+          item.id === assistantMessageId
+            ? {
+                ...item,
+                text: item.text
+                  ? `${item.text}\n\n${fallbackText}`
+                  : fallbackText,
+              }
+            : item,
+        ),
+      )
+    } finally {
       setIsTyping(false)
-    }, 700)
+      setStatusTag('')
+    }
   }
 
   const handleSubmit = (event) => {
@@ -131,14 +268,23 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
   }
 
   const handleClearChat = () => {
+    if (chunkAnimationFrameRef.current) {
+      window.cancelAnimationFrame(chunkAnimationFrameRef.current)
+      chunkAnimationFrameRef.current = null
+    }
+
+    chunkBufferRef.current = ''
     setMessages([buildInitialMessage(student.name)])
     setInput('')
     setIsTyping(false)
+    hasStartedStreamingRef.current = false
+    setStatusTag('')
+    setHasStartedStreaming(false)
     setChatHistory([])
   }
 
   return (
-    <section className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+    <section className="flex flex-col overflow-hidden rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:h-[calc(100vh-8rem)]">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#E8EAF0] pb-5">
         <div>
           <h2 className="font-display text-2xl font-bold text-[#1A1D27]">Ask InternConnect</h2>
@@ -148,7 +294,7 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">Frontend Demo</span>
+          <span className="rounded-full bg-[#EEF2FD] px-3 py-1 text-xs font-semibold text-[#3B6FE8]">AI Powered</span>
           <button
             type="button"
             onClick={handleClearChat}
@@ -159,9 +305,9 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
-          <div className="h-[420px] overflow-y-auto pr-1">
+      <div className="mt-6 grid min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="flex min-h-0 flex-col rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
+          <div className="h-[50vh] min-h-0 overflow-y-auto pr-1 sm:h-[56vh] lg:h-auto lg:flex-1">
             <div className="space-y-3">
               {messages.map((message) => (
                 <article
@@ -172,7 +318,26 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
                       : 'ml-auto bg-[#3B6FE8] text-white'
                   }`}
                 >
-                  <p>{message.text}</p>
+                  {message.role === 'assistant' ? (
+                    <div className="text-[#1A1D27]">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h2: ({ ...props }) => <h2 className="mt-3 mb-2 text-base font-bold" {...props} />,
+                          h3: ({ ...props }) => <h3 className="mt-3 mb-2 text-sm font-bold" {...props} />,
+                          p: ({ ...props }) => <p className="my-2 text-sm leading-6" {...props} />,
+                          ul: ({ ...props }) => <ul className="my-2 list-disc pl-5 text-sm leading-6" {...props} />,
+                          ol: ({ ...props }) => <ol className="my-2 list-decimal pl-5 text-sm leading-6" {...props} />,
+                          li: ({ ...props }) => <li className="my-1" {...props} />,
+                          strong: ({ ...props }) => <strong className="font-semibold text-[#0F172A]" {...props} />,
+                        }}
+                      >
+                        {message.text}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.text}</p>
+                  )}
                   <p
                     className={`mt-2 text-[11px] font-semibold ${
                       message.role === 'assistant' ? 'text-[#8092B5]' : 'text-[#DBE8FF]'
@@ -183,9 +348,9 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
                 </article>
               ))}
 
-              {isTyping && (
+              {isTyping && !hasStartedStreaming && statusTag && (
                 <article className="mr-auto rounded-2xl border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#6B7280]">
-                  InternConnect is typing...
+                  {statusTag}
                 </article>
               )}
               <div ref={chatEndRef} />
@@ -213,11 +378,11 @@ function AskInternConnectSection({ student, interests, skills, examResults }) {
           </form>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:max-h-full lg:overflow-y-auto lg:pr-1">
           <div className="rounded-2xl border border-[#E8EAF0] bg-[#FCFCFD] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6B7280]">Quick Prompts</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {quickPromptOptions.map((prompt) => (
+                {dynamicPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
