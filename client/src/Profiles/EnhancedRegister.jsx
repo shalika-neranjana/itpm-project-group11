@@ -4,6 +4,7 @@ import Cropper from 'react-easy-crop'
 import { ArrowRight, Building2, ImagePlus, LockKeyhole, Mail, Phone, User, X } from 'lucide-react'
 import api from '../api'
 import { formatPhoneNumber } from '../utils/phoneFormatter'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 
 function Field({
   label,
@@ -466,10 +467,12 @@ const EnhancedRegister = () => {
         if (regRole === 'student') {
           localStorage.setItem('student', JSON.stringify(response.data.data))
           localStorage.setItem('role', 'student')
+          try { swalToast('Registration successful') } catch (e) {}
           navigate('/profile')
         } else {
           localStorage.setItem('user', JSON.stringify(response.data.data))
           localStorage.setItem('role', 'company')
+          try { swalToast('Registration successful') } catch (e) {}
           navigate('/company-dashboard')
         }
       }

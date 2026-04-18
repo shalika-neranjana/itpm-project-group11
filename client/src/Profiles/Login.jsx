@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../api'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 
 function Login() {
   const navigate = useNavigate()
@@ -33,7 +34,8 @@ function Login() {
 
       localStorage.setItem('token', token)
       localStorage.setItem('student', JSON.stringify(studentData))
-
+      // Show success toast then navigate
+      try { swalToast('Login successful') } catch (e) {}
       // Check if user is admin
       if (studentData.email === 'admin@internconnect.com') {
         navigate('/admin')
@@ -42,7 +44,9 @@ function Login() {
       }
     } catch (err) {
       console.error(err)
-      setError(err.response?.data?.message || 'Login failed')
+      const msg = err.response?.data?.message || 'Login failed'
+      setError(msg)
+      try { swalError(msg) } catch (e) {}
     } finally {
       setLoading(false)
     }

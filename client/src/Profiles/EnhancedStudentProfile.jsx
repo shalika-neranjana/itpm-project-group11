@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 
 const EnhancedStudentProfile = () => {
   const [user, setUser] = useState(null)
@@ -170,6 +171,7 @@ const EnhancedStudentProfile = () => {
         setUser(response.data.data)
         setEditMode(false)
         setSuccess('Profile updated successfully!')
+        try { swalToast('Profile updated successfully!') } catch (e) {}
         fetchStudentProfile()
         fetchApplications() // Refresh applications
         setTimeout(() => setSuccess(''), 3000)

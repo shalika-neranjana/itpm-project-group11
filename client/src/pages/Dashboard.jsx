@@ -9,6 +9,7 @@ import StudentGuidancePage from '../components/student_guidance/StudentGuidanceP
 import { X } from 'lucide-react'
 import api from '../api'
 import { getAllReviews, deleteReview } from '../api/reviews'
+import { confirm as swalConfirm, error as swalError, toast as swalToast } from '../utils/swal'
 
 const DASHBOARD_TABS = ['opportunities', 'myInternships', 'guidance', 'reviews', 'profile']
 
@@ -285,16 +286,15 @@ function Dashboard() {
   }
 
   const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) {
-      return
-    }
+    const ok = await swalConfirm('Are you sure you want to delete this review?')
+    if (!ok) return
     
     try {
       await deleteReview(reviewId)
       setReviews((prev) => prev.filter(review => review._id !== reviewId))
     } catch (error) {
       console.error('Failed to delete review:', error)
-      alert('Failed to delete review. Please try again.')
+      swalError('Failed to delete review. Please try again.')
     }
   }
 
@@ -334,16 +334,15 @@ function Dashboard() {
         profileImage: updatedStudent.profileImage || '',
       })
       setProfileMessage('Profile updated successfully')
+      try { swalToast('Profile updated successfully') } catch (e) {}
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Update failed')
     }
   }
 
   const handleProfileDelete = async () => {
-    const confirmDelete = window.confirm('Are you sure you want to delete your account?')
-    if (!confirmDelete) {
-      return
-    }
+    const confirmDelete = await swalConfirm('Are you sure you want to delete your account?')
+    if (!confirmDelete) return
 
     try {
       await api.delete('/students/profile', {

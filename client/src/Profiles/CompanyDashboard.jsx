@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react'
 import api from '../api'
+import { confirm as swalConfirm, success as swalSuccess, error as swalError, toast as swalToast } from '../utils/swal'
 
 const panelClass = 'rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]'
 const inputClass =
@@ -141,10 +142,10 @@ const CompanyDashboard = () => {
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
       fetchCompanyInternships()
-      alert(`Application ${status.toLowerCase()} and student will see it in their profile.`)
+      swalSuccess(`Application ${status.toLowerCase()} and student will see it in their profile.`)
     } catch (error) {
       console.error(`Failed to ${status.toLowerCase()} application:`, error)
-      alert(error.response?.data?.message || `Failed to ${status.toLowerCase()} application`)
+      swalError(error.response?.data?.message || `Failed to ${status.toLowerCase()} application`)
     }
   }
 
@@ -158,17 +159,15 @@ const CompanyDashboard = () => {
   }
 
   const handleDeleteInternship = async (internshipId) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this internship?')
-    if (!confirmDelete) {
-      return
-    }
+    const confirmDelete = await swalConfirm('Are you sure you want to delete this internship?')
+    if (!confirmDelete) return
 
     try {
       await api.delete(`/internships/${internshipId}`)
       await fetchCompanyInternships()
-      alert('Internship deleted successfully')
+      swalSuccess('Internship deleted successfully')
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to delete internship')
+      swalError(error.response?.data?.message || 'Failed to delete internship')
     }
   }
 
@@ -205,6 +204,7 @@ const CompanyDashboard = () => {
         })
         setProfileEditMode(false)
         setProfileSuccess('Company profile updated successfully')
+        try { swalToast('Company profile updated successfully') } catch (e) {}
         setTimeout(() => setProfileSuccess(''), 2500)
       }
     } catch (error) {
@@ -215,7 +215,7 @@ const CompanyDashboard = () => {
   }
 
   const handleDeleteCompany = async () => {
-    const confirmed = window.confirm('Are you sure you want to delete your company profile? This cannot be undone.')
+    const confirmed = await swalConfirm('Are you sure you want to delete your company profile? This cannot be undone.')
     if (!confirmed) return
 
     try {

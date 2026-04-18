@@ -7,6 +7,7 @@ import {
   updateFinalReport,
   deleteFinalReport,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const EMPTY = {
   executiveSummary: "",
@@ -480,7 +481,7 @@ export default function FinalReport({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete final report?")) return;
+    if (!await swalConfirm('Delete final report?')) return
     try {
       await deleteFinalReport(report._id);
       setReport(null);

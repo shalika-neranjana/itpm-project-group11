@@ -20,6 +20,9 @@
     "react-easy-crop": "^5.5.7",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
+    "tailwindcss": "^4.2.1",
+    "sweetalert2": "^11.7.28",
+    "sweetalert2-react-content": "^5.0.2"
     "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.2.1"
   },
