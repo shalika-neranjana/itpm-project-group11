@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import {
   getInternships,
   deleteInternship,
@@ -7,9 +8,9 @@ import {
 import EditInternshipForm from "./EditInternshipForm";
 
 export default function InternshipList({ studentId, onOpen, onAddNew }) {
-  const [internships, setInternships] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingInternship, setEditingInternship] = useState(null); // holds internship being edited
+  const [internships,        setInternships]        = useState([]);
+  const [loading,            setLoading]            = useState(true);
+  const [editingInternship,  setEditingInternship]  = useState(null);
 
   useEffect(() => {
     if (!studentId) return;
@@ -24,22 +25,58 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
               .then((updated) => {
                 setInternships((prev) =>
                   prev.map((i) =>
-                    i._id === updated.data._id ? updated.data : i,
-                  ),
+                    i._id === updated.data._id ? updated.data : i
+                  )
                 );
               })
               .catch((err) => console.error("Status update failed:", err));
           }
         });
       })
-      .catch((err) => console.error(err))
+      .catch(() => {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to Load",
+          text: "Could not load your internships. Please refresh the page.",
+          confirmButtonColor: "#3B6FE8",
+        });
+      })
       .finally(() => setLoading(false));
   }, [studentId]);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this internship?")) return;
-    await deleteInternship(id);
-    setInternships((prev) => prev.filter((i) => i._id !== id));
+  const handleDelete = async (id, title) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete Internship?",
+      text: `"${title}" and all its data will be permanently deleted.`,
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#3B6FE8",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteInternship(id);
+      setInternships((prev) => prev.filter((i) => i._id !== id));
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: `"${title}" has been removed.`,
+        confirmButtonColor: "#3B6FE8",
+        timer: 2000,
+        timerProgressBar: true,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Delete Failed",
+        text: err.response?.data?.message || "Could not delete the internship. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
   };
 
   const getProgress = (intern) => {
@@ -48,19 +85,33 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
     if (!intern.endDate) end.setMonth(end.getMonth() + intern.duration);
     return Math.min(
       100,
-      Math.max(0, Math.round(((new Date() - start) / (end - start)) * 100)),
+      Math.max(0, Math.round(((new Date() - start) / (end - start)) * 100))
     );
   };
 
   const getStatus = (intern) =>
     getProgress(intern) >= 100 ? "completed" : "ongoing";
 
-  // ── Edit success: refresh the updated internship in list ──
   const handleEditSuccess = () => {
     getInternships(studentId)
       .then((res) => setInternships(res.data))
       .catch((err) => console.error(err));
     setEditingInternship(null);
+  };
+
+  // Back button on edit page with unsaved-change awareness
+  const handleBackFromEdit = async () => {
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Go Back?",
+      text: "Any unsaved changes will be lost.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, go back",
+      cancelButtonText: "Stay here",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#3B6FE8",
+    });
+    if (result.isConfirmed) setEditingInternship(null);
   };
 
   if (loading)
@@ -76,7 +127,7 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
     return (
       <div>
         <button
-          onClick={() => setEditingInternship(null)}
+          onClick={handleBackFromEdit}
           className="mb-5 flex items-center gap-2 text-sm font-medium text-[#3B6FE8] hover:text-[#2D5CD4] transition-colors"
         >
           ← Back to My Internships
@@ -118,7 +169,7 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {internships.map((intern) => {
           const progress = getProgress(intern);
-          const status = getStatus(intern);
+          const status   = getStatus(intern);
 
           return (
             <div
@@ -150,9 +201,7 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
               {/* Progress bar */}
               <div className="mb-1 flex justify-between text-xs text-[#6B7280]">
                 <span>Progress</span>
-                <span
-                  className={`font-semibold ${progress >= 100 ? "text-[#16A34A]" : "text-[#3B6FE8]"}`}
-                >
+                <span className={`font-semibold ${progress >= 100 ? "text-[#16A34A]" : "text-[#3B6FE8]"}`}>
                   {progress}%
                 </span>
               </div>
@@ -169,8 +218,7 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
 
               {/* Duration */}
               <p className="mb-4 text-xs text-[#6B7280]">
-                Duration: {intern.duration} month
-                {intern.duration > 1 ? "s" : ""}
+                Duration: {intern.duration} month{intern.duration > 1 ? "s" : ""}
               </p>
 
               {/* Actions */}
@@ -181,7 +229,6 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
                 >
                   Open Dashboard
                 </button>
-                {/* ── Edit button ── */}
                 <button
                   onClick={() => setEditingInternship(intern)}
                   className="rounded-xl border border-[#E8EAF0] px-3 py-2 text-sm text-[#1A1D27] hover:bg-[#F7F8FA] transition-colors"
@@ -189,7 +236,7 @@ export default function InternshipList({ studentId, onOpen, onAddNew }) {
                   ✏️
                 </button>
                 <button
-                  onClick={() => handleDelete(intern._id)}
+                  onClick={() => handleDelete(intern._id, intern.title)}
                   className="rounded-xl border border-[#E8EAF0] px-3 py-2 text-sm text-[#DC2626] hover:bg-[#FEE2E2] transition-colors"
                 >
                   🗑
