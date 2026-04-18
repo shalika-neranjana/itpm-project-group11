@@ -6,6 +6,7 @@ const Internship = require("../models/Internship");
 const Student = require("../models/Student");
 const { deleteUploadedFile, getUploadedFilePath } = require("../utils/uploadUtils");
 const { createNotification } = require("./notificationController");
+const { sendApplicationEmail } = require("../utils/emailService");
 
 /**
  * @desc    Get all internships (public)
@@ -414,6 +415,16 @@ const updateApplicationStatus = async (req, res, next) => {
             await createNotification(studentId, message, type);
         } else {
             console.warn("No student ID found for application, skipping notification creation", application._id);
+        }
+
+        // Send email to student
+        if (application.student) {
+            const student = await Student.findById(application.student);
+            if (student && student.email) {
+                await sendApplicationEmail(student.email, internship.title, status);
+            }
+        } else if (application.email) {
+            await sendApplicationEmail(application.email, internship.title, status);
         }
 
         res.status(200).json({
