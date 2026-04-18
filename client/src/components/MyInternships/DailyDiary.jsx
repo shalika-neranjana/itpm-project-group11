@@ -1,5 +1,5 @@
-
 import { useEffect, useState, useMemo } from 'react'
+import Swal from 'sweetalert2'
 import { getEntries, addEntry, updateEntry, deleteEntry } from '../../api/myInternships'
 import { confirm as swalConfirm } from '../../utils/swal'
 
@@ -14,9 +14,8 @@ export default function DailyDiary({ internshipId }) {
   const [form,      setForm]      = useState(EMPTY)
   const [editId,    setEditId]    = useState(null)
   const [loading,   setLoading]   = useState(true)
-  const [timeError, setTimeError] = useState('') 
+  const [timeError, setTimeError] = useState('')
 
-  // ── Search & Filter state ──
   const [search,      setSearch]      = useState('')
   const [filterHours, setFilterHours] = useState('all')
   const [sortBy,      setSortBy]      = useState('newest')
@@ -25,7 +24,14 @@ export default function DailyDiary({ internshipId }) {
   useEffect(() => {
     getEntries(internshipId)
       .then(res => setEntries(res.data))
-      .catch(err => console.error(err))
+      .catch(() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to Load',
+          text: 'Could not load diary entries. Please refresh.',
+          confirmButtonColor: '#3B6FE8',
+        })
+      })
       .finally(() => setLoading(false))
   }, [internshipId])
 
@@ -37,7 +43,7 @@ export default function DailyDiary({ internshipId }) {
   }
 
   const handleChange = (e) => {
-    setTimeError('') 
+    setTimeError('')
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -65,7 +71,6 @@ export default function DailyDiary({ internshipId }) {
     e.preventDefault()
     setTimeError('')
 
-    // ── Time validation ──
     const [sh, sm] = form.startTime.split(':').map(Number)
     const [eh, em] = form.endTime.split(':').map(Number)
     const startMins = sh * 60 + sm
@@ -81,22 +86,100 @@ export default function DailyDiary({ internshipId }) {
       internship:   internshipId,
       workingHours: calcHours(form.startTime, form.endTime),
     }
-    if (editId) {
-      const res = await updateEntry(editId, payload)
-      setEntries(prev => prev.map(e => e._id === editId ? res.data : e))
-    } else {
-      const res = await addEntry(payload)
-      setEntries(prev => [res.data, ...prev])
+
+    try {
+      if (editId) {
+        const res = await updateEntry(editId, payload)
+        setEntries(prev => prev.map(e => e._id === editId ? res.data : e))
+        await Swal.fire({
+          icon: 'success',
+          title: 'Entry Updated!',
+          text: `"${form.title}" has been updated successfully.`,
+          confirmButtonColor: '#3B6FE8',
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      } else {
+        const res = await addEntry(payload)
+        setEntries(prev => [res.data, ...prev])
+        await Swal.fire({
+          icon: 'success',
+          title: 'Entry Added!',
+          text: `"${form.title}" has been saved to your diary.`,
+          confirmButtonColor: '#3B6FE8',
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      }
+      setShowForm(false)
+      setTimeError('')
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: err.response?.data?.message || 'Something went wrong. Please try again.',
+        confirmButtonColor: '#3B6FE8',
+      })
     }
-    setShowForm(false)
-    setTimeError('')
   }
 
-  const handleDelete = async (id) => {
-    const ok = await swalConfirm('Delete this entry?')
-    if (!ok) return
-    await deleteEntry(id)
-    setEntries(prev => prev.filter(e => e._id !== id))
+  const handleDelete = async (id, title) => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Entry?',
+      text: `"${title}" will be permanently deleted.`,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#3B6FE8',
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      await deleteEntry(id)
+      setEntries(prev => prev.filter(e => e._id !== id))
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'The diary entry has been removed.',
+        confirmButtonColor: '#3B6FE8',
+        timer: 1800,
+        timerProgressBar: true,
+      })
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: err.response?.data?.message || 'Could not delete the entry. Please try again.',
+        confirmButtonColor: '#3B6FE8',
+      })
+    }
+  }
+
+  // Confirm before closing form if data is filled
+  const handleCancelForm = async () => {
+    const hasData = Object.values(form).some(v => v !== '')
+    if (hasData) {
+      const result = await Swal.fire({
+        icon: 'question',
+        title: 'Discard Changes?',
+        text: 'Your unsaved entry will be lost.',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, discard',
+        cancelButtonText: 'Keep editing',
+        confirmButtonColor: '#DC2626',
+        cancelButtonColor: '#3B6FE8',
+      })
+      if (result.isConfirmed) {
+        setShowForm(false)
+        setTimeError('')
+      }
+    } else {
+      setShowForm(false)
+      setTimeError('')
+    }
   }
 
   const clearFilters = () => { setSearch(''); setFilterHours('all'); setSortBy('newest') }
@@ -300,27 +383,18 @@ export default function DailyDiary({ internshipId }) {
                   onChange={handleChange} required className={inputCls}
                   placeholder="What did you work on?" />
               </div>
-
-              {/*  Start Time  */}
               <div>
                 <label className={labelCls}>Start Time</label>
-                <input
-                  name="startTime" type="time" value={form.startTime}
+                <input name="startTime" type="time" value={form.startTime}
                   onChange={handleChange} required
-                  className={timeError ? inputErrCls : inputCls}
-                />
+                  className={timeError ? inputErrCls : inputCls} />
               </div>
-
-              {/*  End Time  */}
               <div>
                 <label className={labelCls}>End Time</label>
-                <input
-                  name="endTime" type="time" value={form.endTime}
+                <input name="endTime" type="time" value={form.endTime}
                   onChange={handleChange} required
-                  className={timeError ? inputErrCls : inputCls}
-                />
+                  className={timeError ? inputErrCls : inputCls} />
               </div>
-
               <div className="md:col-span-2">
                 <label className={labelCls}>Description</label>
                 <textarea name="description" value={form.description}
@@ -329,7 +403,6 @@ export default function DailyDiary({ internshipId }) {
               </div>
             </div>
 
-            {/*  Time error message  */}
             {timeError && (
               <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#DC2626] bg-[#FEE2E2] px-4 py-2.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -342,7 +415,6 @@ export default function DailyDiary({ internshipId }) {
               </div>
             )}
 
-            {/*  Working hours preview (only when valid)  */}
             {form.startTime && form.endTime && !timeError && (
               <p className="mt-2 text-xs text-[#6B7280]">
                 Working hours:{' '}
@@ -357,7 +429,7 @@ export default function DailyDiary({ internshipId }) {
                 className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors">
                 {editId ? 'Update' : 'Save'}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setTimeError('') }}
+              <button type="button" onClick={handleCancelForm}
                 className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors">
                 Cancel
               </button>
@@ -366,14 +438,12 @@ export default function DailyDiary({ internshipId }) {
         </div>
       )}
 
-      {/* ── Empty state ── */}
       {entries.length === 0 && !showForm && (
         <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center text-sm text-[#6B7280]">
           No diary entries yet.
         </div>
       )}
 
-      {/* ── No results from filter ── */}
       {entries.length > 0 && filteredEntries.length === 0 && (
         <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
           <p className="text-sm font-semibold text-[#1A1D27]">No entries found</p>
@@ -385,7 +455,6 @@ export default function DailyDiary({ internshipId }) {
         </div>
       )}
 
-      {/* ── Entries list ── */}
       <div className="flex flex-col gap-3">
         {filteredEntries.map(entry => (
           <div key={entry._id}
@@ -413,7 +482,7 @@ export default function DailyDiary({ internshipId }) {
                   className="rounded-lg border border-[#E8EAF0] px-2.5 py-1.5 text-xs hover:bg-[#F7F8FA] transition-colors">
                   ✏️
                 </button>
-                <button onClick={() => handleDelete(entry._id)}
+                <button onClick={() => handleDelete(entry._id, entry.title)}
                   className="rounded-lg border border-[#E8EAF0] px-2.5 py-1.5 text-xs hover:bg-[#FEE2E2] transition-colors">
                   🗑️
                 </button>
