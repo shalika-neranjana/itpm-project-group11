@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import Swal from 'sweetalert2'
 import { getTasks, addTask, updateTask, deleteTask } from '../../api/myInternships'
 import { confirm as swalConfirm } from '../../utils/swal'
 
@@ -19,14 +20,22 @@ export default function MyTasks({ internshipId }) {
   const [loading,  setLoading]  = useState(true)
 
   // ── Filter state ──
-  const [filterPriority, setFilterPriority] = useState('all')   
-  const [filterStatus,   setFilterStatus]   = useState('all')    
+  const [filterPriority, setFilterPriority] = useState('all')
+  const [filterStatus,   setFilterStatus]   = useState('all')
+  const [filterDate,     setFilterDate]     = useState('all')   // NEW
   const [showFilter,     setShowFilter]     = useState(false)
 
   useEffect(() => {
     getTasks(internshipId)
       .then(res => setTasks(res.data))
-      .catch(err => console.error(err))
+      .catch(() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to Load',
+          text: 'Could not load tasks. Please refresh.',
+          confirmButtonColor: '#3B6FE8',
+        })
+      })
       .finally(() => setLoading(false))
   }, [internshipId])
 
@@ -48,37 +57,143 @@ export default function MyTasks({ internshipId }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const payload = { ...form, internship: internshipId }
-    if (editId) {
-      const res = await updateTask(editId, payload)
-      setTasks(prev => prev.map(t => t._id === editId ? res.data : t))
-    } else {
-      const res = await addTask(payload)
-      setTasks(prev => [...prev, res.data])
+    try {
+      if (editId) {
+        const res = await updateTask(editId, payload)
+        setTasks(prev => prev.map(t => t._id === editId ? res.data : t))
+        await Swal.fire({
+          icon: 'success',
+          title: 'Task Updated!',
+          text: `"${form.taskName}" has been updated.`,
+          confirmButtonColor: '#3B6FE8',
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      } else {
+        const res = await addTask(payload)
+        setTasks(prev => [...prev, res.data])
+        await Swal.fire({
+          icon: 'success',
+          title: 'Task Added!',
+          text: `"${form.taskName}" has been added to your tasks.`,
+          confirmButtonColor: '#3B6FE8',
+          timer: 2000,
+          timerProgressBar: true,
+        })
+      }
+      setShowForm(false)
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: err.response?.data?.message || 'Something went wrong. Please try again.',
+        confirmButtonColor: '#3B6FE8',
+      })
     }
-    setShowForm(false)
   }
 
   const toggleComplete = async (task) => {
-    const res = await updateTask(task._id, { completed: !task.completed })
-    setTasks(prev => prev.map(t => t._id === task._id ? res.data : t))
+    try {
+      const res = await updateTask(task._id, { completed: !task.completed })
+      setTasks(prev => prev.map(t => t._id === task._id ? res.data : t))
+
+      if (!task.completed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Task Completed! 🎉',
+          text: `"${task.taskName}" marked as done.`,
+          confirmButtonColor: '#16A34A',
+          timer: 1800,
+          timerProgressBar: true,
+        })
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: 'Could not update task status. Please try again.',
+        confirmButtonColor: '#3B6FE8',
+      })
+    }
   }
 
-  const handleDelete = async (id) => {
-    const ok = await swalConfirm('Delete this task?')
-    if (!ok) return
-    await deleteTask(id)
-    setTasks(prev => prev.filter(t => t._id !== id))
+  const handleDelete = async (id, taskName) => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Task?',
+      text: `"${taskName}" will be permanently deleted.`,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#3B6FE8',
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      await deleteTask(id)
+      setTasks(prev => prev.filter(t => t._id !== id))
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'The task has been removed.',
+        confirmButtonColor: '#3B6FE8',
+        timer: 1800,
+        timerProgressBar: true,
+      })
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: err.response?.data?.message || 'Could not delete the task. Please try again.',
+        confirmButtonColor: '#3B6FE8',
+      })
+    }
+  }
+
+  // Cancel form with unsaved data check
+  const handleCancelForm = async () => {
+    const hasData = Object.values(form).some(v => v !== '' && v !== 'Medium')
+    if (hasData) {
+      const result = await Swal.fire({
+        icon: 'question',
+        title: 'Discard Changes?',
+        text: 'Your unsaved task will be lost.',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, discard',
+        cancelButtonText: 'Keep editing',
+        confirmButtonColor: '#DC2626',
+        cancelButtonColor: '#3B6FE8',
+      })
+      if (result.isConfirmed) setShowForm(false)
+    } else {
+      setShowForm(false)
+    }
   }
 
   const clearFilters = () => {
     setFilterPriority('all')
     setFilterStatus('all')
+    setFilterDate('all')
   }
 
-  const hasActiveFilters = filterPriority !== 'all' || filterStatus !== 'all'
+  const hasActiveFilters = filterPriority !== 'all' || filterStatus !== 'all' || filterDate !== 'all'
 
   // ── Filtered tasks ──
   const filteredTasks = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay())
+
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const endOfMonth   = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
     let result = [...tasks]
 
     if (filterPriority !== 'all') {
@@ -91,8 +206,28 @@ export default function MyTasks({ internshipId }) {
       result = result.filter(t => !t.completed)
     }
 
+    // ── Date filter ──
+    if (filterDate === 'today') {
+      result = result.filter(t => {
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0)
+        return d.getTime() === today.getTime()
+      })
+    } else if (filterDate === 'thisWeek') {
+      result = result.filter(t => {
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0)
+        return d >= startOfWeek && d <= endOfWeek
+      })
+    } else if (filterDate === 'thisMonth') {
+      result = result.filter(t => {
+        const d = new Date(t.dueDate); d.setHours(0,0,0,0)
+        return d >= startOfMonth && d <= endOfMonth
+      })
+    } else if (filterDate === 'overdue') {
+      result = result.filter(t => !t.completed && new Date(t.dueDate) < today)
+    }
+
     return result
-  }, [tasks, filterPriority, filterStatus])
+  }, [tasks, filterPriority, filterStatus, filterDate])
 
   // ── Task summary counts ──
   const completedCount = tasks.filter(t => t.completed).length
@@ -150,8 +285,6 @@ export default function MyTasks({ internshipId }) {
       {/* ── Filter bar ── */}
       {tasks.length > 0 && (
         <div className="mb-5 space-y-3">
-
-          {/* Filter toggle button */}
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowFilter(prev => !prev)}
@@ -166,12 +299,9 @@ export default function MyTasks({ internshipId }) {
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
               </svg>
               Filters
-              {hasActiveFilters && (
-                <span className="flex h-2 w-2 rounded-full bg-[#3B6FE8]" />
-              )}
+              {hasActiveFilters && <span className="flex h-2 w-2 rounded-full bg-[#3B6FE8]" />}
             </button>
 
-            {/* Results count */}
             {hasActiveFilters && (
               <p className="text-xs text-[#6B7280]">
                 Showing{' '}
@@ -183,10 +313,9 @@ export default function MyTasks({ internshipId }) {
             )}
           </div>
 
-          {/* Filter panel */}
           {showFilter && (
             <div className="rounded-2xl border border-[#E8EAF0] bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
 
                 {/* Priority filter */}
                 <div>
@@ -203,9 +332,7 @@ export default function MyTasks({ internshipId }) {
                         onClick={() => setFilterPriority(opt.value)}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           filterPriority === opt.value
-                            ? opt.value === 'all'
-                              ? 'border-[#3B6FE8] bg-[#3B6FE8] text-white'
-                              : opt.value === 'High'
+                            ? opt.value === 'High'
                               ? 'border-[#DC2626] bg-[#DC2626] text-white'
                               : opt.value === 'Medium'
                               ? 'border-[#D97706] bg-[#D97706] text-white'
@@ -225,8 +352,8 @@ export default function MyTasks({ internshipId }) {
                   <div className="flex flex-wrap gap-2">
                     {[
                       { value: 'all',       label: 'All Tasks'  },
-                      { value: 'pending',   label: 'Pending'    },
-                      { value: 'completed', label: 'Completed'  },
+                      { value: 'pending',   label: '⏳ Pending'  },
+                      { value: 'completed', label: '✅ Completed' },
                     ].map(opt => (
                       <button
                         key={opt.value}
@@ -237,8 +364,36 @@ export default function MyTasks({ internshipId }) {
                             : 'border-[#E8EAF0] bg-white text-[#6B7280] hover:bg-[#F7F8FA]'
                         }`}
                       >
-                        {opt.value === 'completed' && '✅ '}
-                        {opt.value === 'pending'   && '⏳ '}
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date filter — NEW */}
+                <div>
+                  <label className={labelCls}>Due Date</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 'all',       label: 'All',        color: '' },
+                      { value: 'today',     label: '📅 Today',    color: '' },
+                      { value: 'thisWeek',  label: '🗓 This Week', color: '' },
+                      { value: 'thisMonth', label: '📆 This Month',color: '' },
+                      { value: 'overdue',   label: '🔴 Overdue',  color: 'border-[#DC2626] text-[#DC2626]' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setFilterDate(opt.value)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          filterDate === opt.value
+                            ? opt.value === 'overdue'
+                              ? 'border-[#DC2626] bg-[#DC2626] text-white'
+                              : 'border-[#3B6FE8] bg-[#3B6FE8] text-white'
+                            : opt.value === 'overdue'
+                            ? 'border-[#DC2626] bg-white text-[#DC2626] hover:bg-[#FEE2E2]'
+                            : 'border-[#E8EAF0] bg-white text-[#6B7280] hover:bg-[#F7F8FA]'
+                        }`}
+                      >
                         {opt.label}
                       </button>
                     ))}
@@ -247,13 +402,10 @@ export default function MyTasks({ internshipId }) {
 
               </div>
 
-              {/* Clear filters */}
               {hasActiveFilters && (
                 <div className="mt-3 border-t border-[#E8EAF0] pt-3">
-                  <button
-                    onClick={clearFilters}
-                    className="text-xs font-semibold text-[#DC2626] hover:underline"
-                  >
+                  <button onClick={clearFilters}
+                    className="text-xs font-semibold text-[#DC2626] hover:underline">
                     ✕ Clear all filters
                   </button>
                 </div>
@@ -284,39 +436,23 @@ export default function MyTasks({ internshipId }) {
               </div>
               <div>
                 <label className={labelCls}>Priority</label>
-                <select
-                  name="priority"
-                  value={form.priority}
-                  onChange={handleChange}
-                  className={inputCls}
-                >
+                <select name="priority" value={form.priority} onChange={handleChange} className={inputCls}>
                   {PRIORITIES.map(p => <option key={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelCls}>Due Date</label>
-                <input
-                  name="dueDate"
-                  type="date"
-                  value={form.dueDate}
-                  onChange={handleChange}
-                  required
-                  className={inputCls}
-                />
+                <input name="dueDate" type="date" value={form.dueDate}
+                  onChange={handleChange} required className={inputCls} />
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <button
-                type="submit"
-                className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
-              >
+              <button type="submit"
+                className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors">
                 {editId ? 'Update' : 'Save'}
               </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors"
-              >
+              <button type="button" onClick={handleCancelForm}
+                className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors">
                 Cancel
               </button>
             </div>
@@ -336,10 +472,8 @@ export default function MyTasks({ internshipId }) {
         <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
           <p className="text-sm font-semibold text-[#1A1D27]">No tasks found</p>
           <p className="mt-1 text-xs text-[#6B7280]">Try adjusting your filters</p>
-          <button
-            onClick={clearFilters}
-            className="mt-3 text-xs font-semibold text-[#3B6FE8] hover:underline"
-          >
+          <button onClick={clearFilters}
+            className="mt-3 text-xs font-semibold text-[#3B6FE8] hover:underline">
             Clear filters
           </button>
         </div>
@@ -356,7 +490,6 @@ export default function MyTasks({ internshipId }) {
                 isOverdue ? 'border-[#FEE2E2]' : 'border-[#E8EAF0]'
               }`}
             >
-              {/* Checkbox */}
               <button
                 onClick={() => toggleComplete(task)}
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all ${
@@ -373,41 +506,32 @@ export default function MyTasks({ internshipId }) {
                 )}
               </button>
 
-              {/* Task name */}
               <span className={`flex-1 text-sm font-semibold ${
                 task.completed ? 'text-[#6B7280] line-through' : 'text-[#1A1D27]'
               }`}>
                 {task.taskName}
               </span>
 
-              {/* Overdue badge */}
               {isOverdue && (
                 <span className="rounded-full bg-[#FEE2E2] px-2 py-0.5 text-xs font-semibold text-[#DC2626]">
                   Overdue
                 </span>
               )}
 
-              {/* Priority badge */}
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${priorityStyle[task.priority]}`}>
                 {task.priority}
               </span>
 
-              {/* Due date */}
               <span className={`text-xs ${isOverdue ? 'font-semibold text-[#DC2626]' : 'text-[#6B7280]'}`}>
                 {new Date(task.dueDate).toLocaleDateString('en-MY')}
               </span>
 
-              {/* Actions */}
-              <button
-                onClick={() => openEdit(task)}
-                className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#F7F8FA] transition-colors"
-              >
+              <button onClick={() => openEdit(task)}
+                className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#F7F8FA] transition-colors">
                 ✏️
               </button>
-              <button
-                onClick={() => handleDelete(task._id)}
-                className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#FEE2E2] transition-colors"
-              >
+              <button onClick={() => handleDelete(task._id, task.taskName)}
+                className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#FEE2E2] transition-colors">
                 🗑️
               </button>
             </div>
