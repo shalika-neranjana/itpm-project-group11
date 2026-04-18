@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { getReviewComments, createReviewComment, replyToComment } from '../api/reviews'
+import { error as swalError } from '../utils/swal'
+import { MessageCircle, Send } from 'lucide-react'
 import {
   getReviewComments,
   createReviewComment,
@@ -70,7 +73,7 @@ function ReviewComments({ reviewId, reviewAuthorId }) {
       setNewComment('')
     } catch (error) {
       console.error('Failed to add comment:', error)
-      alert('Failed to add comment. Please try again.')
+      swalError('Failed to add comment. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -92,7 +95,7 @@ function ReviewComments({ reviewId, reviewAuthorId }) {
       setOpenReplyBoxes({ ...openReplyBoxes, [commentId]: false })
     } catch (error) {
       console.error('Failed to add reply:', error)
-      alert('Failed to add reply. Please try again.')
+      swalError('Failed to add reply. Please try again.')
     } finally {
       setSubmitting(false)
     }

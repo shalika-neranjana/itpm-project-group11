@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { getTasks, addTask, updateTask, deleteTask } from '../../api/myInternships'
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const PRIORITIES = ['High', 'Medium', 'Low']
 const EMPTY = { taskName: '', priority: 'Medium', dueDate: '' }
@@ -63,7 +64,8 @@ export default function MyTasks({ internshipId }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this task?')) return
+    const ok = await swalConfirm('Delete this task?')
+    if (!ok) return
     await deleteTask(id)
     setTasks(prev => prev.filter(t => t._id !== id))
   }

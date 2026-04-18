@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api'
+import { toast as swalToast, error as swalError } from '../utils/swal'
 import Header from '../components/Header'
 
 const ApplicationForm = () => {
@@ -99,13 +100,15 @@ const ApplicationForm = () => {
       })
       
       if (response.data.success) {
-        setSuccess('Application submitted successfully!')
+        try { swalToast('Application submitted successfully!') } catch (e) {}
         setTimeout(() => {
           navigate('/dashboard')
         }, 2000)
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit application')
+      const msg = err.response?.data?.message || 'Failed to submit application'
+      setError(msg)
+      try { swalError(msg) } catch (e) {}
     } finally {
       setSubmitting(false)
     }
