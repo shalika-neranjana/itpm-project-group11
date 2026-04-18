@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Swal from "sweetalert2";
 import { addInternship } from "../../api/myInternships";
 
 const SPECIALIZATIONS = [
@@ -20,36 +21,37 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
     duration:        "",
   });
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
-      // Get student info from session
       const studentData     = JSON.parse(localStorage.getItem("student"));
       const studentIdNumber = studentData?.studentId;
       const studentName     = `${studentData?.firstName} ${studentData?.lastName}`;
 
       if (!studentIdNumber) {
-        setError("Session expired. Please log in again.");
+        Swal.fire({
+          icon: "warning",
+          title: "Session Expired",
+          text: "Please log in again to continue.",
+          confirmButtonColor: "#3B6FE8",
+        });
         setLoading(false);
         return;
       }
 
-      // Auto-calculate endDate
       const start   = new Date(form.startDate);
       const endDate = new Date(start);
       endDate.setMonth(endDate.getMonth() + Number(form.duration));
 
       await addInternship({
-        studentIdNumber,              
-        studentName,                  
+        studentIdNumber,
+        studentName,
         title:           form.title,
         specialization:  form.specialization,
         supervisorName:  form.supervisorName,
@@ -59,11 +61,47 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
         endDate:         endDate.toISOString(),
       });
 
+      await Swal.fire({
+        icon: "success",
+        title: "Internship Added!",
+        text: `"${form.title}" has been successfully added.`,
+        confirmButtonColor: "#3B6FE8",
+        timer: 2500,
+        timerProgressBar: true,
+      });
+
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
+      Swal.fire({
+        icon: "error",
+        title: "Something Went Wrong",
+        text: err.response?.data?.message || "Unable to add internship. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Confirm before cancelling if form has any filled fields
+  const handleCancel = async () => {
+    const hasData = Object.values(form).some((v) => v !== "");
+
+    if (hasData) {
+      const result = await Swal.fire({
+        icon: "question",
+        title: "Discard Changes?",
+        text: "You have unsaved data. Are you sure you want to cancel?",
+        showCancelButton: true,
+        confirmButtonText: "Yes, discard",
+        cancelButtonText: "Keep editing",
+        confirmButtonColor: "#DC2626",
+        cancelButtonColor: "#3B6FE8",
+      });
+
+      if (result.isConfirmed) onCancel();
+    } else {
+      onCancel();
     }
   };
 
@@ -71,7 +109,6 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
     "w-full rounded-xl border border-[#E8EAF0] bg-white px-4 py-3 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors";
   const labelCls = "mb-1.5 block text-xs font-semibold text-[#1A1D27]";
 
-  // Show logged-in student info at top of form
   const studentData = JSON.parse(localStorage.getItem("student"));
 
   return (
@@ -80,7 +117,6 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
         Add New Internship
       </h3>
 
-      {/* Auto-filled student info — read only display */}
       <div className="mb-6 rounded-xl border border-[#E8EAF0] bg-[#F7F8FA] px-5 py-4">
         <p className="mb-1 text-xs font-semibold text-[#6B7280]">Submitting as</p>
         <p className="text-sm font-semibold text-[#1A1D27]">
@@ -88,12 +124,6 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
         </p>
         <p className="text-xs text-[#6B7280]">{studentData?.studentId}</p>
       </div>
-
-      {error && (
-        <div className="mb-4 rounded-xl bg-[#FEE2E2] px-4 py-3 text-sm text-[#DC2626]">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -121,9 +151,7 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
             >
               <option value="">Select specialization</option>
               {SPECIALIZATIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
@@ -175,9 +203,7 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
             >
               <option value="">Select duration</option>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-                <option key={n} value={n}>
-                  {n} Month{n > 1 ? "s" : ""}
-                </option>
+                <option key={n} value={n}>{n} Month{n > 1 ? "s" : ""}</option>
               ))}
             </select>
           </div>
@@ -194,7 +220,7 @@ export default function AddInternshipForm({ onSuccess, onCancel }) {
           </button>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={handleCancel}
             className="rounded-xl border border-[#E8EAF0] px-6 py-2.5 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA]"
           >
             Cancel
