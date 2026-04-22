@@ -321,6 +321,7 @@ export default function FinalReport({
   const [report,       setReport]       = useState(null);
   const [form,         setForm]         = useState(EMPTY);
   const [editing,      setEditing]      = useState(false);
+  const [creating,     setCreating]     = useState(false);
   const [loading,      setLoading]      = useState(true);
   const [pdfStatus,    setPdfStatus]    = useState(null);
   const [emailSent,    setEmailSent]    = useState(false);
@@ -384,6 +385,7 @@ export default function FinalReport({
         setReport(res.data);
       }
       setEditing(false);
+      setCreating(false);
       await Swal.fire({
         icon: "success",
         title: "Draft Saved!",
@@ -427,6 +429,7 @@ export default function FinalReport({
         setReport(res.data);
       }
       setEditing(false);
+      setCreating(false);
       await Swal.fire({
         icon: "success",
         title: "Report Submitted! 🎉",
@@ -463,6 +466,7 @@ export default function FinalReport({
       await deleteFinalReport(report._id);
       setReport(null);
       setForm(EMPTY);
+      setCreating(false);
       Swal.fire({
         icon: "success",
         title: "Deleted!",
@@ -500,9 +504,13 @@ export default function FinalReport({
         confirmButtonColor: "#DC2626",
         cancelButtonColor: "#3B6FE8",
       });
-      if (result.isConfirmed) setEditing(false);
+      if (result.isConfirmed) {
+        setEditing(false);
+        setCreating(false);
+      }
     } else {
       setEditing(false);
+      setCreating(false);
     }
   };
 
@@ -637,7 +645,7 @@ export default function FinalReport({
 
   const inputCls = "w-full rounded-xl border border-[#E8EAF0] bg-white px-4 py-2.5 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors";
   const labelCls = "mb-1 block text-xs font-semibold text-[#1A1D27]";
-  const showForm = !report || editing;
+  const showForm = (creating && !report) || editing;
 
   if (loading)
     return (
@@ -656,6 +664,7 @@ export default function FinalReport({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleDownloadPDF}
+              data-testid="final-report-download-pdf"
               disabled={pdfStatus === "generating"}
               className="flex items-center gap-2 rounded-xl bg-[#FEE2E2] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FECACA] disabled:opacity-60 transition-colors"
             >
@@ -670,6 +679,7 @@ export default function FinalReport({
 
             <button
               onClick={() => setShowEmailBox((prev) => !prev)}
+              data-testid="final-report-send-to-supervisor"
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                 emailSent
                   ? "bg-[#DCFCE7] text-[#16A34A]"
@@ -687,12 +697,14 @@ export default function FinalReport({
 
             <button
               onClick={() => setEditing(true)}
+              data-testid="final-report-edit"
               className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#1A1D27] hover:bg-[#F7F8FA] transition-colors"
             >
               ✏️ Edit
             </button>
             <button
               onClick={handleDelete}
+              data-testid="final-report-delete"
               className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FEE2E2] transition-colors"
             >
               🗑️ Delete
@@ -713,12 +725,14 @@ export default function FinalReport({
             <input
               type="email"
               value={emailInput}
+              data-testid="final-report-email-input"
               onChange={(e) => setEmailInput(e.target.value)}
               placeholder="supervisor@company.com"
               className="flex-1 rounded-xl border border-[#E8EAF0] bg-white px-4 py-2.5 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors"
             />
             <button
               onClick={handleSendEmail}
+              data-testid="final-report-email-send"
               disabled={!emailInput.trim()}
               className="flex items-center gap-2 rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] disabled:opacity-50 transition-colors"
             >
@@ -729,6 +743,7 @@ export default function FinalReport({
             </button>
             <button
               onClick={() => setShowEmailBox(false)}
+              data-testid="final-report-email-cancel"
               className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors"
             >
               Cancel
@@ -797,41 +812,73 @@ export default function FinalReport({
           <div className="space-y-4">
             <div>
               <label className={labelCls}>Executive Summary</label>
-              <textarea name="executiveSummary" value={form.executiveSummary}
-                onChange={handleChange} rows={4} className={inputCls}
-                placeholder="Write a summary of your overall internship experience..." />
+              <textarea
+                name="executiveSummary"
+                value={form.executiveSummary}
+                data-testid="final-report-executive-summary"
+                onChange={handleChange}
+                rows={4}
+                className={inputCls}
+                placeholder="Write a summary of your overall internship experience..."
+              />
             </div>
             <div>
               <label className={labelCls}>Key Accomplishments (comma-separated)</label>
-              <textarea name="keyAccomplishments" value={form.keyAccomplishments}
-                onChange={handleChange} rows={3} className={inputCls}
-                placeholder="Built login system, Deployed to AWS, Reduced load time by 40%" />
+              <textarea
+                name="keyAccomplishments"
+                value={form.keyAccomplishments}
+                data-testid="final-report-key-accomplishments"
+                onChange={handleChange}
+                rows={3}
+                className={inputCls}
+                placeholder="Built login system, Deployed to AWS, Reduced load time by 40%"
+              />
             </div>
             <div>
               <label className={labelCls}>Skills Acquired (comma-separated)</label>
-              <input name="skillsAcquired" value={form.skillsAcquired}
-                onChange={handleChange} className={inputCls}
-                placeholder="React, Node.js, Docker, Agile" />
+              <input
+                name="skillsAcquired"
+                value={form.skillsAcquired}
+                data-testid="final-report-skills-acquired"
+                onChange={handleChange}
+                className={inputCls}
+                placeholder="React, Node.js, Docker, Agile"
+              />
             </div>
             <div>
               <label className={labelCls}>Conclusion &amp; Recommendations</label>
-              <textarea name="conclusionRecommendations" value={form.conclusionRecommendations}
-                onChange={handleChange} rows={4} className={inputCls}
-                placeholder="Your conclusion and recommendations for future interns..." />
+              <textarea
+                name="conclusionRecommendations"
+                value={form.conclusionRecommendations}
+                data-testid="final-report-conclusion"
+                onChange={handleChange}
+                rows={4}
+                className={inputCls}
+                placeholder="Your conclusion and recommendations for future interns..."
+              />
             </div>
           </div>
           <div className="mt-5 flex gap-2">
-            <button onClick={handleSaveDraft}
-              className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors">
+            <button
+              onClick={handleSaveDraft}
+              data-testid="final-report-save-draft"
+              className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
+            >
               Save Draft
             </button>
-            <button onClick={handleSubmit}
-              className="rounded-xl bg-[#16A34A] px-5 py-2 text-sm font-semibold text-white hover:bg-[#15803D] transition-colors">
+            <button
+              onClick={handleSubmit}
+              data-testid="final-report-submit"
+              className="rounded-xl bg-[#16A34A] px-5 py-2 text-sm font-semibold text-white hover:bg-[#15803D] transition-colors"
+            >
               Submit Final Report
             </button>
             {editing && (
-              <button onClick={handleCancelEdit}
-                className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors">
+              <button
+                onClick={handleCancelEdit}
+                data-testid="final-report-cancel-edit"
+                className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors"
+              >
                 Cancel
               </button>
             )}
@@ -840,9 +887,16 @@ export default function FinalReport({
       )}
 
       {/* ── Empty state ── */}
-      {!report && !showForm && (
+      {!report && !creating && (
         <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
-          <p className="text-sm text-[#6B7280]">No final report yet. Click "Create Report" to get started.</p>
+          <p className="mb-4 text-sm text-[#6B7280]">No final report yet. Click "Create Report" to get started.</p>
+          <button
+            onClick={() => setCreating(true)}
+            data-testid="final-report-create-button"
+            className="rounded-xl bg-[#3B6FE8] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
+          >
+            Create Final Report
+          </button>
         </div>
       )}
 
@@ -887,6 +941,7 @@ export default function FinalReport({
 
             <button
               onClick={handleGenerateCertificate}
+              data-testid="final-report-generate-certificate"
               disabled={!canGenerateCertificate || certStatus === "generating"}
               className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
                 canGenerateCertificate
