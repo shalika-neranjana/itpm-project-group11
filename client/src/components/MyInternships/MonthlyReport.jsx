@@ -468,6 +468,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
         <h3 className="font-display text-xl font-bold text-[#1A1D27]">Monthly Reports</h3>
         <button
           onClick={openAdd}
+          data-testid="add-report-button"
           className="rounded-xl bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
         >
           + Add Report
@@ -511,6 +512,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
                 placeholder="Search by month, week summary or skill..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                data-testid="report-search-input"
                 className="w-full rounded-xl border border-[#E8EAF0] bg-white py-2.5 pl-10 pr-9 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors"
               />
               {search && (
@@ -522,6 +524,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
             </div>
             <button
               onClick={() => setShowFilter((prev) => !prev)}
+              data-testid="sort-button"
               className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
                 showFilter || hasActiveFilters
                   ? "border-[#3B6FE8] bg-[#EEF2FD] text-[#3B6FE8]"
@@ -594,6 +597,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
                 <div className="flex-1">
                   <select name="monthName" value={form.monthName}
                     onChange={handleChange}
+                    data-testid="month-select"
                     className={monthError ? selectErrCls : selectCls}>
                     <option value="">Select month</option>
                     {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -601,7 +605,8 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
                 </div>
                 <div style={{ width: "120px" }}>
                   <select name="monthYear" value={form.monthYear}
-                    onChange={handleChange} className={selectCls}>
+                    onChange={handleChange} className={selectCls}
+                    data-testid="year-select">
                     {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
@@ -634,6 +639,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
                   <label className={labelCls}>Week {i + 1}</label>
                   <textarea name={wk} value={form.weekSummary[wk]}
                     onChange={handleWeekChange} rows={3} className={inputCls}
+                    data-testid={`week-summary-${wk}`}
                     placeholder={`What did you do in week ${i + 1}?`} />
                 </div>
               ))}
@@ -643,15 +649,18 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
               <label className={labelCls}>Skills Learned (comma-separated)</label>
               <input name="skillsLearned" value={form.skillsLearned}
                 onChange={handleChange} className={inputCls}
+                data-testid="skills-learned-input"
                 placeholder="React, Node.js, REST APIs, Agile" />
             </div>
 
             <div className="flex gap-2">
               <button type="submit"
+                data-testid="submit-report-button"
                 className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors">
                 {editId ? "Update Report" : "Save Report"}
               </button>
               <button type="button" onClick={handleCancelForm}
+                data-testid="cancel-report-button"
                 className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors">
                 Cancel
               </button>
@@ -699,10 +708,12 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
               </div>
               <div className="flex gap-2">
                 <button onClick={() => openEdit(r)}
+                  data-testid={`edit-report-${r._id}`}
                   className="rounded-lg border border-[#E8EAF0] px-3 py-1.5 text-xs font-medium text-[#1A1D27] hover:bg-[#F7F8FA] transition-colors">
                   ✏️ Edit
                 </button>
                 <button onClick={() => handleDelete(r._id, r.month)}
+                  data-testid={`delete-report-${r._id}`}
                   className="rounded-lg border border-[#E8EAF0] px-3 py-1.5 text-xs font-medium text-[#DC2626] hover:bg-[#FEE2E2] transition-colors">
                   🗑️
                 </button>
@@ -739,6 +750,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
               <button
                 onClick={() => handleDownloadPDF(r)}
                 disabled={pdfStatus[r._id] === "generating"}
+                data-testid={`download-pdf-${r._id}`}
                 className="flex items-center gap-2 rounded-xl bg-[#FEE2E2] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FECACA] disabled:opacity-60 transition-colors"
               >
                 {pdfStatus[r._id] === "generating" ? (
@@ -753,6 +765,7 @@ export default function MonthlyReport({ internshipId, supervisorEmail, superviso
               {/* Send to Supervisor */}
               <button
                 onClick={() => toggleEmailBox(r._id)}
+                data-testid={`send-email-${r._id}`}
                 className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                   emailSent[r._id]
                     ? "bg-[#DCFCE7] text-[#16A34A]"
