@@ -8,6 +8,7 @@ import {
   updateFinalReport,
   deleteFinalReport,
 } from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const EMPTY = {
   executiveSummary: "",

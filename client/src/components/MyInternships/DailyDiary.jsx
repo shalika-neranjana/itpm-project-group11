@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Swal from 'sweetalert2'
 import { getEntries, addEntry, updateEntry, deleteEntry } from '../../api/myInternships'
+import { confirm as swalConfirm } from '../../utils/swal'
 
 const EMPTY = {
   date: '', title: '', description: '',

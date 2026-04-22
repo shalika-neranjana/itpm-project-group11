@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { confirm as swalConfirm } from '../utils/swal'
 
 function CompanyReview({ review, onDelete, onEdit }) {
   const navigate = useNavigate()
@@ -31,9 +32,10 @@ function CompanyReview({ review, onDelete, onEdit }) {
     return review.authorId === currentUserId || review.authorId._id === currentUserId
   }
 
-  const handleDelete = (e) => {
+  const handleDelete = async (e) => {
     e.stopPropagation()
-    if (window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+    const ok = await swalConfirm('Are you sure you want to delete this review? This action cannot be undone.')
+    if (ok) {
       onDelete(review._id || review.id)
     }
   }
