@@ -12,6 +12,7 @@ const {
     getCompanyInternships,
     applyForInternship,
     getStudentApplications,
+    getCompanyApplicationById,
     updateApplicationStatus,
 } = require("../controllers/internshipController");
 
@@ -34,6 +35,7 @@ router.post("/", companyAuth, createInternship);
 router.put("/:id", companyAuth, updateInternship);
 router.delete("/:id", companyAuth, deleteInternship);
 router.get("/company/my", companyAuth, getCompanyInternships);
+router.get("/:id/applications/:appId", companyAuth, getCompanyApplicationById);
 router.put("/:id/applications/:appId", companyAuth, updateApplicationStatus);
 
 module.exports = router;

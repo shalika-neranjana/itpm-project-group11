@@ -43,6 +43,15 @@ const getTabFromLocation = (location) => {
   return 'opportunities'
 }
 
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return '-'
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString()
+}
+
 function Dashboard() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -597,6 +606,10 @@ function Dashboard() {
                           <p className="text-base font-bold text-[#1A1D27]">{internship.location || '-'}</p>
                         </div>
                         <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Deadline</p>
+                          <p className="text-base font-bold text-[#1A1D27]">{formatDisplayDate(internship.deadline)}</p>
+                        </div>
+                        <div>
                           <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Openings</p>
                           <p className="text-base font-bold text-[#1A1D27]">{internship.slots}</p>
                         </div>
@@ -721,35 +734,37 @@ function Dashboard() {
                   Refresh
                 </button>
               </div>
-              {notificationsLoading ? (
-                <div className="text-sm text-[#6B7280]">Loading notifications...</div>
-              ) : notificationsError ? (
-                <div className="text-sm text-red-600">{notificationsError}</div>
-              ) : notifications.length === 0 ? (
-                <div className="text-sm text-[#6B7280]">No notifications yet.</div>
-              ) : (
-                <div className="space-y-2">
-                  {notifications.map((notif) => (
-                    <div
-                      key={notif._id}
-                      className={`rounded-lg border px-3 py-2 ${notif.read ? 'border-gray-200 bg-gray-50' : 'border-blue-200 bg-blue-50'}`}
-                    >
-                      <p className="text-sm text-[#1F2937]">{notif.message}</p>
-                      <div className="mt-1 flex items-center justify-between">
-                        <p className="text-xs text-[#6B7280]">{new Date(notif.createdAt).toLocaleString()}</p>
-                        {!notif.read && (
-                          <button
-                            onClick={() => markNotificationAsRead(notif._id)}
-                            className="text-xs font-semibold text-blue-600 hover:text-blue-800"
-                          >
-                            Mark as read
-                          </button>
-                        )}
+              <div className="max-h-80 overflow-y-auto pr-1">
+                {notificationsLoading ? (
+                  <div className="text-sm text-[#6B7280]">Loading notifications...</div>
+                ) : notificationsError ? (
+                  <div className="text-sm text-red-600">{notificationsError}</div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-sm text-[#6B7280]">No notifications yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {notifications.map((notif) => (
+                      <div
+                        key={notif._id}
+                        className={`rounded-lg border px-3 py-2 ${notif.read ? 'border-gray-200 bg-gray-50' : 'border-blue-200 bg-blue-50'}`}
+                      >
+                        <p className="text-sm text-[#1F2937]">{notif.message}</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <p className="text-xs text-[#6B7280]">{new Date(notif.createdAt).toLocaleString()}</p>
+                          {!notif.read && (
+                            <button
+                              onClick={() => markNotificationAsRead(notif._id)}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
@@ -957,7 +972,7 @@ function Dashboard() {
               <div className="rounded-lg bg-[#F7F8FA] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
                 <p className="mt-1 text-sm font-semibold text-[#1A1D27]">
-                  {selectedOpportunity.deadline ? new Date(selectedOpportunity.deadline).toLocaleDateString() : '-'}
+                  {formatDisplayDate(selectedOpportunity.deadline)}
                 </p>
               </div>
               <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">

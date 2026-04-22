@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import {
   BriefcaseBusiness,
   Building2,
+  FileDown,
   LogOut,
   PencilLine,
   Phone,
@@ -31,6 +34,15 @@ const resolveUploadUrl = (pathOrUrl) => {
   return `${origin}${pathOrUrl}`
 }
 
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return '-'
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString()
+}
+
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
@@ -43,6 +55,8 @@ const CompanyDashboard = () => {
   const [profileSuccess, setProfileSuccess] = useState('')
   const [selectedInternship, setSelectedInternship] = useState(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [applicantSearch, setApplicantSearch] = useState('')
+  const [applicantTypeFilter, setApplicantTypeFilter] = useState('')
   const navigate = useNavigate()
 
   const [companyForm, setCompanyForm] = useState({
@@ -139,6 +153,11 @@ const CompanyDashboard = () => {
   }
 
   const handleUpdateApplicationStatus = async (applicant, status) => {
+    if (status === 'Accepted') {
+      navigate(`/company-dashboard/interview/${applicant.internshipId}/${applicant._id}`)
+      return
+    }
+
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
       fetchCompanyInternships()
@@ -168,6 +187,79 @@ const CompanyDashboard = () => {
       swalSuccess('Internship deleted successfully')
     } catch (error) {
       swalError(error.response?.data?.message || 'Failed to delete internship')
+    }
+  }
+
+  const filteredApplicants = useMemo(() => {
+    const normalizedSearch = applicantSearch.trim().toLowerCase()
+
+    return applicants.filter((applicant) => {
+      const matchesType = applicantTypeFilter
+        ? applicant.internshipType === applicantTypeFilter
+        : true
+
+      const matchesSearch = normalizedSearch
+        ? [applicant.name, applicant.email, applicant.phone]
+            .filter(Boolean)
+            .some((field) => String(field).toLowerCase().includes(normalizedSearch))
+        : true
+
+      return matchesType && matchesSearch
+    })
+  }, [applicants, applicantSearch, applicantTypeFilter])
+
+  const handleDownloadApplicantsPdf = () => {
+    if (!filteredApplicants.length) {
+      swalError('No applicants available to export')
+      return
+    }
+
+    try {
+      const doc = new jsPDF({ orientation: 'landscape' })
+      const generatedAt = new Date().toLocaleString()
+
+      doc.setFontSize(16)
+      doc.text('Applicant Details Report', 14, 16)
+      doc.setFontSize(10)
+      doc.text(`Generated: ${generatedAt}`, 14, 23)
+
+      const tableRows = filteredApplicants.map((applicant) => [
+        applicant.name || '-',
+        applicant.email || '-',
+        applicant.phone || '-',
+        applicant.status || 'Pending',
+        applicant.internshipTitle || '-',
+        applicant.internshipType || '-',
+        applicant.internshipLocation || '-',
+        formatDisplayDate(applicant.appliedDate)
+      ])
+
+      autoTable(doc, {
+        startY: 30,
+        head: [[
+          'Name',
+          'Email',
+          'Phone',
+          'Status',
+          'Internship',
+          'Type',
+          'Location',
+          'Applied Date'
+        ]],
+        body: tableRows,
+        styles: {
+          fontSize: 9,
+          cellPadding: 2
+        },
+        headStyles: {
+          fillColor: [59, 111, 232]
+        }
+      })
+
+      doc.save(`applicants-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+    } catch (error) {
+      console.error('Failed to generate applicants PDF:', error)
+      swalError('Failed to generate PDF report')
     }
   }
 
@@ -384,6 +476,10 @@ const CompanyDashboard = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg bg-[#F7F8FA] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
+                        <p className="mt-1 text-sm font-bold text-[#1A1D27]">{formatDisplayDate(internship.deadline)}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#F7F8FA] p-3">
                         <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Slots</p>
                         <p className="mt-1 text-sm font-bold text-[#1A1D27]">{internship.slots}</p>
                       </div>
@@ -437,8 +533,38 @@ const CompanyDashboard = () => {
 
         {activeTab === 'applicants' && (
           <section className="space-y-4">
-            {applicants.length > 0 ? (
-              applicants.map((applicant, index) => (
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <input
+                  type="text"
+                  value={applicantSearch}
+                  onChange={(e) => setApplicantSearch(e.target.value)}
+                  placeholder="Search by name, email, or phone"
+                  className={inputClass}
+                />
+                <select
+                  value={applicantTypeFilter}
+                  onChange={(e) => setApplicantTypeFilter(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">All Types</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
+              </div>
+
+              <button
+                onClick={handleDownloadApplicantsPdf}
+                disabled={!filteredApplicants.length}
+                className="inline-flex items-center gap-2 rounded-[10px] border border-[#D4E0FA] bg-[#EEF2FD] px-4 py-2.5 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileDown className="h-4 w-4" />
+                Download PDF
+              </button>
+            </div>
+            {filteredApplicants.length > 0 ? (
+              filteredApplicants.map((applicant, index) => (
                 <article key={`${applicant._id}-${index}`} className={panelClass}>
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-4">
@@ -489,7 +615,7 @@ const CompanyDashboard = () => {
                         disabled={applicant.status === 'Accepted'}
                         className="rounded-[10px] bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Accept
+                        {applicant.status === 'Accepted' ? 'Accepted' : 'Accept and Schedule'}
                       </button>
                       <button
                         onClick={() => handleUpdateApplicationStatus(applicant, 'Rejected')}
@@ -505,8 +631,8 @@ const CompanyDashboard = () => {
             ) : (
               <div className={panelClass}>
                 <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
-                  <h3 className="text-xl font-bold text-[#1A1D27]">No applicants yet</h3>
-                  <p className="mt-2 text-[#6B7280]">Once students apply, they will appear here for review.</p>
+                  <h3 className="text-xl font-bold text-[#1A1D27]">No matching applicants found</h3>
+                  <p className="mt-2 text-[#6B7280]">Try changing your search text or internship type filter.</p>
                 </div>
               </div>
             )}
@@ -706,7 +832,7 @@ const CompanyDashboard = () => {
               <div className="rounded-lg bg-[#F7F8FA] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Deadline</p>
                 <p className="mt-1 text-sm font-semibold text-[#1A1D27]">
-                  {selectedInternship.deadline ? new Date(selectedInternship.deadline).toLocaleDateString() : '-'}
+                  {formatDisplayDate(selectedInternship.deadline)}
                 </p>
               </div>
               <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">

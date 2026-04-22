@@ -11,6 +11,12 @@ const resolveCompanyLogoUrl = (logoPath) => {
   return `${API_ORIGIN}${logoPath}`
 }
 
+const formatDisplayDate = (value) => {
+  if (!value) return '-'
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString()
+}
+
 const InternshipMarketplace = () => {
   const [internships, setInternships] = useState([])
   const [loading, setLoading] = useState(true)
@@ -153,7 +159,7 @@ const InternshipMarketplace = () => {
               <div className="text-sm text-gray-600 mb-4">
                 <div className="flex justify-between mb-1">
                   <span>⏱ {internship.duration}</span>
-                  <span>📅 {new Date(internship.deadline).toLocaleDateString()}</span>
+                  <span>📅 Deadline: {formatDisplayDate(internship.deadline)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>📍 {internship.location}</span>
