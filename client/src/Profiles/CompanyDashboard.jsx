@@ -327,10 +327,6 @@ const CompanyDashboard = () => {
       </header>
 
       <main className={`relative z-10 ${mainClassName}`}>
-        <div className="mb-6">
-          <h1 className="font-display text-[36px] font-bold text-[#0F1419]">{current.title}</h1>
-          <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
-        </div>
 
         <section className="mb-6 flex flex-wrap gap-3 lg:hidden">
           {tabs.map(({ id, label, icon: Icon }) => {
@@ -355,7 +351,6 @@ const CompanyDashboard = () => {
         {activeTab === 'internships' && (
           <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-bold text-[#1A1D27]">Published Internships</h2>
               <button
                 onClick={() => navigate('/company-dashboard/post-internship')}
                 className="inline-flex items-center gap-2 rounded-[10px] bg-[#3B6FE8] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#2D5CD4]"

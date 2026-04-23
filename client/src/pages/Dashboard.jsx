@@ -383,25 +383,25 @@ function Dashboard() {
 
   const pageTitles = {
     opportunities: {
-      title: 'Internship Opportunities',
-      subtitle: 'Browse and apply for internship positions',
+      title: '',
+      subtitle: '',
     },
     myInternships: {
-      title: 'My Internships',
-      subtitle: 'Manage your active and completed internships',
+      title: '',
+      subtitle: '',
     },
     guidance: {
-      title: 'Student Guidance',
-      subtitle: 'Track results, interests, skills, and personalized career suggestions',
+      title: '',
+      subtitle: '',
       message: 'Student Guidance content is loading.',
     },
     reviews: {
-      title: 'Reviews & Feedbacks',
-      subtitle: 'Anonymous internship experience sharing',
+      title: '',
+      subtitle: '',
       message: 'Reviews & Feedbacks is under development and coming soon.',
     },
     profile: {
-      title: 'My Profile',
+      title: '',
       subtitle: 'View and manage your student profile',
     },
   }
@@ -480,7 +480,9 @@ function Dashboard() {
           <h1 className="font-display text-[36px] font-bold text-[#0F1419]">
             {current.title}
           </h1>
-          <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
+          {current.subtitle && (
+            <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
+          )}
         </div>
 
         {activeTab === 'opportunities' ? (
