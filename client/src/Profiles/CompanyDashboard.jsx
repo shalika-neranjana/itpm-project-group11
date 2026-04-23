@@ -659,7 +659,7 @@ const CompanyDashboard = () => {
 
       {isViewOpen && selectedInternship ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Internship Details</h3>
               <button
