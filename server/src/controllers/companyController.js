@@ -29,6 +29,7 @@ const registerCompany = async (req, res, next) => {
             contactPerson,
             description,
             logo,
+            featured,
         } = req.body;
         const normalizedEmail = email?.trim().toLowerCase();
         const normalizedPhone = phone?.trim();
@@ -92,6 +93,7 @@ const registerCompany = async (req, res, next) => {
             contactPerson,
             description,
             logo: uploadedLogo,
+            featured: featured === 'true' || featured === true,
         });
 
         registrationCompleted = true;
@@ -110,7 +112,8 @@ const registerCompany = async (req, res, next) => {
                 location: company.location,
                 contactPerson: company.contactPerson,
                 description: company.description,
-                logo: company.logo,
+                    logo: company.logo,
+                    featured: company.featured,
                 token: generateToken(company._id),
                 role: "company",
             },
@@ -169,7 +172,8 @@ const loginCompany = async (req, res, next) => {
                 location: company.location,
                 contactPerson: company.contactPerson,
                 description: company.description,
-                logo: company.logo,
+                    logo: company.logo,
+                    featured: company.featured,
                 token: generateToken(company._id),
                 role: "company",
             },
@@ -219,6 +223,7 @@ const updateCompanyProfile = async (req, res, next) => {
             contactPerson,
             description,
             logo,
+            featured,
         } = req.body;
 
         const company = await Company.findById(req.company._id);
@@ -227,6 +232,9 @@ const updateCompanyProfile = async (req, res, next) => {
             res.status(404);
             throw new Error("Company not found");
         }
+
+        // Determine uploaded logo (if present)
+        const uploadedLogo = getUploadedFilePath(req.file, "logos", logo);
 
         // Update fields
         company.name = name || company.name;
@@ -237,7 +245,15 @@ const updateCompanyProfile = async (req, res, next) => {
         company.location = location || company.location;
         company.contactPerson = contactPerson || company.contactPerson;
         company.description = description || company.description;
-        company.logo = logo || company.logo;
+        company.logo = uploadedLogo || logo || company.logo;
+        // featured may come as string when sent via FormData, coerce to boolean
+        if (typeof featured !== 'undefined') {
+            if (typeof featured === 'string') {
+                company.featured = featured === 'true' || featured === '1';
+            } else {
+                company.featured = !!featured;
+            }
+        }
 
         await company.save();
 

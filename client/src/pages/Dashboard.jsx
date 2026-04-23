@@ -472,6 +472,14 @@ function Dashboard() {
     return `${origin}${profileImage}`
   }, [profileFormData.profileImage])
 
+  const resolveCompanyLogoUrl = (logoPath) => {
+    if (!logoPath) return ''
+    if (typeof logoPath === 'string' && (logoPath.startsWith('http') || logoPath.startsWith('data:'))) return logoPath
+    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    const origin = base.replace(/\/api\/?$/, '')
+    return `${origin}${logoPath}`
+  }
+
   useEffect(() => {
     setProfileImageLoadFailed(false)
   }, [profileImageUrl])
@@ -610,12 +618,38 @@ function Dashboard() {
                       {/* Job Title */}
                       <h3 className="text-xl font-bold text-[#1A1D27] mb-3 line-clamp-2">{internship.title}</h3>
                       
-                      {/* Company */}
-                      <p className="text-sm font-semibold text-[#1A1D27] mb-3">
-                        {typeof internship.company === 'object' 
-                          ? internship.company?.name || 'Unknown Company'
-                          : internship.company || 'Unknown Company'}
-                      </p>
+                      {/* Company (logo + name) */}
+                      {(() => {
+                        const companyObj = typeof internship.company === 'object' ? internship.company : null
+                        const companyName = companyObj?.name || (typeof internship.company === 'string' ? internship.company : 'Unknown Company')
+                        const companyLogoPath = companyObj?.logo || internship.logo || ''
+
+                        const initials = companyName
+                          .split(' ')
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((w) => w[0]?.toUpperCase())
+                          .join('') || 'CO'
+
+                        return (
+                          <div className="flex items-center gap-3 mb-3">
+                            {companyLogoPath ? (
+                              <img
+                                src={resolveCompanyLogoUrl(companyLogoPath)}
+                                alt={`${companyName} logo`}
+                                className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover border border-[#E8EAF0]"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white border border-[#E8EAF0]">
+                                {initials}
+                              </div>
+                            )}
+
+                            <p className="text-sm font-semibold text-[#1A1D27]">{companyName}</p>
+                          </div>
+                        )
+                      })()}
 
                       {/* Type and Specialization Tags Row */}
                       <div className="flex gap-2 flex-wrap">

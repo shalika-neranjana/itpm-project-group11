@@ -42,7 +42,7 @@ router.get("/profile", companyAuth, getCompanyProfile);
  * @route   PUT /api/company/profile
  * @access  Private
  */
-router.put("/profile", companyAuth, updateCompanyProfile);
+router.put("/profile", companyAuth, uploadCompanyLogo, updateCompanyProfile);
 router.delete("/profile", companyAuth, deleteCompanyProfile);
 
 module.exports = router;

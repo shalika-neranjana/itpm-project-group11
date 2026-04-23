@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import Cropper from 'react-easy-crop'
 import { useNavigate } from 'react-router-dom'
 import {
   BriefcaseBusiness,
@@ -51,8 +52,18 @@ const CompanyDashboard = () => {
     address: '',
     website: '',
     phone: '',
-    email: ''
+    email: '',
+    logo: '',
+    featured: false,
   })
+
+  const [companyLogoFile, setCompanyLogoFile] = useState(null)
+  const [companyLogoPreview, setCompanyLogoPreview] = useState('')
+  const [cropSourceImage, setCropSourceImage] = useState('')
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const [isCropOpen, setIsCropOpen] = useState(false)
 
   useEffect(() => {
     console.log('CompanyDashboard useEffect called')
@@ -116,8 +127,11 @@ const CompanyDashboard = () => {
         address: companyData.address || '',
         website: companyData.website || '',
         phone: companyData.phone || '',
-        email: companyData.email || ''
+        email: companyData.email || '',
+        logo: companyData.logo || '',
+        featured: !!companyData.featured,
       })
+      setCompanyLogoPreview(resolveUploadUrl(companyData.logo))
       // Update localStorage with fresh data
       localStorage.setItem('user', JSON.stringify(companyData))
     } catch (error) {
@@ -133,8 +147,11 @@ const CompanyDashboard = () => {
         address: userData.address || '',
         website: userData.website || '',
         phone: userData.phone || '',
-        email: userData.email || ''
+        email: userData.email || '',
+        logo: userData.logo || '',
+        featured: !!userData.featured,
       })
+      setCompanyLogoPreview(resolveUploadUrl(userData.logo))
     }
   }
 
@@ -180,9 +197,98 @@ const CompanyDashboard = () => {
 
   const handleCompanyChange = (e) => {
     const { name, value } = e.target
-    setCompanyForm((prev) => ({ ...prev, [name]: value }))
+    if (e.target.type === 'checkbox') {
+      setCompanyForm((prev) => ({ ...prev, [name]: e.target.checked }))
+    } else {
+      setCompanyForm((prev) => ({ ...prev, [name]: value }))
+    }
     setProfileError('')
     setProfileSuccess('')
+  }
+
+  const createImage = (url) =>
+    new Promise((resolve, reject) => {
+      const image = new Image()
+      image.addEventListener('load', () => resolve(image))
+      image.addEventListener('error', (error) => reject(error))
+      image.src = url
+    })
+
+  const getCroppedImageBlob = async (imageSrc, croppedAreaPixels) => {
+    const image = await createImage(imageSrc)
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+
+    canvas.width = croppedAreaPixels.width
+    canvas.height = croppedAreaPixels.height
+
+    context.drawImage(
+      image,
+      croppedAreaPixels.x,
+      croppedAreaPixels.y,
+      croppedAreaPixels.width,
+      croppedAreaPixels.height,
+      0,
+      0,
+      croppedAreaPixels.width,
+      croppedAreaPixels.height
+    )
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Image crop failed'))
+            return
+          }
+
+          resolve(blob)
+        },
+        'image/jpeg',
+        0.92
+      )
+    })
+  }
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files?.[0] || null
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCropSourceImage(String(reader.result || ''))
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
+      setIsCropOpen(true)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const resetCropState = () => {
+    setCropSourceImage('')
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
+    setCroppedAreaPixels(null)
+    setIsCropOpen(false)
+  }
+
+  const handleCropConfirm = async () => {
+    if (!cropSourceImage || !croppedAreaPixels) {
+      return
+    }
+    try {
+      const blob = await getCroppedImageBlob(cropSourceImage, croppedAreaPixels)
+      const croppedFile = new File([blob], `company-logo-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      const previewUrl = URL.createObjectURL(croppedFile)
+      if (companyLogoPreview && companyLogoPreview.startsWith('blob:')) URL.revokeObjectURL(companyLogoPreview)
+      setCompanyLogoFile(croppedFile)
+      setCompanyLogoPreview(previewUrl)
+      setCompanyForm((prev) => ({ ...prev, logo: '' }))
+    } catch (err) {
+      console.error('Crop failed', err)
+    } finally {
+      resetCropState()
+    }
   }
 
   const handleSaveCompanyProfile = async () => {
@@ -190,7 +296,22 @@ const CompanyDashboard = () => {
     setProfileError('')
     setProfileSuccess('')
     try {
-      const response = await api.put('/company/profile', companyForm)
+      // Use FormData to allow optional logo upload and featured flag
+      const formData = new FormData()
+      formData.append('name', companyForm.name)
+      formData.append('industry', companyForm.industry)
+      formData.append('address', companyForm.address)
+      formData.append('website', companyForm.website)
+      formData.append('phone', companyForm.phone)
+      formData.append('email', companyForm.email)
+      // include existing logo path if no new file uploaded
+      formData.append('logo', companyForm.logo || user?.logo || '')
+      formData.append('featured', companyForm.featured ? 'true' : 'false')
+      if (companyLogoFile) formData.append('logo', companyLogoFile)
+
+      const response = await api.put('/company/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
       if (response.data.success) {
         localStorage.setItem('user', JSON.stringify(response.data.data))
         setUser(response.data.data)
@@ -200,8 +321,11 @@ const CompanyDashboard = () => {
           address: response.data.data.address || '',
           website: response.data.data.website || '',
           phone: response.data.data.phone || '',
-          email: response.data.data.email || ''
+          email: response.data.data.email || '',
+          logo: response.data.data.logo || '',
+          featured: !!response.data.data.featured,
         })
+        setCompanyLogoPreview(resolveUploadUrl(response.data.data.logo))
         setProfileEditMode(false)
         setProfileSuccess('Company profile updated successfully')
         try { swalToast('Company profile updated successfully') } catch (e) {}
@@ -311,9 +435,17 @@ const CompanyDashboard = () => {
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
-              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white shadow-sm">
-                {companyInitials}
-              </div>
+              {user?.logo ? (
+                <img
+                  src={resolveUploadUrl(user.logo)}
+                  alt={`${user?.name || 'Company'} logo`}
+                  className="h-[36px] w-[36px] rounded-full object-cover border border-[#E8EAF0]"
+                />
+              ) : (
+                <div className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white shadow-sm">
+                  {companyInitials}
+                </div>
+              )}
             </div>
             <button
               onClick={handleLogout}
@@ -524,8 +656,14 @@ const CompanyDashboard = () => {
 
             <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
               <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-[28px] font-bold text-white">
-                  {companyInitials}
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
+                  {user?.logo ? (
+                    <img src={resolveUploadUrl(user.logo)} alt={`${user?.name || 'Company'} logo`} className="h-20 w-20 rounded-full object-cover border border-[#E8EAF0]" />
+                  ) : (
+                    <div className="h-20 w-20 flex items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-[28px] font-bold text-white">
+                      {companyInitials}
+                    </div>
+                  )}
                 </div>
 
                 <h2 className="text-lg font-bold text-[#1A1D27]">{user?.name || '-'}</h2>
@@ -629,6 +767,23 @@ const CompanyDashboard = () => {
                           />
                         </div>
                       </div>
+
+                      <div className="md:col-span-2">
+                        <label className="mb-1.5 block text-sm font-semibold text-[#1A1D27]">Company Logo</label>
+                        <div className="flex items-center gap-3">
+                          {companyLogoPreview ? (
+                            <img src={companyLogoPreview} alt="Logo preview" className="h-14 w-14 rounded-lg border border-gray-200 object-cover" />
+                          ) : (
+                            <div className="h-14 w-14 rounded-lg border border-gray-200 bg-[#F7F8FA] flex items-center justify-center text-sm text-[#6B7280]">No logo</div>
+                          )}
+                          <input type="file" accept="image/*" onChange={handleLogoChange} />
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2 flex items-center gap-3">
+                        <input id="featured" name="featured" type="checkbox" checked={companyForm.featured} onChange={handleCompanyChange} />
+                        <label htmlFor="featured" className="text-sm text-[#1A1D27]">Featured</label>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
@@ -707,6 +862,43 @@ const CompanyDashboard = () => {
               <div className="rounded-lg bg-[#F7F8FA] p-4 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">Description</p>
                 <p className="mt-1 text-sm text-[#1A1D27] whitespace-pre-wrap">{selectedInternship.description || '-'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isCropOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Crop image to square (1:1)</h3>
+                <p className="text-sm text-[#6B7280]">Position and zoom to adjust the logo, then save the cropped image.</p>
+              </div>
+              <button onClick={resetCropState} className="rounded-lg border border-[#E8EAF0] p-2 text-[#6B7280] hover:bg-[#F7F8FA]">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', height: 360, background: '#f3f4f6' }}>
+              <Cropper
+                image={cropSourceImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_croppedArea, areaPixels) => setCroppedAreaPixels(areaPixels)}
+              />
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <label htmlFor="cropZoom" className="text-sm font-semibold text-[#1A1D27]">Zoom</label>
+              <input id="cropZoom" type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+              <div className="ml-auto flex gap-2">
+                <button onClick={resetCropState} className="rounded-[10px] border border-[#E8EAF0] bg-white px-4 py-2 text-sm font-semibold text-[#1A1D27]">Cancel</button>
+                <button onClick={handleCropConfirm} className="rounded-[10px] bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white">Use Cropped Image</button>
               </div>
             </div>
           </div>
