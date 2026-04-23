@@ -53,10 +53,10 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     search: '',
-    specialization: '',
-    type: '',
-    duration: '',
-    stipend: ''
+    specialization: [],
+    type: [],
+    duration: [],
+    stipend: []
   })
 
   const fetchInternships = useCallback(async () => {
@@ -109,6 +109,21 @@ function Dashboard() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
+  const toggleFilter = (key, value) => {
+    setFilters((prev) => {
+      const list = Array.isArray(prev[key]) ? [...prev[key]] : []
+      const idx = list.indexOf(value)
+      if (idx === -1) list.push(value)
+      else list.splice(idx, 1)
+
+      return { ...prev, [key]: list }
+    })
+  }
+
+  const clearFilters = () => {
+    setFilters({ search: filters.search || '', specialization: [], type: [], duration: [], stipend: [] })
+  }
+
   const parseDurationInMonths = (durationValue) => {
     if (durationValue === null || durationValue === undefined) {
       return null
@@ -153,23 +168,20 @@ function Dashboard() {
         internship.company?.name?.toLowerCase().includes(searchValue) ||
         internship.location?.toLowerCase().includes(searchValue)
 
-      const matchesType = !filters.type || internship.type === filters.type
-      const matchesSpecialization =
-        !filters.specialization || internship.specialization === filters.specialization
-      const selectedDurationRange = DURATION_RANGE_OPTIONS.find((range) => range.value === filters.duration)
+      const matchesType = !filters.type.length || filters.type.includes(internship.type)
+      const matchesSpecialization = !filters.specialization.length || filters.specialization.includes(internship.specialization)
+
       const durationInMonths = parseDurationInMonths(internship.duration)
-      const matchesDuration =
-        !selectedDurationRange ||
-        (durationInMonths !== null &&
-          durationInMonths >= selectedDurationRange.min &&
-          durationInMonths <= selectedDurationRange.max)
-      const selectedStipendRange = STIPEND_RANGE_OPTIONS.find((range) => range.value === filters.stipend)
+      const matchesDuration = !filters.duration.length || filters.duration.some((val) => {
+        const range = DURATION_RANGE_OPTIONS.find(r => r.value === val)
+        return range && durationInMonths !== null && durationInMonths >= range.min && durationInMonths <= range.max
+      })
+
       const stipendAmount = parseStipendAmount(internship.stipend)
-      const matchesStipend =
-        !selectedStipendRange ||
-        (stipendAmount !== null &&
-          stipendAmount >= selectedStipendRange.min &&
-          stipendAmount <= selectedStipendRange.max)
+      const matchesStipend = !filters.stipend.length || filters.stipend.some((val) => {
+        const range = STIPEND_RANGE_OPTIONS.find(r => r.value === val)
+        return range && stipendAmount !== null && stipendAmount >= range.min && stipendAmount <= range.max
+      })
 
       return (
         matchesSearch &&
@@ -487,8 +499,7 @@ function Dashboard() {
 
         {activeTab === 'opportunities' ? (
           <>
-            {/* Filters */}
-            <div className="mb-6 flex flex-wrap gap-4">
+            <div className="mb-6">
               <input
                 type="text"
                 placeholder="Search internships..."
@@ -496,67 +507,104 @@ function Dashboard() {
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <select
-                value={filters.specialization}
-                onChange={(e) => handleFilterChange('specialization', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Specializations</option>
-                {specializationOptions.map((specialization) => (
-                  <option key={specialization} value={specialization}>
-                    {specialization}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filters.type}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Types</option>
-                <option>On-site</option>
-                <option>Remote</option>
-                <option>Hybrid</option>
-              </select>
-              <select
-                value={filters.duration}
-                onChange={(e) => handleFilterChange('duration', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Durations</option>
-                {DURATION_RANGE_OPTIONS.map((durationRange) => (
-                  <option key={durationRange.value} value={durationRange.value}>
-                    {durationRange.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filters.stipend}
-                onChange={(e) => handleFilterChange('stipend', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Stipends</option>
-                {STIPEND_RANGE_OPTIONS.map((stipendRange) => (
-                  <option key={stipendRange.value} value={stipendRange.value}>
-                    {stipendRange.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
-            {/* Internship Cards */}
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : filteredInternships.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredInternships.map((internship) => (
-                  <article
-                    key={internship._id}
-                    onClick={() => handleViewOpportunity(internship)}
-                    className="rounded-2xl border border-[#E8EAF0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col cursor-pointer"
-                  >
+            <div className="mb-6 lg:flex lg:gap-6">
+              <aside className="mb-4 lg:mb-0 lg:w-72 rounded-2xl border border-[#E8EAF0] bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                <h3 className="mb-3 text-sm font-semibold text-[#1A1D27]">Filters</h3>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Specialization</p>
+                  <div className="space-y-2 max-h-40 overflow-auto pr-2">
+                    <label className="flex items-center gap-2 text-sm" key="all-spec">
+                      <input type="checkbox" onChange={() => {}} className="hidden" />
+                    </label>
+                    {specializationOptions.length ? specializationOptions.map((spec) => (
+                      <label key={spec} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.specialization.includes(spec)}
+                          onChange={() => toggleFilter('specialization', spec)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{spec}</span>
+                      </label>
+                    )) : (
+                      <p className="text-sm text-[#6B7280]">No specializations</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Type</p>
+                  <div className="space-y-2">
+                    {['On-site', 'Remote', 'Hybrid'].map((t) => (
+                      <label key={t} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.type.includes(t)}
+                          onChange={() => toggleFilter('type', t)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Duration</p>
+                  <div className="space-y-2">
+                    {DURATION_RANGE_OPTIONS.map((d) => (
+                      <label key={d.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.duration.includes(d.value)}
+                          onChange={() => toggleFilter('duration', d.value)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{d.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Stipend</p>
+                  <div className="space-y-2">
+                    {STIPEND_RANGE_OPTIONS.map((s) => (
+                      <label key={s.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.stipend.includes(s.value)}
+                          onChange={() => toggleFilter('stipend', s.value)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{s.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button onClick={clearFilters} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold text-[#3B6FE8] hover:bg-[#F7F8FA]">Clear Filters</button>
+                </div>
+              </aside>
+
+              <div className="flex-1">
+                {/* Internship Cards */}
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : filteredInternships.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredInternships.map((internship) => (
+                      <article
+                        key={internship._id}
+                        onClick={() => handleViewOpportunity(internship)}
+                        className="rounded-2xl border border-[#E8EAF0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col cursor-pointer"
+                      >
                     {/* Header Section */}
                     <div className="p-6 pb-4">
                       {/* Job Title */}
@@ -612,6 +660,8 @@ function Dashboard() {
                 <p className="text-gray-500">No internships found for selected filters.</p>
               </div>
             )}
+              </div>
+            </div>
           </>
         ) : activeTab === 'reviews' ? (
           <div className="space-y-5">
