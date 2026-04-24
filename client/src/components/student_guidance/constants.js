@@ -4,6 +4,7 @@ export const guidanceTabs = [
   { key: 'skills', label: 'Skills' },
   { key: 'askInternConnect', label: 'Ask InternConnect' },
   { key: 'careers', label: 'Career Suggestions' },
+  { key: 'trackIt', label: 'Track It' },
 ]
 
 export const interestCategories = [

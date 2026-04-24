@@ -10,6 +10,37 @@ const getAuthConfig = () => {
   }
 }
 
+// Journey API
+export const fetchJourneys = async () => {
+  const response = await api.get('/student-guidance/journeys', getAuthConfig())
+  return response.data.data
+}
+
+export const createJourney = async (payload) => {
+  const response = await api.post('/student-guidance/journeys', payload, getAuthConfig())
+  return response.data.data
+}
+
+export const updateJourney = async (id, payload) => {
+  const response = await api.put(`/student-guidance/journeys/${id}`, payload, getAuthConfig())
+  return response.data.data
+}
+
+export const deleteJourney = async (id) => {
+  const response = await api.delete(`/student-guidance/journeys/${id}`, getAuthConfig())
+  return response.data
+}
+
+export const generateJourneySteps = async (payload) => {
+  const response = await api.post('/student-guidance/journeys/generate-ai', payload, getAuthConfig())
+  return response.data.data
+}
+
+export const toggleJourneyStep = async (payload) => {
+  const response = await api.post('/student-guidance/journeys/toggle-completion', payload, getAuthConfig())
+  return response.data.data
+}
+
 export const fetchStudentGuidance = async () => {
   const response = await api.get('/student-guidance', getAuthConfig())
   return response.data.data
