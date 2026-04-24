@@ -9,7 +9,7 @@ const ReviewForum = () => {
   const navigate = useNavigate();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filters
   const [search, setSearch] = useState('');
   const [selectedCompanies, setSelectedCompanies] = useState([]);
@@ -102,13 +102,13 @@ const ReviewForum = () => {
   };
 
   const toggleCompanyFilter = (company) => {
-    setSelectedCompanies(prev => 
+    setSelectedCompanies(prev =>
       prev.includes(company) ? prev.filter(c => c !== company) : [...prev, company]
     );
   };
 
   const toggleRatingFilter = (rating) => {
-    setSelectedRatings(prev => 
+    setSelectedRatings(prev =>
       prev.includes(rating) ? prev.filter(r => r !== rating) : [...prev, rating]
     );
   };
@@ -120,7 +120,7 @@ const ReviewForum = () => {
           <MessageCircle className="text-blue-600" />
           Community Reviews
         </h2>
-        
+
         <div className="flex w-full sm:w-auto items-center gap-3">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -132,7 +132,7 @@ const ReviewForum = () => {
               className="w-full rounded-full border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm"
             />
           </div>
-          
+
           <button
             onClick={() => navigate('/write-review')}
             className="flex shrink-0 items-center gap-2 rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition-transform hover:scale-105 hover:bg-blue-700"
@@ -150,17 +150,17 @@ const ReviewForum = () => {
             <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-900">
               <Filter size={16} className="text-gray-500" /> Filters
             </h3>
-            
+
             <div className="mb-5">
               <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Rating</h4>
               <div className="space-y-2">
                 {[5, 4, 3, 2, 1].map(rating => (
                   <label key={rating} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={selectedRatings.includes(rating)}
                       onChange={() => toggleRatingFilter(rating)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="flex items-center gap-1">
                       {rating} <Star size={12} className="fill-yellow-400 text-yellow-400" /> & up
@@ -175,11 +175,11 @@ const ReviewForum = () => {
               <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                 {companies.map(company => (
                   <label key={company} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
-                    <input 
+                    <input
                       type="checkbox"
                       checked={selectedCompanies.includes(company)}
                       onChange={() => toggleCompanyFilter(company)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="truncate">{company}</span>
                   </label>
@@ -189,7 +189,7 @@ const ReviewForum = () => {
             </div>
 
             {(selectedCompanies.length > 0 || selectedRatings.length > 0) && (
-              <button 
+              <button
                 onClick={() => { setSelectedCompanies([]); setSelectedRatings([]); }}
                 className="mt-4 w-full rounded-lg bg-gray-50 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100"
               >
@@ -197,7 +197,7 @@ const ReviewForum = () => {
               </button>
             )}
           </div>
-          
+
           <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
             <h3 className="mb-2 text-sm font-bold text-blue-900">Your Voice Matters</h3>
             <p className="text-xs text-blue-800 leading-relaxed">
@@ -210,13 +210,13 @@ const ReviewForum = () => {
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between border-b border-gray-200 pb-2">
             <div className="flex gap-4">
-              <button 
+              <button
                 onClick={() => setSortBy('newest')}
                 className={`text-sm font-semibold pb-2 border-b-2 transition-colors ${sortBy === 'newest' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
                 Latest
               </button>
-              <button 
+              <button
                 onClick={() => setSortBy('top')}
                 className={`text-sm font-semibold pb-2 border-b-2 transition-colors ${sortBy === 'top' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
@@ -233,9 +233,9 @@ const ReviewForum = () => {
           ) : filteredReviews.length > 0 ? (
             <div className="space-y-4">
               {filteredReviews.map(review => (
-                <ThreadCard 
-                  key={review.id || review._id} 
-                  review={review} 
+                <ThreadCard
+                  key={review.id || review._id}
+                  review={review}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
                   onVote={handleVote}
@@ -247,7 +247,7 @@ const ReviewForum = () => {
               <Briefcase size={40} className="mb-4 text-gray-300" />
               <h3 className="mb-1 text-lg font-bold text-gray-900">No reviews found</h3>
               <p className="text-sm text-gray-500">Try adjusting your search or filters.</p>
-              <button 
+              <button
                 onClick={() => { setSearch(''); setSelectedCompanies([]); setSelectedRatings([]); }}
                 className="mt-4 text-sm font-semibold text-blue-600 hover:underline"
               >

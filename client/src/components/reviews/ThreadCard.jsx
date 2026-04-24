@@ -11,7 +11,7 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
   // Parse student info
   const currentUser = JSON.parse(localStorage.getItem('student') || '{}');
   const currentUserId = currentUser._id || currentUser.id;
-  
+
   const canManage = review.authorId === currentUserId || (review.authorId && review.authorId._id === currentUserId);
 
   const handleDelete = (e) => {
@@ -61,11 +61,11 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
             </div>
           </div>
         </div>
-        
+
         {/* Actions Dropdown */}
         {canManage && (
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowDropdown(!showDropdown)}
               className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100"
             >
@@ -94,7 +94,7 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
             <span className="text-xs font-bold text-blue-700">{review.rating?.toFixed(1)}</span>
           </div>
         </div>
-        
+
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#4B5563]">
           {review.text || review.description}
         </p>
@@ -103,25 +103,25 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
       {/* Footer / Interaction Bar */}
       <div className="mt-2 flex items-center justify-between border-t border-gray-50 px-5 py-3">
         <div className="flex gap-4">
-          <button 
+          <button
             onClick={() => onVote(review._id || review.id, 'up')}
             className="group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:bg-green-50 hover:text-green-600"
           >
-            <ThumbsUp size={16} className="transition-transform group-hover:-translate-y-0.5" /> 
+            <ThumbsUp size={16} className="transition-transform group-hover:-translate-y-0.5" />
             <span>Helpful</span>
           </button>
-          <button 
+          <button
             onClick={() => onVote(review._id || review.id, 'down')}
             className="group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             <ThumbsDown size={16} className="transition-transform group-hover:translate-y-0.5" />
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setShowComments(!showComments)}
             className={`group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${showComments ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
           >
-            <MessageSquare size={16} /> 
+            <MessageSquare size={16} />
             <span>Discuss</span>
           </button>
         </div>
