@@ -252,6 +252,7 @@ export default function MyTasks({ internshipId }) {
         <h3 className="font-display text-xl font-bold text-[#1A1D27]">My Tasks</h3>
         <button
           onClick={openAdd}
+          data-testid="add-task-btn"
           className="rounded-xl bg-[#3B6FE8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
         >
           + Add Task
@@ -288,6 +289,7 @@ export default function MyTasks({ internshipId }) {
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowFilter(prev => !prev)}
+              data-testid="tasks-filter-toggle"
               className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                 showFilter || hasActiveFilters
                   ? 'border-[#3B6FE8] bg-[#EEF2FD] text-[#3B6FE8]'
@@ -330,6 +332,7 @@ export default function MyTasks({ internshipId }) {
                       <button
                         key={opt.value}
                         onClick={() => setFilterPriority(opt.value)}
+                        data-testid={`filter-priority-${opt.value}`}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           filterPriority === opt.value
                             ? opt.value === 'High'
@@ -358,6 +361,7 @@ export default function MyTasks({ internshipId }) {
                       <button
                         key={opt.value}
                         onClick={() => setFilterStatus(opt.value)}
+                        data-testid={`filter-status-${opt.value}`}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           filterStatus === opt.value
                             ? 'border-[#3B6FE8] bg-[#3B6FE8] text-white'
@@ -384,6 +388,7 @@ export default function MyTasks({ internshipId }) {
                       <button
                         key={opt.value}
                         onClick={() => setFilterDate(opt.value)}
+                        data-testid={`filter-date-${opt.value}`}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           filterDate === opt.value
                             ? opt.value === 'overdue'
@@ -405,6 +410,7 @@ export default function MyTasks({ internshipId }) {
               {hasActiveFilters && (
                 <div className="mt-3 border-t border-[#E8EAF0] pt-3">
                   <button onClick={clearFilters}
+                    data-testid="clear-filters-btn"
                     className="text-xs font-semibold text-[#DC2626] hover:underline">
                     ✕ Clear all filters
                   </button>
@@ -430,28 +436,31 @@ export default function MyTasks({ internshipId }) {
                   value={form.taskName}
                   onChange={handleChange}
                   required
+                  data-testid="task-name-input"
                   className={inputCls}
                   placeholder="e.g. Build login page"
                 />
               </div>
               <div>
                 <label className={labelCls}>Priority</label>
-                <select name="priority" value={form.priority} onChange={handleChange} className={inputCls}>
+                <select name="priority" value={form.priority} onChange={handleChange} className={inputCls} data-testid="task-priority-select">
                   {PRIORITIES.map(p => <option key={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelCls}>Due Date</label>
                 <input name="dueDate" type="date" value={form.dueDate}
-                  onChange={handleChange} required className={inputCls} />
+                  onChange={handleChange} required className={inputCls} data-testid="task-due-date-input" />
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <button type="submit"
+               <button type="submit"
+                data-testid="task-save-btn"
                 className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors">
                 {editId ? 'Update' : 'Save'}
               </button>
               <button type="button" onClick={handleCancelForm}
+                data-testid="task-cancel-btn"
                 className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors">
                 Cancel
               </button>
@@ -486,12 +495,14 @@ export default function MyTasks({ internshipId }) {
           return (
             <div
               key={task._id}
+              data-testid={`task-item-${task._id}`}
               className={`flex items-center gap-3 rounded-2xl border bg-white px-5 py-3.5 transition-all hover:border-[#D4E0FA] ${
                 isOverdue ? 'border-[#FEE2E2]' : 'border-[#E8EAF0]'
               }`}
             >
               <button
                 onClick={() => toggleComplete(task)}
+                data-testid={`task-complete-btn-${task._id}`}
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all ${
                   task.completed
                     ? 'border-[#16A34A] bg-[#16A34A]'
@@ -527,10 +538,12 @@ export default function MyTasks({ internshipId }) {
               </span>
 
               <button onClick={() => openEdit(task)}
+                data-testid={`task-edit-btn-${task._id}`}
                 className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#F7F8FA] transition-colors">
                 ✏️
               </button>
               <button onClick={() => handleDelete(task._id, task.taskName)}
+                data-testid={`task-delete-btn-${task._id}`}
                 className="rounded-lg border border-[#E8EAF0] px-2 py-1 text-xs hover:bg-[#FEE2E2] transition-colors">
                 🗑️
               </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
-import CompanyReview from '../components/CompanyReview'
+import ReviewForum from '../components/reviews/ReviewForum'
 import InternshipList from '../components/MyInternships/InternshipList'
 import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
@@ -53,10 +53,10 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     search: '',
-    specialization: '',
-    type: '',
-    duration: '',
-    stipend: ''
+    specialization: [],
+    type: [],
+    duration: [],
+    stipend: []
   })
 
   const fetchInternships = useCallback(async () => {
@@ -109,6 +109,21 @@ function Dashboard() {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
+  const toggleFilter = (key, value) => {
+    setFilters((prev) => {
+      const list = Array.isArray(prev[key]) ? [...prev[key]] : []
+      const idx = list.indexOf(value)
+      if (idx === -1) list.push(value)
+      else list.splice(idx, 1)
+
+      return { ...prev, [key]: list }
+    })
+  }
+
+  const clearFilters = () => {
+    setFilters({ search: filters.search || '', specialization: [], type: [], duration: [], stipend: [] })
+  }
+
   const parseDurationInMonths = (durationValue) => {
     if (durationValue === null || durationValue === undefined) {
       return null
@@ -153,23 +168,20 @@ function Dashboard() {
         internship.company?.name?.toLowerCase().includes(searchValue) ||
         internship.location?.toLowerCase().includes(searchValue)
 
-      const matchesType = !filters.type || internship.type === filters.type
-      const matchesSpecialization =
-        !filters.specialization || internship.specialization === filters.specialization
-      const selectedDurationRange = DURATION_RANGE_OPTIONS.find((range) => range.value === filters.duration)
+      const matchesType = !filters.type.length || filters.type.includes(internship.type)
+      const matchesSpecialization = !filters.specialization.length || filters.specialization.includes(internship.specialization)
+
       const durationInMonths = parseDurationInMonths(internship.duration)
-      const matchesDuration =
-        !selectedDurationRange ||
-        (durationInMonths !== null &&
-          durationInMonths >= selectedDurationRange.min &&
-          durationInMonths <= selectedDurationRange.max)
-      const selectedStipendRange = STIPEND_RANGE_OPTIONS.find((range) => range.value === filters.stipend)
+      const matchesDuration = !filters.duration.length || filters.duration.some((val) => {
+        const range = DURATION_RANGE_OPTIONS.find(r => r.value === val)
+        return range && durationInMonths !== null && durationInMonths >= range.min && durationInMonths <= range.max
+      })
+
       const stipendAmount = parseStipendAmount(internship.stipend)
-      const matchesStipend =
-        !selectedStipendRange ||
-        (stipendAmount !== null &&
-          stipendAmount >= selectedStipendRange.min &&
-          stipendAmount <= selectedStipendRange.max)
+      const matchesStipend = !filters.stipend.length || filters.stipend.some((val) => {
+        const range = STIPEND_RANGE_OPTIONS.find(r => r.value === val)
+        return range && stipendAmount !== null && stipendAmount >= range.min && stipendAmount <= range.max
+      })
 
       return (
         matchesSearch &&
@@ -383,25 +395,25 @@ function Dashboard() {
 
   const pageTitles = {
     opportunities: {
-      title: 'Internship Opportunities',
-      subtitle: 'Browse and apply for internship positions',
+      title: '',
+      subtitle: '',
     },
     myInternships: {
-      title: 'My Internships',
-      subtitle: 'Manage your active and completed internships',
+      title: '',
+      subtitle: '',
     },
     guidance: {
-      title: 'Student Guidance',
-      subtitle: 'Track results, interests, skills, and personalized career suggestions',
+      title: '',
+      subtitle: '',
       message: 'Student Guidance content is loading.',
     },
     reviews: {
-      title: 'Reviews & Feedbacks',
-      subtitle: 'Anonymous internship experience sharing',
+      title: '',
+      subtitle: '',
       message: 'Reviews & Feedbacks is under development and coming soon.',
     },
     profile: {
-      title: 'My Profile',
+      title: '',
       subtitle: 'View and manage your student profile',
     },
   }
@@ -460,6 +472,14 @@ function Dashboard() {
     return `${origin}${profileImage}`
   }, [profileFormData.profileImage])
 
+  const resolveCompanyLogoUrl = (logoPath) => {
+    if (!logoPath) return ''
+    if (typeof logoPath === 'string' && (logoPath.startsWith('http') || logoPath.startsWith('data:'))) return logoPath
+    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    const origin = base.replace(/\/api\/?$/, '')
+    return `${origin}${logoPath}`
+  }
+
   useEffect(() => {
     setProfileImageLoadFailed(false)
   }, [profileImageUrl])
@@ -480,13 +500,14 @@ function Dashboard() {
           <h1 className="font-display text-[36px] font-bold text-[#0F1419]">
             {current.title}
           </h1>
-          <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
+          {current.subtitle && (
+            <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
+          )}
         </div>
 
         {activeTab === 'opportunities' ? (
           <>
-            {/* Filters */}
-            <div className="mb-6 flex flex-wrap gap-4">
+            <div className="mb-6">
               <input
                 type="text"
                 placeholder="Search internships..."
@@ -494,78 +515,141 @@ function Dashboard() {
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <select
-                value={filters.specialization}
-                onChange={(e) => handleFilterChange('specialization', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Specializations</option>
-                {specializationOptions.map((specialization) => (
-                  <option key={specialization} value={specialization}>
-                    {specialization}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filters.type}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Types</option>
-                <option>On-site</option>
-                <option>Remote</option>
-                <option>Hybrid</option>
-              </select>
-              <select
-                value={filters.duration}
-                onChange={(e) => handleFilterChange('duration', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Durations</option>
-                {DURATION_RANGE_OPTIONS.map((durationRange) => (
-                  <option key={durationRange.value} value={durationRange.value}>
-                    {durationRange.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filters.stipend}
-                onChange={(e) => handleFilterChange('stipend', e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Stipends</option>
-                {STIPEND_RANGE_OPTIONS.map((stipendRange) => (
-                  <option key={stipendRange.value} value={stipendRange.value}>
-                    {stipendRange.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
-            {/* Internship Cards */}
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : filteredInternships.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredInternships.map((internship) => (
-                  <article
-                    key={internship._id}
-                    onClick={() => handleViewOpportunity(internship)}
-                    className="rounded-2xl border border-[#E8EAF0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col cursor-pointer"
-                  >
+            <div className="mb-6 lg:flex lg:gap-6">
+              <aside className="mb-4 lg:mb-0 lg:w-72 rounded-2xl border border-[#E8EAF0] bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                <h3 className="mb-3 text-sm font-semibold text-[#1A1D27]">Filters</h3>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Specialization</p>
+                  <div className="space-y-2 max-h-40 overflow-auto pr-2">
+                    <label className="flex items-center gap-2 text-sm" key="all-spec">
+                      <input type="checkbox" onChange={() => {}} className="hidden" />
+                    </label>
+                    {specializationOptions.length ? specializationOptions.map((spec) => (
+                      <label key={spec} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.specialization.includes(spec)}
+                          onChange={() => toggleFilter('specialization', spec)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{spec}</span>
+                      </label>
+                    )) : (
+                      <p className="text-sm text-[#6B7280]">No specializations</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Type</p>
+                  <div className="space-y-2">
+                    {['On-site', 'Remote', 'Hybrid'].map((t) => (
+                      <label key={t} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.type.includes(t)}
+                          onChange={() => toggleFilter('type', t)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Duration</p>
+                  <div className="space-y-2">
+                    {DURATION_RANGE_OPTIONS.map((d) => (
+                      <label key={d.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.duration.includes(d.value)}
+                          onChange={() => toggleFilter('duration', d.value)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{d.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Stipend</p>
+                  <div className="space-y-2">
+                    {STIPEND_RANGE_OPTIONS.map((s) => (
+                      <label key={s.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.stipend.includes(s.value)}
+                          onChange={() => toggleFilter('stipend', s.value)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-[#1A1D27]">{s.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button onClick={clearFilters} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold text-[#3B6FE8] hover:bg-[#F7F8FA]">Clear Filters</button>
+                </div>
+              </aside>
+
+              <div className="flex-1">
+                {/* Internship Cards */}
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : filteredInternships.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredInternships.map((internship) => (
+                      <article
+                        key={internship._id}
+                        onClick={() => handleViewOpportunity(internship)}
+                        className="rounded-2xl border border-[#E8EAF0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden flex flex-col cursor-pointer"
+                      >
                     {/* Header Section */}
                     <div className="p-6 pb-4">
                       {/* Job Title */}
                       <h3 className="text-xl font-bold text-[#1A1D27] mb-3 line-clamp-2">{internship.title}</h3>
                       
-                      {/* Company */}
-                      <p className="text-sm font-semibold text-[#1A1D27] mb-3">
-                        {typeof internship.company === 'object' 
-                          ? internship.company?.name || 'Unknown Company'
-                          : internship.company || 'Unknown Company'}
-                      </p>
+                      {/* Company (logo + name) */}
+                      {(() => {
+                        const companyObj = typeof internship.company === 'object' ? internship.company : null
+                        const companyName = companyObj?.name || (typeof internship.company === 'string' ? internship.company : 'Unknown Company')
+                        const companyLogoPath = companyObj?.logo || internship.logo || ''
+
+                        const initials = companyName
+                          .split(' ')
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((w) => w[0]?.toUpperCase())
+                          .join('') || 'CO'
+
+                        return (
+                          <div className="flex items-center gap-3 mb-3">
+                            {companyLogoPath ? (
+                              <img
+                                src={resolveCompanyLogoUrl(companyLogoPath)}
+                                alt={`${companyName} logo`}
+                                className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover border border-[#E8EAF0]"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white border border-[#E8EAF0]">
+                                {initials}
+                              </div>
+                            )}
+
+                            <p className="text-sm font-semibold text-[#1A1D27]">{companyName}</p>
+                          </div>
+                        )
+                      })()}
 
                       {/* Type and Specialization Tags Row */}
                       <div className="flex gap-2 flex-wrap">
@@ -610,86 +694,11 @@ function Dashboard() {
                 <p className="text-gray-500">No internships found for selected filters.</p>
               </div>
             )}
+              </div>
+            </div>
           </>
         ) : activeTab === 'reviews' ? (
-          <div className="space-y-5">
-            <div className="mb-6 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-xl font-bold text-[#1A1D27]">
-                  Company Reviews
-                </h2>
-                <button
-                  onClick={() => navigate('/write-review')}
-                  className="flex items-center gap-2 rounded-lg bg-[#3B6FE8] px-4 py-2 font-semibold text-white transition hover:bg-[#2D5CD4] cursor-pointer"
-                >
-                  <span>+</span>
-                  Write Anonymous Review
-                </button>
-              </div>
-              {reviews.length > 0 && (
-                <div className="flex flex-wrap gap-4">
-                  <input
-                    type="text"
-                    placeholder="Search by company name or role..."
-                    value={reviewsSearch}
-                    onChange={(e) => setReviewsSearch(e.target.value)}
-                    className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <select
-                    value={ratingFilter}
-                    onChange={(e) => setRatingFilter(e.target.value)}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">All Ratings</option>
-                    <option value="5">5 Stars</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="3">3+ Stars</option>
-                    <option value="2">2+ Stars</option>
-                    <option value="1">1+ Stars</option>
-                  </select>
-                </div>
-              )}
-            </div>
-            {reviews.length > 0 ? (
-              (() => {
-                const filteredReviews = reviews.filter((review) => {
-                  const searchLower = reviewsSearch.toLowerCase()
-                  const matchesSearch =
-                    review.company?.toLowerCase().includes(searchLower) ||
-                    review.role?.toLowerCase().includes(searchLower)
-                  const matchesRating =
-                    ratingFilter === '' ||
-                    (review.rating && parseInt(review.rating) >= parseInt(ratingFilter))
-                  return matchesSearch && matchesRating
-                })
-                
-                return filteredReviews.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredReviews.map((review) => (
-                      <CompanyReview
-                        key={review.id}
-                        review={review}
-                        onDelete={handleDeleteReview}
-                        onEdit={handleEditReview}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
-                    <p className="text-[#6B7280]">
-                      No reviews found matching "{reviewsSearch}"
-                    </p>
-                  </div>
-                )
-              })()
-            ) : (
-              <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
-                <p className="text-[#6B7280]">
-                  No reviews yet. Be the first to share your experience!
-                </p>
-              </div>
-            )}
-          </div>
+          <ReviewForum />
         ) : activeTab === 'myInternships' ? (
           renderMyInternships()
         ) : activeTab === 'profile' ? (
@@ -915,7 +924,7 @@ function Dashboard() {
 
       {isOpportunityViewOpen && selectedOpportunity ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-display text-2xl font-bold text-[#1A1D27]">Internship Details</h3>
               <button
