@@ -371,20 +371,39 @@ const flagReview = async (req, res, next) => {
 /**
  * @desc    Mark review as helpful
  * @route   PUT /api/reviews/:id/helpful
- * @access  Public
+ * @access  Private
  */
 const markHelpful = async (req, res, next) => {
     try {
-        const review = await CompanyReview.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { helpful: 1 } },
-            { new: true }
-        );
+        const review = await CompanyReview.findById(req.params.id);
 
         if (!review) {
             res.status(404);
             throw new Error("Review not found");
         }
+
+        const userId = req.student._id.toString();
+        const helpfulIndex = (review.helpfulBy || []).findIndex((v) => v.toString() === userId);
+        const unhelpfulIndex = (review.unhelpfulBy || []).findIndex((v) => v.toString() === userId);
+
+        if (helpfulIndex > -1) {
+            // Already marked helpful, remove it (toggle)
+            review.helpfulBy.splice(helpfulIndex, 1);
+            review.helpful = Math.max(0, (review.helpful || 1) - 1);
+        } else {
+            // Mark as helpful
+            review.helpfulBy = review.helpfulBy || [];
+            review.helpfulBy.push(req.student._id);
+            review.helpful = (review.helpful || 0) + 1;
+
+            // Remove from unhelpful if present
+            if (unhelpfulIndex > -1) {
+                review.unhelpfulBy.splice(unhelpfulIndex, 1);
+                review.unhelpful = Math.max(0, (review.unhelpful || 1) - 1);
+            }
+        }
+
+        await review.save();
 
         res.status(200).json({
             success: true,
@@ -398,20 +417,39 @@ const markHelpful = async (req, res, next) => {
 /**
  * @desc    Mark review as unhelpful
  * @route   PUT /api/reviews/:id/unhelpful
- * @access  Public
+ * @access  Private
  */
 const markUnhelpful = async (req, res, next) => {
     try {
-        const review = await CompanyReview.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { unhelpful: 1 } },
-            { new: true }
-        );
+        const review = await CompanyReview.findById(req.params.id);
 
         if (!review) {
             res.status(404);
             throw new Error("Review not found");
         }
+
+        const userId = req.student._id.toString();
+        const helpfulIndex = (review.helpfulBy || []).findIndex((v) => v.toString() === userId);
+        const unhelpfulIndex = (review.unhelpfulBy || []).findIndex((v) => v.toString() === userId);
+
+        if (unhelpfulIndex > -1) {
+            // Already marked unhelpful, remove it (toggle)
+            review.unhelpfulBy.splice(unhelpfulIndex, 1);
+            review.unhelpful = Math.max(0, (review.unhelpful || 1) - 1);
+        } else {
+            // Mark as unhelpful
+            review.unhelpfulBy = review.unhelpfulBy || [];
+            review.unhelpfulBy.push(req.student._id);
+            review.unhelpful = (review.unhelpful || 0) + 1;
+
+            // Remove from helpful if present
+            if (helpfulIndex > -1) {
+                review.helpfulBy.splice(helpfulIndex, 1);
+                review.helpful = Math.max(0, (review.helpful || 1) - 1);
+            }
+        }
+
+        await review.save();
 
         res.status(200).json({
             success: true,

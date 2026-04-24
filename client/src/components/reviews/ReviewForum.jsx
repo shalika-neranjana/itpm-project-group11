@@ -2,9 +2,26 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllReviews, deleteReview, markReviewHelpful, markReviewUnhelpful } from '../../api/reviews';
 import { confirm as swalConfirm, error as swalError, toast as swalToast } from '../../utils/swal';
-import { Search, Filter, MessageCircle, TrendingUp, Award, PenTool, Star, Briefcase, RefreshCw, ChevronRight } from 'lucide-react';
+import { Search, Filter, MessageCircle, TrendingUp, Award, PenTool, Star, Briefcase, RefreshCw, ChevronRight, Sparkles, Info } from 'lucide-react';
 import ThreadCard from './ThreadCard';
 import useDebounce from '../../hooks/useDebounce';
+
+const ReviewSkeleton = () => (
+  <div className="animate-pulse rounded-[2rem] border border-gray-100 bg-white p-6 shadow-sm">
+    <div className="flex items-center gap-4 mb-4">
+      <div className="h-12 w-12 rounded-2xl bg-gray-100"></div>
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-1/4 rounded bg-gray-100"></div>
+        <div className="h-3 w-1/3 rounded bg-gray-50"></div>
+      </div>
+    </div>
+    <div className="space-y-3">
+      <div className="h-4 w-3/4 rounded bg-gray-100"></div>
+      <div className="h-4 w-1/2 rounded bg-gray-100"></div>
+      <div className="h-20 w-full rounded-2xl bg-gray-50"></div>
+    </div>
+  </div>
+);
 
 const ReviewForum = () => {
   const navigate = useNavigate();
@@ -178,90 +195,83 @@ const ReviewForum = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 h-[calc(100vh-140px)] overflow-hidden">
         {/* LEFT COLUMN - Advanced Filters */}
-        <div className="hidden lg:block lg:col-span-3 space-y-6">
-          <div className="sticky top-6 space-y-6">
-            <div className="rounded-3xl border border-[#F3F4F6] bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="flex items-center gap-2 text-base font-bold text-[#1A1D27]">
-                  <Filter size={18} className="text-blue-600" /> Filters
-                </h3>
-                {(selectedCompanies.length > 0 || selectedRatings.length > 0) && (
-                  <button
-                    onClick={() => { setSelectedCompanies([]); setSelectedRatings([]); }}
-                    className="text-xs font-bold text-red-500 hover:text-red-600"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
+        <div className="hidden lg:block lg:col-span-3 h-full overflow-y-auto pr-4 custom-scrollbar space-y-6 pb-10">
+          <div className="rounded-3xl border border-[#F3F4F6] bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="flex items-center gap-2 text-base font-bold text-[#1A1D27]">
+                <Filter size={18} className="text-blue-600" /> Filters
+              </h3>
+              {(selectedCompanies.length > 0 || selectedRatings.length > 0) && (
+                <button
+                  onClick={() => { setSelectedCompanies([]); setSelectedRatings([]); }}
+                  className="text-xs font-bold text-red-500 hover:text-red-600"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
 
-              <div className="space-y-8">
-                <div>
-                  <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Rating Scale</h4>
-                  <div className="space-y-2.5">
-                    {[5, 4, 3, 2, 1].map(rating => (
-                      <label key={rating} className="flex cursor-pointer items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <div className="relative flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedRatings.includes(rating)}
-                              onChange={() => toggleRatingFilter(rating)}
-                              className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 transition-all checked:border-blue-600 checked:bg-blue-600 focus:outline-none"
-                            />
-                            <ChevronRight size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
-                          </div>
-                          <div className="flex items-center gap-1 text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">
-                            {rating} <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                            <span className="ml-1 text-gray-400 font-medium">& up</span>
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Top Companies</h4>
-                  <div className="max-h-64 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
-                    {companies.map(company => (
-                      <label key={company} className="flex cursor-pointer items-center justify-between group">
-                        <div className="flex items-center gap-3 overflow-hidden">
+            <div className="space-y-8">
+              <div>
+                <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Rating Scale</h4>
+                <div className="space-y-2.5">
+                  {[5, 4, 3, 2, 1].map(rating => (
+                    <label key={rating} className="flex cursor-pointer items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex items-center justify-center">
                           <input
                             type="checkbox"
-                            checked={selectedCompanies.includes(company)}
-                            onChange={() => toggleCompanyFilter(company)}
-                            className="h-5 w-5 rounded-md border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all"
+                            checked={selectedRatings.includes(rating)}
+                            onChange={() => toggleRatingFilter(rating)}
+                            className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-200 transition-all checked:border-blue-600 checked:bg-blue-600 focus:outline-none"
                           />
-                          <span className="truncate text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{company}</span>
+                          <ChevronRight size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
                         </div>
-                      </label>
-                    ))}
-                    {companies.length === 0 && <p className="text-xs text-gray-400 italic">No companies yet</p>}
-                  </div>
+                        <div className="flex items-center gap-1 text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">
+                          {rating} <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                          <span className="ml-1 text-gray-400 font-medium">& up</span>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Top Companies</h4>
+                <div className="max-h-64 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
+                  {companies.map(company => (
+                    <label key={company} className="flex cursor-pointer items-center justify-between group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <input
+                          type="checkbox"
+                          checked={selectedCompanies.includes(company)}
+                          onChange={() => toggleCompanyFilter(company)}
+                          className="h-5 w-5 rounded-md border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all"
+                        />
+                        <span className="truncate text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{company}</span>
+                      </div>
+                    </label>
+                  ))}
+                  {companies.length === 0 && <p className="text-xs text-gray-400 italic">No companies yet</p>}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Community Stat */}
-            <div className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-200">
-              <TrendingUp className="mb-4 opacity-50" size={32} />
-              <h3 className="text-lg font-bold mb-2">Help the Community</h3>
-              <p className="text-sm text-blue-100 leading-relaxed mb-4">
-                Your experience can change someone's career path. Join {reviews.length}+ students.
-              </p>
-              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white w-2/3"></div>
-              </div>
-            </div>
+          {/* Community Stat */}
+          <div className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg shadow-blue-200">
+            <TrendingUp className="mb-4 opacity-50" size={32} />
+            <h4 className="text-lg font-black leading-tight">Trusted by 2,000+ Students</h4>
+            <p className="mt-2 text-sm font-medium text-blue-100/80">Real experiences from students at top tech companies worldwide.</p>
           </div>
         </div>
 
         {/* MIDDLE COLUMN - Activity Feed */}
-        <div className="lg:col-span-6 space-y-6">
-          <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-2xl">
+        <div className="lg:col-span-6 h-full overflow-y-auto pr-2 custom-scrollbar pb-10">
+          <div className="flex items-center justify-between bg-gray-50/50 p-2 rounded-2xl sticky top-0 z-10 backdrop-blur-md mb-6">
             <div className="flex p-1 bg-white rounded-xl shadow-sm border border-gray-100">
               <button
                 onClick={() => setSortBy('newest')}
@@ -287,104 +297,71 @@ const ReviewForum = () => {
             </button>
           </div>
 
-          {loading ? (
-            <div className="space-y-6">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : filteredReviews.length > 0 ? (
-            <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-              {filteredReviews.map(review => (
+          <div className="space-y-6">
+            {loading ? (
+              [1, 2, 3].map(i => <ReviewSkeleton key={i} />)
+            ) : filteredReviews.length > 0 ? (
+              filteredReviews.map((review) => (
                 <ThreadCard
-                  key={review.id || review._id}
+                  key={review._id || review.id}
                   review={review}
                   onDelete={handleDelete}
                   onEdit={handleEdit}
                   onVote={handleVote}
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-[2.5rem] border-2 border-dashed border-gray-200 bg-white py-24 text-center px-6">
-              <div className="mb-6 rounded-full bg-gray-50 p-6 text-gray-200">
-                <Briefcase size={64} />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center rounded-[3rem] border-2 border-dashed border-gray-100 bg-white">
+                <div className="mb-6 rounded-full bg-gray-50 p-6 text-gray-300">
+                  <MessageCircle size={48} />
+                </div>
+                <h3 className="text-xl font-black text-[#1A1D27] mb-2">No reviews found</h3>
+                <p className="text-sm font-medium text-gray-400 max-w-[280px]">Try adjusting your filters or search terms.</p>
               </div>
-              <h3 className="text-2xl font-black text-[#1A1D27] mb-2">No reviews found</h3>
-              <p className="text-gray-500 max-w-xs mx-auto mb-8 font-medium">
-                We couldn't find any reviews matching "{search}". Try broadening your search.
-              </p>
-              <button
-                onClick={() => { setSearch(''); setSelectedCompanies([]); setSelectedRatings([]); }}
-                className="rounded-xl bg-blue-50 px-6 py-3 text-sm font-bold text-blue-600 hover:bg-blue-100 transition-colors"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* RIGHT COLUMN - Context & Insights */}
-        <div className="hidden lg:block lg:col-span-3 space-y-6">
-          <div className="sticky top-6 space-y-6">
-            {/* Trending Box */}
-            <div className="rounded-3xl border border-[#F3F4F6] bg-white p-6 shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4">
-                <TrendingUp size={48} className="text-gray-50 opacity-[0.03] -rotate-12" />
-              </div>
-              <h3 className="mb-6 flex items-center gap-2 text-base font-black text-[#1A1D27]">
-                <TrendingUp size={18} className="text-green-500" /> Hot Companies
-              </h3>
-              <div className="space-y-4">
-                {topCompanies.map((tc, idx) => (
-                  <div key={tc.name} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-xs font-black text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
-                        {idx + 1}
-                      </div>
-                      <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600 truncate max-w-[140px] transition-colors">{tc.name}</span>
+        {/* RIGHT COLUMN - Insights & Guidelines */}
+        <div className="hidden lg:block lg:col-span-3 h-full overflow-y-auto pl-4 custom-scrollbar space-y-6 pb-10">
+          <div className="rounded-3xl border border-[#F3F4F6] bg-white p-6 shadow-sm">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-[#1A1D27]">
+              <Sparkles size={18} className="text-amber-500" /> Hot Companies
+            </h3>
+            <div className="space-y-4">
+              {companies.slice(0, 5).map((company, idx) => (
+                <div key={company} className="flex items-center justify-between group cursor-pointer" onClick={() => { setSelectedCompanies([company]); }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-xs font-black text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                      {idx + 1}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{tc.count} reviews</span>
-                    </div>
+                    <span className="text-sm font-bold text-gray-600 group-hover:text-[#1A1D27] transition-colors">{company}</span>
                   </div>
-                ))}
-                {topCompanies.length === 0 && (
-                  <div className="py-4 text-center">
-                    <p className="text-xs text-gray-400 font-medium">Data will appear as students post reviews.</p>
-                  </div>
-                )}
-              </div>
+                  <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                </div>
+              ))}
+              {companies.length === 0 && <p className="text-xs text-gray-400 font-medium">Data will appear as students post reviews.</p>}
             </div>
+          </div>
 
-            {/* Guidelines Box */}
-            <div className="rounded-3xl border border-[#1A1D27] bg-[#1A1D27] p-6 text-white shadow-xl">
-              <h3 className="mb-4 flex items-center gap-2 text-base font-black">
-                <Award size={20} className="text-yellow-400" /> Community Rules
-              </h3>
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+          <div className="rounded-3xl border border-[#1A1D27] bg-[#1A1D27] p-6 text-white shadow-xl">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-black">
+              <Award size={20} className="text-yellow-400" /> Community Rules
+            </h3>
+            <div className="space-y-4">
+              {[
+                { title: "Be Constructive", text: "Share honest feedback professionally.", color: "bg-blue-500" },
+                { title: "No NDAs", text: "Avoid sharing proprietary company info.", color: "bg-indigo-500" },
+                { title: "Stay Relevant", text: "Focus on learning and mentorship.", color: "bg-purple-500" }
+              ].map((rule, idx) => (
+                <div key={idx} className="flex gap-3">
+                  <div className={`h-2 w-2 rounded-full ${rule.color} mt-1.5 shrink-0`}></div>
                   <p className="text-xs font-medium text-gray-300 leading-relaxed">
-                    <strong className="text-white block mb-0.5">Be Constructive</strong>
-                    Share honest feedback, but keep it professional and respectful.
+                    <strong className="text-white block mb-0.5">{rule.title}</strong>
+                    {rule.text}
                   </p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="h-2 w-2 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div>
-                  <p className="text-xs font-medium text-gray-300 leading-relaxed">
-                    <strong className="text-white block mb-0.5">No NDAs</strong>
-                    Avoid sharing sensitive or proprietary company information.
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="h-2 w-2 rounded-full bg-purple-500 mt-1.5 shrink-0"></div>
-                  <p className="text-xs font-medium text-gray-300 leading-relaxed">
-                    <strong className="text-white block mb-0.5">Stay Relevant</strong>
-                    Focus on learning, mentorship, and work environment.
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

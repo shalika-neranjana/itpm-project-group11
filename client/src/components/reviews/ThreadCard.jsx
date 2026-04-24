@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, ThumbsUp, ThumbsDown, MoreVertical, Edit, Trash2, Clock, Share2, Sparkles, User, ChevronDown, ChevronUp } from 'lucide-react';
-import ReviewComments from '../ReviewComments';
+import DiscussionModal from './DiscussionModal';
 import { summarizeReview } from '../../api/reviews';
 
 function ThreadCard({ review, onDelete, onEdit, onVote }) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [summary, setSummary] = useState(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState('');
@@ -159,28 +160,35 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
           <div className="flex items-center gap-1 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
             <button
               onClick={() => onVote(review._id || review.id, 'up')}
-              className="group flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-green-50 hover:text-green-600"
+              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                review.helpfulBy?.includes(currentUserId) 
+                  ? 'bg-green-100 text-green-700 shadow-inner' 
+                  : 'text-gray-500 hover:bg-green-50 hover:text-green-600'
+              }`}
             >
-              <ThumbsUp size={16} className="transition-transform group-hover:-translate-y-0.5" />
+              <ThumbsUp size={16} className={`transition-transform ${review.helpfulBy?.includes(currentUserId) ? '' : 'group-hover:-translate-y-0.5'}`} />
               <span>{review.helpful || 0}</span>
             </button>
             <div className="h-4 w-px bg-gray-100"></div>
             <button
               onClick={() => onVote(review._id || review.id, 'down')}
-              className="group flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-gray-500 transition-all hover:bg-red-50 hover:text-red-600"
+              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all ${
+                review.unhelpfulBy?.includes(currentUserId) 
+                  ? 'bg-red-100 text-red-700 shadow-inner' 
+                  : 'text-gray-500 hover:bg-red-50 hover:text-red-600'
+              }`}
             >
-              <ThumbsDown size={16} className="transition-transform group-hover:translate-y-0.5" />
+              <ThumbsDown size={16} className={`transition-transform ${review.unhelpfulBy?.includes(currentUserId) ? '' : 'group-hover:translate-y-0.5'}`} />
               {review.unhelpful > 0 && <span>{review.unhelpful}</span>}
             </button>
           </div>
 
           <button
-            onClick={() => setShowComments(!showComments)}
-            className={`group flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${showComments ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-gray-500 hover:bg-white hover:shadow-sm hover:text-blue-600'}`}
+            onClick={() => setIsModalOpen(true)}
+            className="group flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-500 transition-all hover:bg-white hover:shadow-sm hover:text-blue-600"
           >
             <MessageSquare size={16} />
             <span>Discussion {review.commentsCount > 0 ? `(${review.commentsCount})` : ''}</span>
-            {showComments ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
 
@@ -201,12 +209,12 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
         </div>
       </div>
 
-      {/* Nested Comments Section */}
-      {showComments && (
-        <div className="border-t border-gray-100 bg-[#F9FAFB] animate-in slide-in-from-top duration-300">
-          <ReviewComments reviewId={review._id || review.id} reviewAuthorId={review.authorId} />
-        </div>
-      )}
+      {/* Discussion Modal */}
+      <DiscussionModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        review={review}
+      />
     </div>
   );
 }
