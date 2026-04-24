@@ -20,18 +20,31 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Attach student data to request
-            req.student = await Student.findById(decoded.id).select("-password");
+            const student = await Student.findById(decoded.id).select("-password");
 
+            if (!student) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Not authorized. User not found.",
+                });
+            }
+
+            req.student = student;
             next();
         } else {
-            res.status(401);
-            throw new Error("Not authorized. Token missing.");
+            return res.status(401).json({
+                success: false,
+                message: "Not authorized. Token missing."
+            });
         }
 
     } catch (error) {
-        res.status(401);
-        throw new Error("Not authorized. Token failed.");
+        return res.status(401).json({
+            success: false,
+            message: "Not authorized. Token failed."
+        });
     }
 };
 
+protect.protectStudent = protect;
 module.exports = protect;

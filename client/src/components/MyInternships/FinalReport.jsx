@@ -1,0 +1,967 @@
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+  getFinalReport,
+  addFinalReport,
+  updateFinalReport,
+  deleteFinalReport,
+} from "../../api/myInternships";
+import { confirm as swalConfirm } from '../../utils/swal'
+
+const EMPTY = {
+  executiveSummary: "",
+  keyAccomplishments: "",
+  skillsAcquired: "",
+  conclusionRecommendations: "",
+  status: "draft",
+};
+
+function generateFinalPDF(report, studentName, studentId, internshipTitle) {
+  const doc = new jsPDF();
+
+  doc.setFillColor(59, 111, 232);
+  doc.rect(0, 0, 210, 32, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("Final Internship Report", 14, 14);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("InternConnect — Intelligence Career Guidance System", 14, 23);
+
+  const statusColor = report.status === "submitted" ? [22, 163, 74] : [217, 119, 6];
+  doc.setFillColor(...statusColor);
+  doc.roundedRect(152, 8, 44, 10, 2, 2, "F");
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text(report.status === "submitted" ? "SUBMITTED" : "DRAFT", 174, 14.5, { align: "center" });
+
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Student Information", 14, 46);
+  doc.setDrawColor(232, 234, 240);
+  doc.setLineWidth(0.5);
+  doc.line(14, 48, 196, 48);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(107, 114, 128);
+  doc.text("Student Name", 14, 56);
+  doc.text("Student ID", 110, 56);
+  doc.text("Internship Title", 14, 68);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text(studentName || "—", 14, 62);
+  doc.text(studentId || "—", 110, 62);
+
+  const titleLines = doc.splitTextToSize(internshipTitle || "—", 180);
+  doc.text(titleLines, 14, 74);
+
+  const afterStudentInfo = 74 + (titleLines.length - 1) * 6 + 12;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("Executive Summary", 14, afterStudentInfo);
+  doc.setDrawColor(232, 234, 240);
+  doc.line(14, afterStudentInfo + 2, 196, afterStudentInfo + 2);
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(26, 29, 39);
+  const summaryLines = doc.splitTextToSize(report.executiveSummary || "—", 180);
+  doc.text(summaryLines, 14, afterStudentInfo + 10);
+
+  const afterSummary = afterStudentInfo + 10 + summaryLines.length * 5 + 8;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("Key Accomplishments", 14, afterSummary);
+  doc.setDrawColor(232, 234, 240);
+  doc.line(14, afterSummary + 2, 196, afterSummary + 2);
+
+  const accomplishmentRows =
+    report.keyAccomplishments?.length > 0
+      ? report.keyAccomplishments.map((a, i) => [`${i + 1}.`, a])
+      : [["—", "No accomplishments recorded"]];
+
+  autoTable(doc, {
+    startY: afterSummary + 6,
+    head: [["#", "Accomplishment"]],
+    body: accomplishmentRows,
+    theme: "grid",
+    headStyles: { fillColor: [59, 111, 232], textColor: 255, fontStyle: "bold", fontSize: 9, cellPadding: 4 },
+    bodyStyles: { fontSize: 9, textColor: [26, 29, 39], cellPadding: 4, minCellHeight: 10 },
+    alternateRowStyles: { fillColor: [247, 248, 250] },
+    columnStyles: {
+      0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
+      1: { cellWidth: 170 },
+    },
+    margin: { left: 14, right: 14 },
+  });
+
+  const afterAccomplishments = doc.lastAutoTable.finalY + 12;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("Skills Acquired", 14, afterAccomplishments);
+  doc.setDrawColor(232, 234, 240);
+  doc.line(14, afterAccomplishments + 2, 196, afterAccomplishments + 2);
+
+  if (report.skillsAcquired?.length > 0) {
+    let chipX = 14, chipY = afterAccomplishments + 12;
+    const chipH = 7;
+    doc.setFontSize(9);
+    report.skillsAcquired.forEach((skill) => {
+      const textW = doc.getTextWidth(skill);
+      const chipW = textW + 8;
+      if (chipX + chipW > 196) { chipX = 14; chipY += chipH + 4; }
+      doc.setFillColor(238, 242, 253);
+      doc.roundedRect(chipX, chipY - 5, chipW, chipH, 2, 2, "F");
+      doc.setTextColor(59, 111, 232);
+      doc.setFont("helvetica", "bold");
+      doc.text(skill, chipX + 4, chipY);
+      chipX += chipW + 4;
+    });
+    var afterSkills = chipY + chipH + 8;
+  } else {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text("No skills recorded.", 14, afterAccomplishments + 10);
+    var afterSkills = afterAccomplishments + 20;
+  }
+
+  if (afterSkills > 240) { doc.addPage(); afterSkills = 20; }
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("Conclusion & Recommendations", 14, afterSkills);
+  doc.setDrawColor(232, 234, 240);
+  doc.line(14, afterSkills + 2, 196, afterSkills + 2);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(26, 29, 39);
+  const conclusionLines = doc.splitTextToSize(report.conclusionRecommendations || "—", 180);
+  doc.text(conclusionLines, 14, afterSkills + 10);
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(232, 234, 240);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(107, 114, 128);
+    doc.text(
+      `Generated on ${new Date().toLocaleDateString("en-MY", { year: "numeric", month: "long", day: "numeric" })}`,
+      14, 286,
+    );
+    doc.text(`Page ${i} of ${pageCount}`, 155, 286);
+    doc.text("InternConnect", 174, 292);
+  }
+
+  return doc;
+}
+
+function generateCertificatePDF({ studentName, studentId, internshipTitle, specialization, supervisorName, companyName, startDate, endDate, duration }) {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const W = 297, H = 210, cx = W / 2;
+
+  doc.setFillColor(250, 251, 255);
+  doc.rect(0, 0, W, H, "F");
+  doc.setDrawColor(59, 111, 232);
+  doc.setLineWidth(3);
+  doc.rect(8, 8, W - 16, H - 16);
+  doc.setLineWidth(0.8);
+  doc.setDrawColor(180, 200, 245);
+  doc.rect(12, 12, W - 24, H - 24);
+
+  const corners = [[8, 8], [W - 18, 8], [8, H - 18], [W - 18, H - 18]];
+  doc.setFillColor(59, 111, 232);
+  corners.forEach(([x, y]) => doc.rect(x, y, 10, 10, "F"));
+
+  doc.setFillColor(59, 111, 232);
+  doc.rect(12, 12, W - 24, 18, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("InternConnect — Intelligence Career Guidance System", cx, 23, { align: "center" });
+
+  doc.setFontSize(28);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("CERTIFICATE OF COMPLETION", cx, 52, { align: "center" });
+
+  doc.setDrawColor(212, 175, 55);
+  doc.setLineWidth(1);
+  doc.line(cx - 70, 56, cx + 70, 56);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80, 85, 105);
+  doc.text("This is to certify that", cx, 68, { align: "center" });
+
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(59, 111, 232);
+  doc.text(studentName || "—", cx, 80, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(107, 114, 128);
+  doc.text(`Student ID: ${studentId || "—"}`, cx, 87, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.setTextColor(80, 85, 105);
+  doc.text("has successfully completed the internship programme", cx, 97, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  const titleLines = doc.splitTextToSize(internshipTitle || "—", 200);
+  doc.text(titleLines, cx, 107, { align: "center" });
+
+  const afterTitle = 107 + (titleLines.length - 1) * 7;
+  const detailY    = afterTitle + 12;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(107, 114, 128);
+  doc.text("Specialization", 60, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  doc.text(specialization || "—", 60, detailY + 6, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Duration", cx, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  const durationLabel = duration ? `${duration} month${duration > 1 ? "s" : ""}` : "—";
+  doc.text(durationLabel, cx, detailY + 6, { align: "center" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Period", W - 60, detailY, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.setFontSize(10);
+  const fmtDate = (d) =>
+    d ? new Date(d).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  doc.text(`${fmtDate(startDate)} – ${fmtDate(endDate)}`, W - 60, detailY + 6, { align: "center" });
+
+  doc.setDrawColor(232, 234, 240);
+  doc.setLineWidth(0.5);
+  doc.line(30, detailY + 14, W - 30, detailY + 14);
+
+  const sigY = detailY + 28;
+  doc.setDrawColor(59, 111, 232);
+  doc.setLineWidth(0.8);
+  doc.line(50, sigY, 120, sigY);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text(supervisorName || "Supervisor", 85, sigY + 5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Internship Supervisor", 85, sigY + 10, { align: "center" });
+  if (companyName) doc.text(companyName, 85, sigY + 15, { align: "center" });
+
+  doc.setDrawColor(59, 111, 232);
+  doc.line(177, sigY, 247, sigY);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(26, 29, 39);
+  doc.text("InternConnect System", 212, sigY + 5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text("Authorised Issuing Authority", 212, sigY + 10, { align: "center" });
+  doc.text("Intelligence Career Guidance System", 212, sigY + 15, { align: "center" });
+
+  doc.setFillColor(59, 111, 232);
+  doc.rect(12, H - 30, W - 24, 18, "F");
+  const certId = `IC-${studentId || "000"}-${Date.now().toString(36).toUpperCase()}`;
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 255, 255);
+  doc.text(`Certificate ID: ${certId}`, 20, H - 19);
+  doc.text(
+    `Issued on ${new Date().toLocaleDateString("en-MY", { year: "numeric", month: "long", day: "numeric" })} · InternConnect`,
+    cx, H - 19, { align: "center" },
+  );
+  doc.text("internconnect.system", W - 20, H - 19, { align: "right" });
+
+  return doc;
+}
+
+export default function FinalReport({
+  internshipId,
+  internshipTitle,
+  supervisorEmail,
+  supervisorName,
+  progress,
+  internship,
+}) {
+  const [report,       setReport]       = useState(null);
+  const [form,         setForm]         = useState(EMPTY);
+  const [editing,      setEditing]      = useState(false);
+  const [creating,     setCreating]     = useState(false);
+  const [loading,      setLoading]      = useState(true);
+  const [pdfStatus,    setPdfStatus]    = useState(null);
+  const [emailSent,    setEmailSent]    = useState(false);
+  const [showEmailBox, setShowEmailBox] = useState(false);
+  const [emailInput,   setEmailInput]   = useState("");
+  const [certStatus,   setCertStatus]   = useState(null);
+
+  const studentData = JSON.parse(localStorage.getItem("student"));
+  const studentName = `${studentData?.firstName ?? ""} ${studentData?.lastName ?? ""}`.trim();
+  const studentId   = studentData?.studentId ?? "";
+
+  useEffect(() => {
+    getFinalReport(internshipId)
+      .then((res) => {
+        if (res.data) {
+          setReport(res.data);
+          setForm({
+            executiveSummary:          res.data.executiveSummary          ?? "",
+            keyAccomplishments:        res.data.keyAccomplishments?.join(", ") ?? "",
+            skillsAcquired:            res.data.skillsAcquired?.join(", ")     ?? "",
+            conclusionRecommendations: res.data.conclusionRecommendations  ?? "",
+            status:                    res.data.status                     ?? "draft",
+          });
+        }
+      })
+      .catch(() => {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to Load",
+          text: "Could not load the final report. Please refresh.",
+          confirmButtonColor: "#3B6FE8",
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [internshipId]);
+
+  useEffect(() => {
+    if (showEmailBox) setEmailInput(supervisorEmail || "");
+  }, [showEmailBox, supervisorEmail]);
+
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const buildPayload = (status) => ({
+    internship:                internshipId,
+    executiveSummary:          form.executiveSummary,
+    conclusionRecommendations: form.conclusionRecommendations,
+    keyAccomplishments:        form.keyAccomplishments.split(",").map((s) => s.trim()).filter(Boolean),
+    skillsAcquired:            form.skillsAcquired.split(",").map((s) => s.trim()).filter(Boolean),
+    status,
+  });
+
+  const handleSaveDraft = async () => {
+    try {
+      const payload = buildPayload("draft");
+      if (report) {
+        const res = await updateFinalReport(report._id, payload);
+        setReport(res.data);
+      } else {
+        const res = await addFinalReport(payload);
+        setReport(res.data);
+      }
+      setEditing(false);
+      setCreating(false);
+      await Swal.fire({
+        icon: "success",
+        title: "Draft Saved!",
+        text: "Your final report has been saved as a draft.",
+        confirmButtonColor: "#3B6FE8",
+        timer: 2000,
+        timerProgressBar: true,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Save Failed",
+        text: err.response?.data?.message || "Could not save the draft. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Confirm before final submission — it's a significant action
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Submit Final Report?",
+      text: "Once submitted, this report will be marked as officially submitted. You can still edit it later if needed.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, submit",
+      cancelButtonText: "Not yet",
+      confirmButtonColor: "#16A34A",
+      cancelButtonColor: "#3B6FE8",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const payload = buildPayload("submitted");
+      if (report) {
+        const res = await updateFinalReport(report._id, payload);
+        setReport(res.data);
+      } else {
+        const res = await addFinalReport(payload);
+        setReport(res.data);
+      }
+      setEditing(false);
+      setCreating(false);
+      await Swal.fire({
+        icon: "success",
+        title: "Report Submitted! 🎉",
+        text: "Your final internship report has been successfully submitted.",
+        confirmButtonColor: "#16A34A",
+        timer: 2500,
+        timerProgressBar: true,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Submission Failed",
+        text: err.response?.data?.message || "Could not submit the report. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete Final Report?",
+      text: "This will permanently delete your final report and cannot be undone.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#DC2626",
+      cancelButtonColor: "#3B6FE8",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await deleteFinalReport(report._id);
+      setReport(null);
+      setForm(EMPTY);
+      setCreating(false);
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Your final report has been removed.",
+        confirmButtonColor: "#3B6FE8",
+        timer: 2000,
+        timerProgressBar: true,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Delete Failed",
+        text: err.response?.data?.message || "Could not delete the report. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  // Cancel edit with unsaved-change check
+  const handleCancelEdit = async () => {
+    const hasChanges =
+      form.executiveSummary          !== (report?.executiveSummary          ?? "") ||
+      form.conclusionRecommendations !== (report?.conclusionRecommendations  ?? "") ||
+      form.keyAccomplishments        !== (report?.keyAccomplishments?.join(", ") ?? "") ||
+      form.skillsAcquired            !== (report?.skillsAcquired?.join(", ")     ?? "");
+
+    if (hasChanges) {
+      const result = await Swal.fire({
+        icon: "question",
+        title: "Discard Changes?",
+        text: "You have unsaved changes. Are you sure you want to cancel?",
+        showCancelButton: true,
+        confirmButtonText: "Yes, discard",
+        cancelButtonText: "Keep editing",
+        confirmButtonColor: "#DC2626",
+        cancelButtonColor: "#3B6FE8",
+      });
+      if (result.isConfirmed) {
+        setEditing(false);
+        setCreating(false);
+      }
+    } else {
+      setEditing(false);
+      setCreating(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    setPdfStatus("generating");
+    try {
+      const doc      = generateFinalPDF(report, studentName, studentId, internshipTitle);
+      const filename = `Final_Report_${studentId}_${(internshipTitle || "Internship").replace(/\s+/g, "_")}.pdf`;
+      doc.save(filename);
+      setPdfStatus("done");
+
+      Swal.fire({
+        icon: "success",
+        title: "PDF Downloaded!",
+        text: `${filename} has been saved to your device.`,
+        confirmButtonColor: "#3B6FE8",
+        timer: 2500,
+        timerProgressBar: true,
+      });
+
+      setTimeout(() => setPdfStatus(null), 2500);
+    } catch (err) {
+      console.error("PDF error:", err);
+      setPdfStatus(null);
+      Swal.fire({
+        icon: "error",
+        title: "PDF Failed",
+        text: "Could not generate the PDF. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  const canGenerateCertificate = progress >= 100 && report?.status === "submitted";
+
+  const handleGenerateCertificate = async () => {
+    if (!canGenerateCertificate) return;
+
+    // Confirm certificate generation
+    const result = await Swal.fire({
+      icon: "info",
+      title: "Generate Certificate? 🏅",
+      text: "Your Certificate of Completion will be downloaded as a PDF.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, generate",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3B6FE8",
+      cancelButtonColor: "#6B7280",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setCertStatus("generating");
+    try {
+      const doc = generateCertificatePDF({
+        studentName,
+        studentId,
+        internshipTitle,
+        specialization: internship?.specialization ?? "",
+        supervisorName: supervisorName ?? "",
+        companyName:    internship?.companyName ?? internship?.company ?? "",
+        startDate:      internship?.startDate,
+        endDate:        internship?.endDate,
+        duration:       internship?.duration,
+      });
+      const filename = `Certificate_${studentId}_${(internshipTitle || "Internship").replace(/\s+/g, "_")}.pdf`;
+      doc.save(filename);
+      setCertStatus("done");
+
+      await Swal.fire({
+        icon: "success",
+        title: "Certificate Downloaded! 🎉",
+        html: `Your <strong>Certificate of Completion</strong> has been saved.<br/><span style="font-size:12px;color:#6B7280">${filename}</span>`,
+        confirmButtonColor: "#3B6FE8",
+        timer: 3000,
+        timerProgressBar: true,
+      });
+
+      setTimeout(() => setCertStatus(null), 3000);
+    } catch (err) {
+      console.error("Certificate error:", err);
+      setCertStatus(null);
+      Swal.fire({
+        icon: "error",
+        title: "Certificate Failed",
+        text: "Could not generate the certificate. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailInput.trim()) return;
+
+    const result = await Swal.fire({
+      icon: "info",
+      title: "Send Final Report?",
+      html: `This will <strong>download the PDF</strong> and open your email app with <strong>${emailInput.trim()}</strong> pre-filled.<br/><br/>Please attach the downloaded PDF before sending.`,
+      showCancelButton: true,
+      confirmButtonText: "Yes, proceed",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3B6FE8",
+      cancelButtonColor: "#6B7280",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const doc      = generateFinalPDF(report, studentName, studentId, internshipTitle);
+      const filename = `Final_Report_${studentId}_${(internshipTitle || "Internship").replace(/\s+/g, "_")}.pdf`;
+      doc.save(filename);
+
+      const subject = encodeURIComponent(`Final Internship Report — ${internshipTitle} | ${studentName}`);
+      const body    = encodeURIComponent(
+        `Dear ${supervisorName || "Supervisor"},\n\nPlease find attached my Final Internship Report for the position of ${internshipTitle}.\n\nThis report has been submitted via InternConnect.\n\nBest regards,\n${studentName}\n${studentId}`
+      );
+
+      window.location.href = `mailto:${emailInput.trim()}?subject=${subject}&body=${body}`;
+
+      setEmailSent(true);
+      setShowEmailBox(false);
+      setTimeout(() => setEmailSent(false), 4000);
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Email Failed",
+        text: "Could not prepare the email. Please try again.",
+        confirmButtonColor: "#3B6FE8",
+      });
+    }
+  };
+
+  const inputCls = "w-full rounded-xl border border-[#E8EAF0] bg-white px-4 py-2.5 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors";
+  const labelCls = "mb-1 block text-xs font-semibold text-[#1A1D27]";
+  const showForm = (creating && !report) || editing;
+
+  if (loading)
+    return (
+      <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#3B6FE8] border-t-transparent" />
+        Loading report...
+      </div>
+    );
+
+  return (
+    <div>
+      {/* ── Header ── */}
+      <div className="mb-5 flex items-center justify-between">
+        <h3 className="font-display text-xl font-bold text-[#1A1D27]">Final Report</h3>
+        {report && !editing && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleDownloadPDF}
+              data-testid="final-report-download-pdf"
+              disabled={pdfStatus === "generating"}
+              className="flex items-center gap-2 rounded-xl bg-[#FEE2E2] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FECACA] disabled:opacity-60 transition-colors"
+            >
+              {pdfStatus === "generating" ? (
+                <><div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#DC2626] border-t-transparent" /> Generating...</>
+              ) : pdfStatus === "done" ? (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> Downloaded!</>
+              ) : (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><polyline points="9 15 12 18 15 15" /></svg> Download PDF</>
+              )}
+            </button>
+
+            <button
+              onClick={() => setShowEmailBox((prev) => !prev)}
+              data-testid="final-report-send-to-supervisor"
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                emailSent
+                  ? "bg-[#DCFCE7] text-[#16A34A]"
+                  : showEmailBox
+                  ? "bg-[#3B6FE8] text-white"
+                  : "border border-[#D1FAE5] bg-[#D1FAE5] text-[#059669] hover:bg-[#A7F3D0]"
+              }`}
+            >
+              {emailSent ? (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> Email Client Opened!</>
+              ) : (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg> Send to Supervisor</>
+              )}
+            </button>
+
+            <button
+              onClick={() => setEditing(true)}
+              data-testid="final-report-edit"
+              className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#1A1D27] hover:bg-[#F7F8FA] transition-colors"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              data-testid="final-report-delete"
+              className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FEE2E2] transition-colors"
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Email input box ── */}
+      {showEmailBox && report && !editing && (
+        <div className="mb-5 rounded-2xl border border-[#E8EAF0] bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <p className="mb-1 text-sm font-semibold text-[#1A1D27]">Send to Supervisor</p>
+          <p className="mb-4 text-xs text-[#6B7280]">
+            This will download the PDF and open your email app with the supervisor's address pre-filled.
+            Attach the downloaded PDF before sending.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={emailInput}
+              data-testid="final-report-email-input"
+              onChange={(e) => setEmailInput(e.target.value)}
+              placeholder="supervisor@company.com"
+              className="flex-1 rounded-xl border border-[#E8EAF0] bg-white px-4 py-2.5 text-sm text-[#1A1D27] outline-none focus:border-[#3B6FE8] transition-colors"
+            />
+            <button
+              onClick={handleSendEmail}
+              data-testid="final-report-email-send"
+              disabled={!emailInput.trim()}
+              className="flex items-center gap-2 rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] disabled:opacity-50 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              Open Email
+            </button>
+            <button
+              onClick={() => setShowEmailBox(false)}
+              data-testid="final-report-email-cancel"
+              className="rounded-xl border border-[#E8EAF0] px-4 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── View mode ── */}
+      {report && !editing && (
+        <div className="space-y-5 rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              report.status === "submitted" ? "bg-[#DCFCE7] text-[#16A34A]" : "bg-[#FEF3C7] text-[#D97706]"
+            }`}>
+              {report.status === "submitted" ? "✅ Submitted" : "📝 Draft"}
+            </span>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Executive Summary</p>
+            <p className="text-sm leading-relaxed text-[#1A1D27]">{report.executiveSummary || "—"}</p>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Key Accomplishments</p>
+            {report.keyAccomplishments?.length > 0 ? (
+              <ul className="space-y-1.5">
+                {report.keyAccomplishments.map((a, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-[#1A1D27]">
+                    <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#EEF2FD] text-[10px] font-bold text-[#3B6FE8]">
+                      {i + 1}
+                    </span>
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[#6B7280]">—</p>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Skills Acquired</p>
+            {report.skillsAcquired?.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {report.skillsAcquired.map((s) => (
+                  <span key={s} className="rounded-full bg-[#EEF2FD] px-2.5 py-0.5 text-xs font-semibold text-[#3B6FE8]">{s}</span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#6B7280]">—</p>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Conclusion &amp; Recommendations</p>
+            <p className="text-sm leading-relaxed text-[#1A1D27]">{report.conclusionRecommendations || "—"}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Form mode ── */}
+      {showForm && (
+        <div className="rounded-2xl border border-[#E8EAF0] bg-white p-6 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+          <div className="space-y-4">
+            <div>
+              <label className={labelCls}>Executive Summary</label>
+              <textarea
+                name="executiveSummary"
+                value={form.executiveSummary}
+                data-testid="final-report-executive-summary"
+                onChange={handleChange}
+                rows={4}
+                className={inputCls}
+                placeholder="Write a summary of your overall internship experience..."
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Key Accomplishments (comma-separated)</label>
+              <textarea
+                name="keyAccomplishments"
+                value={form.keyAccomplishments}
+                data-testid="final-report-key-accomplishments"
+                onChange={handleChange}
+                rows={3}
+                className={inputCls}
+                placeholder="Built login system, Deployed to AWS, Reduced load time by 40%"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Skills Acquired (comma-separated)</label>
+              <input
+                name="skillsAcquired"
+                value={form.skillsAcquired}
+                data-testid="final-report-skills-acquired"
+                onChange={handleChange}
+                className={inputCls}
+                placeholder="React, Node.js, Docker, Agile"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Conclusion &amp; Recommendations</label>
+              <textarea
+                name="conclusionRecommendations"
+                value={form.conclusionRecommendations}
+                data-testid="final-report-conclusion"
+                onChange={handleChange}
+                rows={4}
+                className={inputCls}
+                placeholder="Your conclusion and recommendations for future interns..."
+              />
+            </div>
+          </div>
+          <div className="mt-5 flex gap-2">
+            <button
+              onClick={handleSaveDraft}
+              data-testid="final-report-save-draft"
+              className="rounded-xl bg-[#3B6FE8] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
+            >
+              Save Draft
+            </button>
+            <button
+              onClick={handleSubmit}
+              data-testid="final-report-submit"
+              className="rounded-xl bg-[#16A34A] px-5 py-2 text-sm font-semibold text-white hover:bg-[#15803D] transition-colors"
+            >
+              Submit Final Report
+            </button>
+            {editing && (
+              <button
+                onClick={handleCancelEdit}
+                data-testid="final-report-cancel-edit"
+                className="rounded-xl border border-[#E8EAF0] px-5 py-2 text-sm font-semibold text-[#6B7280] hover:bg-[#F7F8FA] transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ── */}
+      {!report && !creating && (
+        <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
+          <p className="mb-4 text-sm text-[#6B7280]">No final report yet. Click "Create Report" to get started.</p>
+          <button
+            onClick={() => setCreating(true)}
+            data-testid="final-report-create-button"
+            className="rounded-xl bg-[#3B6FE8] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2D5CD4] transition-colors"
+          >
+            Create Final Report
+          </button>
+        </div>
+      )}
+
+      {/* ── Generate Certificate ── */}
+      <div className="mt-6">
+        <div className={`rounded-2xl border p-5 transition-colors ${
+          canGenerateCertificate
+            ? "border-[#D4E0FA] bg-gradient-to-r from-[#EEF2FD] to-[#F0FDF4]"
+            : "border-[#E8EAF0] bg-[#F7F8FA]"
+        }`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xl ${
+                canGenerateCertificate ? "bg-[#EEF2FD]" : "bg-[#E8EAF0]"
+              }`}>
+                🏅
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1A1D27]">Certificate of Completion</p>
+                {canGenerateCertificate ? (
+                  <p className="mt-0.5 text-xs font-medium text-[#16A34A]">
+                    ✅ You've completed the internship! Your certificate is ready to download.
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-[#6B7280]">
+                    Available once internship progress reaches 100% and the final report is submitted.
+                  </p>
+                )}
+                {!canGenerateCertificate && (
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    <span className={`flex items-center gap-1 text-xs font-medium ${progress >= 100 ? "text-[#16A34A]" : "text-[#D97706]"}`}>
+                      {progress >= 100 ? "✅" : "⏳"} Progress 100%{" "}
+                      <span className="font-normal text-[#6B7280]">(currently {progress ?? 0}%)</span>
+                    </span>
+                    <span className={`flex items-center gap-1 text-xs font-medium ${report?.status === "submitted" ? "text-[#16A34A]" : "text-[#D97706]"}`}>
+                      {report?.status === "submitted" ? "✅" : "⏳"} Final report submitted
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleGenerateCertificate}
+              data-testid="final-report-generate-certificate"
+              disabled={!canGenerateCertificate || certStatus === "generating"}
+              className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
+                canGenerateCertificate
+                  ? certStatus === "done"
+                    ? "bg-[#DCFCE7] text-[#16A34A]"
+                    : "bg-[#3B6FE8] text-white hover:bg-[#2D5CD4]"
+                  : "cursor-not-allowed bg-[#E8EAF0] text-[#9CA3AF]"
+              } disabled:opacity-70`}
+            >
+              {certStatus === "generating" ? (
+                <><div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" /> Generating...</>
+              ) : certStatus === "done" ? (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg> Certificate Downloaded!</>
+              ) : (
+                <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6" /><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" /></svg> Generate Certificate</>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

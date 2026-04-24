@@ -77,35 +77,14 @@ function Header({ active = 'opportunities', onTabChange }) {
                 </svg>
             ),
         },
-        {
-            key: 'profile',
-            label: 'My Profile',
-            icon: (
-                <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-                </svg>
-            ),
-        },
+        // 'profile' tab intentionally removed; profile is accessible via profile icon
     ]
 
     const handleNavClick = (item) => {
-        if (item.key === 'profile') {
-            navigate('/profile')
-            return
-        }
-
-        if (window.location.pathname !== '/dashboard') {
-            navigate('/dashboard', { state: { tab: item.key } })
+        if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/profile') {
+            const path = item.key === 'profile' ? '/profile' : '/dashboard'
+            const query = item.key === 'opportunities' || item.key === 'profile' ? '' : `?tab=${item.key}`
+            navigate(`${path}${query}`)
             return
         }
 
@@ -124,12 +103,11 @@ function Header({ active = 'opportunities', onTabChange }) {
         <header className="sticky top-0 z-50 border-b border-[#E8EAF0] bg-white/95 backdrop-blur-sm">
             <div className="flex h-[64px] w-full items-center justify-between px-8">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[10px] bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] shadow-sm">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>
-                    </div>
+                    <img
+                        src="/logo_icon_only.png"
+                        alt="InternConnect logo"
+                        className="h-[36px] w-[36px] rounded-[10px] border border-[#E8EAF0] bg-white object-cover shadow-sm"
+                    />
 
                     <span className="font-display text-[19px] font-bold text-[#1A1D27]">
                         InternConnect
@@ -169,17 +147,47 @@ function Header({ active = 'opportunities', onTabChange }) {
                     </button>
 
                     <div className="relative">
-                        <button
-                            onClick={() => setShowUserMenu((v) => !v)}
-                            className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white shadow-sm"
-                        >
-                            {initials}
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => {
+                                    setShowUserMenu(false)
+                                    if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/profile') {
+                                        navigate('/profile')
+                                        return
+                                    }
+                                    if (onTabChange) {
+                                        onTabChange('profile', 'My Profile')
+                                    }
+                                }}
+                                className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-gradient-to-br from-[#3B6FE8] to-[#6B9FFF] text-sm font-bold text-white shadow-sm"
+                            >
+                                {initials}
+                            </button>
+
+                            <button
+                                onClick={() => setShowUserMenu((v) => !v)}
+                                className="flex h-[36px] w-[36px] items-center justify-center rounded-full border border-[#E8EAF0] bg-white text-[#6B7280] transition hover:bg-[#F7F8FA]"
+                                aria-label="User menu"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                            </button>
+                        </div>
 
                         {showUserMenu && (
                             <div className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-[#E8EAF0] bg-white p-1 shadow-lg">
                                 <button
-                                    onClick={() => { setShowUserMenu(false); navigate('/profile') }}
+                                    onClick={() => {
+                                        setShowUserMenu(false)
+                                        if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/profile') {
+                                            navigate('/profile')
+                                            return
+                                        }
+                                        if (onTabChange) {
+                                            onTabChange('profile', 'My Profile')
+                                        }
+                                    }}
                                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[#1A1D27] hover:bg-[#F7F8FA]"
                                 >
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
