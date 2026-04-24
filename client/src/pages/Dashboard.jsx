@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
-import CompanyReview from '../components/CompanyReview'
+import ReviewForum from '../components/reviews/ReviewForum'
 import InternshipList from '../components/MyInternships/InternshipList'
 import AddInternshipForm from '../components/MyInternships/AddInternshipForm'
 import InternshipDashboard from '../components/MyInternships/InternshipDashboard'
@@ -664,84 +664,7 @@ function Dashboard() {
             </div>
           </>
         ) : activeTab === 'reviews' ? (
-          <div className="space-y-5">
-            <div className="mb-6 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-xl font-bold text-[#1A1D27]">
-                  Company Reviews
-                </h2>
-                <button
-                  onClick={() => navigate('/write-review')}
-                  className="flex items-center gap-2 rounded-lg bg-[#3B6FE8] px-4 py-2 font-semibold text-white transition hover:bg-[#2D5CD4] cursor-pointer"
-                >
-                  <span>+</span>
-                  Write Anonymous Review
-                </button>
-              </div>
-              {reviews.length > 0 && (
-                <div className="flex flex-wrap gap-4">
-                  <input
-                    type="text"
-                    placeholder="Search by company name or role..."
-                    value={reviewsSearch}
-                    onChange={(e) => setReviewsSearch(e.target.value)}
-                    className="w-80 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <select
-                    value={ratingFilter}
-                    onChange={(e) => setRatingFilter(e.target.value)}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">All Ratings</option>
-                    <option value="5">5 Stars</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="3">3+ Stars</option>
-                    <option value="2">2+ Stars</option>
-                    <option value="1">1+ Stars</option>
-                  </select>
-                </div>
-              )}
-            </div>
-            {reviews.length > 0 ? (
-              (() => {
-                const filteredReviews = reviews.filter((review) => {
-                  const searchLower = reviewsSearch.toLowerCase()
-                  const matchesSearch =
-                    review.company?.toLowerCase().includes(searchLower) ||
-                    review.role?.toLowerCase().includes(searchLower)
-                  const matchesRating =
-                    ratingFilter === '' ||
-                    (review.rating && parseInt(review.rating) >= parseInt(ratingFilter))
-                  return matchesSearch && matchesRating
-                })
-                
-                return filteredReviews.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredReviews.map((review) => (
-                      <CompanyReview
-                        key={review.id}
-                        review={review}
-                        onDelete={handleDeleteReview}
-                        onEdit={handleEditReview}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
-                    <p className="text-[#6B7280]">
-                      No reviews found matching "{reviewsSearch}"
-                    </p>
-                  </div>
-                )
-              })()
-            ) : (
-              <div className="rounded-lg border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-8 text-center">
-                <p className="text-[#6B7280]">
-                  No reviews yet. Be the first to share your experience!
-                </p>
-              </div>
-            )}
-          </div>
+          <ReviewForum />
         ) : activeTab === 'myInternships' ? (
           renderMyInternships()
         ) : activeTab === 'profile' ? (
