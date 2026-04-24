@@ -26,6 +26,7 @@ const {
     deleteReviewReply,
     voteComment,
     voteReply,
+    summarizeReview,
 } = require("../controllers/reviewController");
 const protect = require("../middleware/authMiddleware");
 
@@ -47,6 +48,9 @@ router.get("/:id", getCompanyReviewById);
 
 // Get comments for a review
 router.get("/:id/comments", getReviewComments);
+
+// Summarize a review
+router.get("/:id/summarize", summarizeReview);
 
 // Mark review as helpful
 router.put("/:id/helpful", markHelpful);
