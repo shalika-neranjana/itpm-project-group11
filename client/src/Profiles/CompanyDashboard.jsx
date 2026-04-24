@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import { useNavigate } from 'react-router-dom'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import {
   BriefcaseBusiness,
   Building2,
+  FileDown,
   LogOut,
   PencilLine,
   Phone,
@@ -32,6 +35,15 @@ const resolveUploadUrl = (pathOrUrl) => {
   return `${origin}${pathOrUrl}`
 }
 
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return '-'
+  }
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString()
+}
+
 const CompanyDashboard = () => {
   const [user, setUser] = useState(null)
   const [internships, setInternships] = useState([])
@@ -44,6 +56,11 @@ const CompanyDashboard = () => {
   const [profileSuccess, setProfileSuccess] = useState('')
   const [selectedInternship, setSelectedInternship] = useState(null)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [applicantSearch, setApplicantSearch] = useState('')
+  const [applicantTypeFilter, setApplicantTypeFilter] = useState('')
+  const [applicantStatusFilter, setApplicantStatusFilter] = useState('')
+  const [applicantInternshipFilter, setApplicantInternshipFilter] = useState('')
+  const [applicantSortOrder, setApplicantSortOrder] = useState('newest')
   const navigate = useNavigate()
 
   const [companyForm, setCompanyForm] = useState({
@@ -64,23 +81,6 @@ const CompanyDashboard = () => {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [isCropOpen, setIsCropOpen] = useState(false)
-
-  useEffect(() => {
-    console.log('CompanyDashboard useEffect called')
-    const token = localStorage.getItem('token')
-    const role = localStorage.getItem('role')
-    console.log('Token:', !!token, 'Role:', role)
-
-    if (!token || localStorage.getItem('role') !== 'company') {
-      console.log('Redirecting to login')
-      navigate('/login')
-      return
-    }
-
-    console.log('Calling fetchCompanyProfile and fetchCompanyInternships')
-    fetchCompanyProfile()
-    fetchCompanyInternships()
-  }, [navigate])
 
   const fetchCompanyInternships = async () => {
     try {
@@ -155,6 +155,23 @@ const CompanyDashboard = () => {
     }
   }
 
+  useEffect(() => {
+    console.log('CompanyDashboard useEffect called')
+    const token = localStorage.getItem('token')
+    const role = localStorage.getItem('role')
+    console.log('Token:', !!token, 'Role:', role)
+
+    if (!token || localStorage.getItem('role') !== 'company') {
+      console.log('Redirecting to login')
+      navigate('/login')
+      return
+    }
+
+    console.log('Calling fetchCompanyProfile and fetchCompanyInternships')
+    fetchCompanyProfile()
+    fetchCompanyInternships()
+  }, [navigate])
+
   const handleUpdateApplicationStatus = async (applicant, status) => {
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
@@ -185,6 +202,93 @@ const CompanyDashboard = () => {
       swalSuccess('Internship deleted successfully')
     } catch (error) {
       swalError(error.response?.data?.message || 'Failed to delete internship')
+    }
+  }
+
+  const filteredApplicants = useMemo(() => {
+    const normalizedSearch = applicantSearch.trim().toLowerCase()
+
+    const filtered = applicants.filter((applicant) => {
+      const matchesType = applicantTypeFilter
+        ? applicant.internshipType === applicantTypeFilter
+        : true
+
+      const matchesStatus = applicantStatusFilter
+        ? (applicant.status || 'Pending') === applicantStatusFilter
+        : true
+
+      const matchesInternship = applicantInternshipFilter
+        ? applicant.internshipId === applicantInternshipFilter
+        : true
+
+      const matchesSearch = normalizedSearch
+        ? [applicant.name, applicant.email, applicant.phone]
+            .filter(Boolean)
+            .some((field) => String(field).toLowerCase().includes(normalizedSearch))
+        : true
+
+      return matchesType && matchesStatus && matchesInternship && matchesSearch
+    })
+
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.appliedDate || 0).getTime()
+      const dateB = new Date(b.appliedDate || 0).getTime()
+      return applicantSortOrder === 'newest' ? dateB - dateA : dateA - dateB
+    })
+  }, [applicants, applicantSearch, applicantTypeFilter, applicantStatusFilter, applicantInternshipFilter, applicantSortOrder])
+
+  const handleDownloadApplicantsPdf = () => {
+    if (!filteredApplicants.length) {
+      swalError('No applicants available to export')
+      return
+    }
+
+    try {
+      const doc = new jsPDF({ orientation: 'landscape' })
+      const generatedAt = new Date().toLocaleString()
+
+      doc.setFontSize(16)
+      doc.text('Applicant Details Report', 14, 16)
+      doc.setFontSize(10)
+      doc.text(`Generated: ${generatedAt}`, 14, 23)
+
+      const tableRows = filteredApplicants.map((applicant) => [
+        applicant.name || '-',
+        applicant.email || '-',
+        applicant.phone || '-',
+        applicant.status || 'Pending',
+        applicant.internshipTitle || '-',
+        applicant.internshipType || '-',
+        applicant.internshipLocation || '-',
+        formatDisplayDate(applicant.appliedDate)
+      ])
+
+      autoTable(doc, {
+        startY: 30,
+        head: [[
+          'Name',
+          'Email',
+          'Phone',
+          'Status',
+          'Internship',
+          'Type',
+          'Location',
+          'Applied Date'
+        ]],
+        body: tableRows,
+        styles: {
+          fontSize: 9,
+          cellPadding: 2
+        },
+        headStyles: {
+          fillColor: [59, 111, 232]
+        }
+      })
+
+      doc.save(`applicants-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+    } catch (error) {
+      console.error('Failed to generate applicants PDF:', error)
+      swalError('Failed to generate PDF report')
     }
   }
 
@@ -367,8 +471,8 @@ const CompanyDashboard = () => {
       subtitle: 'Manage internship opportunities and keep your hiring pipeline active.'
     },
     applicants: {
-      title: 'Applicants',
-      subtitle: 'Review student applications and update decisions quickly.'
+      title: '',
+      subtitle: ''
     },
     profile: {
       title: 'Company Profile',
@@ -459,6 +563,16 @@ const CompanyDashboard = () => {
       </header>
 
       <main className={`relative z-10 ${mainClassName}`}>
+        {(current.title || current.subtitle) && (
+          <div className="mb-6">
+            {current.title && (
+              <h1 className="font-display text-[36px] font-bold text-[#0F1419]">{current.title}</h1>
+            )}
+            {current.subtitle && (
+              <p className="mt-2 text-base font-bold text-[#3E4957]">{current.subtitle}</p>
+            )}
+          </div>
+        )}
 
         <section className="mb-6 flex flex-wrap gap-3 lg:hidden">
           {tabs.map(({ id, label, icon: Icon }) => {
@@ -564,8 +678,100 @@ const CompanyDashboard = () => {
 
         {activeTab === 'applicants' && (
           <section className="space-y-4">
-            {applicants.length > 0 ? (
-              applicants.map((applicant, index) => (
+            <div className="rounded-2xl border border-[#E8EAF0] bg-white p-5 shadow-sm">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Search</label>
+                  <input
+                    type="text"
+                    value={applicantSearch}
+                    onChange={(e) => setApplicantSearch(e.target.value)}
+                    placeholder="Name, email..."
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Status</label>
+                  <select
+                    value={applicantStatusFilter}
+                    onChange={(e) => setApplicantStatusFilter(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Accepted">Accepted</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Internship</label>
+                  <select
+                    value={applicantInternshipFilter}
+                    onChange={(e) => setApplicantInternshipFilter(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">All Internships</option>
+                    {internships.map(i => (
+                      <option key={i._id} value={i._id}>{i.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Type</label>
+                  <select
+                    value={applicantTypeFilter}
+                    onChange={(e) => setApplicantTypeFilter(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">All Types</option>
+                    <option value="On-site">On-site</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Hybrid">Hybrid</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Sort By</label>
+                  <select
+                    value={applicantSortOrder}
+                    onChange={(e) => setApplicantSortOrder(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#F0F2F5] pt-4">
+                <button
+                  onClick={() => {
+                    setApplicantSearch('')
+                    setApplicantStatusFilter('')
+                    setApplicantTypeFilter('')
+                    setApplicantInternshipFilter('')
+                    setApplicantSortOrder('newest')
+                  }}
+                  className="text-sm font-semibold text-[#6B7280] transition hover:text-[#1A1D27]"
+                >
+                  Clear all filters
+                </button>
+
+                <button
+                  onClick={handleDownloadApplicantsPdf}
+                  disabled={!filteredApplicants.length}
+                  className="inline-flex items-center gap-2 rounded-[10px] border border-[#D4E0FA] bg-[#EEF2FD] px-5 py-2.5 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Download Report ({filteredApplicants.length})
+                </button>
+              </div>
+            </div>
+            {filteredApplicants.length > 0 ? (
+              filteredApplicants.map((applicant, index) => (
                 <article key={`${applicant._id}-${index}`} className={panelClass}>
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-4">
@@ -632,8 +838,8 @@ const CompanyDashboard = () => {
             ) : (
               <div className={panelClass}>
                 <div className="rounded-2xl border border-dashed border-[#D4E0FA] bg-[#F7F8FA] p-10 text-center">
-                  <h3 className="text-xl font-bold text-[#1A1D27]">No applicants yet</h3>
-                  <p className="mt-2 text-[#6B7280]">Once students apply, they will appear here for review.</p>
+                  <h3 className="text-xl font-bold text-[#1A1D27]">No matching applicants found</h3>
+                  <p className="mt-2 text-[#6B7280]">Try changing your search text or internship type filter.</p>
                 </div>
               </div>
             )}
