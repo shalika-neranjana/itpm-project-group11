@@ -920,35 +920,43 @@ const summarizeReview = async (req, res, next) => {
             throw new Error("Review not found");
         }
 
-        const client = getOpenAIClient();
+        try {
+            const client = getOpenAIClient();
+            const response = await client.responses.create({
+                model: process.env.OPENAI_MODEL || "gpt-5",
+                reasoning: { effort: "medium" },
+                input: [
+                    {
+                        role: "developer",
+                        content: "You are a helpful assistant that summarizes company reviews. Provide a short 3 to 4 line summary of whether the review is good or bad, highlighting the key points. Be concise and professional."
+                    },
+                    {
+                        role: "user",
+                        content: `Company: ${review.companyName}\nRole: ${review.position}\nRating: ${review.rating}/5\nReview: ${review.description}`
+                    }
+                ]
+            });
 
-        const response = await client.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a helpful assistant that summarizes company reviews. Provide a short 3 to 4 line summary of whether the review is good or bad, highlighting the key points. Be concise.",
-                },
-                {
-                    role: "user",
-                    content: `Company: ${review.companyName}\nRole: ${review.position}\nRating: ${review.rating}/5\nReview: ${review.description}`,
-                },
-            ],
-            max_tokens: 150,
-        });
+            const summary = response.output_text.trim();
 
-        const summary = response.choices[0].message.content.trim();
-
-        res.status(200).json({
-            success: true,
-            summary,
-        });
+            res.status(200).json({
+                success: true,
+                summary,
+            });
+        } catch (aiError) {
+            console.error("AI Summarization failed, using fallback:", aiError);
+            // Simple rule-based fallback summary
+            const sentiment = review.rating >= 4 ? "positive" : review.rating <= 2 ? "negative" : "mixed";
+            const fallbackSummary = `This is a ${sentiment} review for ${review.companyName} as a ${review.position}. The reviewer rated it ${review.rating}/5. ${review.description.substring(0, 100)}...`;
+            
+            res.status(200).json({
+                success: true,
+                summary: fallbackSummary,
+                isFallback: true
+            });
+        }
     } catch (error) {
-        console.error("Summarization error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to generate summary",
-        });
+        next(error);
     }
 };
 
