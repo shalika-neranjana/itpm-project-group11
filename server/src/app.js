@@ -24,6 +24,7 @@ const taskRoutes = require("./routes/MyInternships/taskRoutes");
 const monthlyReportRoutes = require("./routes/MyInternships/monthlyReportRoutes");
 const finalReportRoutes = require("./routes/MyInternships/finalReportRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const journeyRoutes = require("./routes/student_guidance/journeyRoutes");
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use("/api/company", companyRoutes);
 app.use("/api/internships", internshipRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/student-guidance", studentGuidanceRoutes);
+app.use("/api/student-guidance/journeys", journeyRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 /**

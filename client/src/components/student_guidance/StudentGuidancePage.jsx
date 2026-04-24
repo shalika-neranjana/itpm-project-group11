@@ -12,6 +12,7 @@ import ExamResultsSection from './ExamResultsSection'
 import GuidanceSidebar from './GuidanceSidebar'
 import InterestsSection from './InterestsSection'
 import SkillsSection from './SkillsSection'
+import TrackItSection from './TrackItSection'
 
 function StudentGuidancePage() {
   const location = useLocation()
@@ -42,7 +43,7 @@ function StudentGuidancePage() {
 
   useEffect(() => {
     const requestedTab = location.state?.guidanceTab
-    const allowedTabs = ['examResults', 'interests', 'skills', 'askInternConnect', 'careers']
+    const allowedTabs = ['examResults', 'interests', 'skills', 'askInternConnect', 'careers', 'trackIt']
 
     if (requestedTab && allowedTabs.includes(requestedTab)) {
       setActiveTab(requestedTab)
@@ -140,6 +141,7 @@ function StudentGuidancePage() {
         refreshing={saveState.careers}
       />
     ),
+    trackIt: <TrackItSection />,
   }
 
   if (loading) {
