@@ -6,6 +6,20 @@
 const mongoose = require("mongoose");
 const CompanyReview = require("../models/Review");
 const Student = require("../models/Student");
+const OpenAI = require("openai");
+
+let openAIClient;
+const getOpenAIClient = () => {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error("OPENAI_API_KEY is not configured on the server environment");
+    }
+
+    if (!openAIClient) {
+        openAIClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    }
+
+    return openAIClient;
+};
 
 const getVoteScore = (item) => {
     const upvotes = item.upvotedBy?.length || 0;
@@ -892,6 +906,52 @@ const voteReply = async (req, res, next) => {
     }
 };
 
+/**
+ * @desc    Summarize a review using AI
+ * @route   GET /api/reviews/:id/summarize
+ * @access  Public
+ */
+const summarizeReview = async (req, res, next) => {
+    try {
+        const review = await CompanyReview.findById(req.params.id);
+        
+        if (!review) {
+            res.status(404);
+            throw new Error("Review not found");
+        }
+
+        const client = getOpenAIClient();
+
+        const response = await client.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a helpful assistant that summarizes company reviews. Provide a short 3 to 4 line summary of whether the review is good or bad, highlighting the key points. Be concise.",
+                },
+                {
+                    role: "user",
+                    content: `Company: ${review.companyName}\nRole: ${review.position}\nRating: ${review.rating}/5\nReview: ${review.description}`,
+                },
+            ],
+            max_tokens: 150,
+        });
+
+        const summary = response.choices[0].message.content.trim();
+
+        res.status(200).json({
+            success: true,
+            summary,
+        });
+    } catch (error) {
+        console.error("Summarization error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to generate summary",
+        });
+    }
+};
+
 module.exports = {
     createCompanyReview,
     getAllCompanyReviews,
@@ -913,4 +973,5 @@ module.exports = {
     deleteReviewReply,
     voteComment,
     voteReply,
+    summarizeReview,
 };

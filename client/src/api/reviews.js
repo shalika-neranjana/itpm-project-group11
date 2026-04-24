@@ -19,6 +19,10 @@ const mapReviewData = (dbReview) => {
     flagged: dbReview.flagged,
     verified: dbReview.rating >= 4,
     sentiment: dbReview.rating <= 2 ? 'Negative' : dbReview.rating >= 4 ? 'Positive' : 'Neutral',
+    helpful: dbReview.helpful || 0,
+    unhelpful: dbReview.unhelpful || 0,
+    commentsCount: dbReview.comments?.length || 0,
+    comments: dbReview.comments || [],
   }
 }
 
@@ -277,6 +281,15 @@ export const voteReviewReply = async (reviewId, commentId, replyId, vote) => {
   }
 }
 
+export const summarizeReview = async (id) => {
+  try {
+    const response = await api.get(`/reviews/${id}/summarize`)
+    return response.data.summary
+  } catch (error) {
+    throw error.response?.data || error
+  }
+}
+
 export default {
   createReview,
   getAllReviews,
@@ -297,4 +310,5 @@ export default {
   deleteReviewReply,
   voteReviewComment,
   voteReviewReply,
+  summarizeReview,
 }

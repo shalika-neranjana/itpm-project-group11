@@ -90,10 +90,12 @@ const ReviewForum = () => {
   const handleVote = async (id, voteType) => {
     try {
       if (voteType === 'up') {
-        await markReviewHelpful(id);
+        const updatedReview = await markReviewHelpful(id);
+        setReviews(prev => prev.map(r => (r._id || r.id) === id ? updatedReview : r));
         swalToast('Marked as helpful');
       } else {
-        await markReviewUnhelpful(id);
+        const updatedReview = await markReviewUnhelpful(id);
+        setReviews(prev => prev.map(r => (r._id || r.id) === id ? updatedReview : r));
         swalToast('Marked as unhelpful');
       }
     } catch (error) {

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, ThumbsUp, ThumbsDown, MoreVertical, Edit, Trash2, Clock, Share2 } from 'lucide-react';
+import { MessageSquare, ThumbsUp, ThumbsDown, MoreVertical, Edit, Trash2, Clock, Share2, Sparkles } from 'lucide-react';
 import ReviewComments from '../ReviewComments';
+import { summarizeReview } from '../../api/reviews';
 
 function ThreadCard({ review, onDelete, onEdit, onVote }) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
 
   // Parse student info
   const currentUser = JSON.parse(localStorage.getItem('student') || '{}');
@@ -24,6 +28,21 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
     e.stopPropagation();
     setShowDropdown(false);
     onEdit(review);
+  };
+
+  const handleSummarize = async () => {
+    if (summary) return;
+    setIsSummarizing(true);
+    setSummaryError('');
+    try {
+      const result = await summarizeReview(review._id || review.id);
+      setSummary(result);
+    } catch (error) {
+      console.error("Failed to summarize review:", error);
+      setSummaryError('Failed to generate summary.');
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const getInitials = (name) => {
@@ -98,6 +117,23 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#4B5563]">
           {review.text || review.description}
         </p>
+
+        {/* AI Summary Section */}
+        {(summary || isSummarizing || summaryError) && (
+          <div className="mt-4 rounded-lg bg-purple-50/50 p-3 border border-purple-100">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={14} className="text-purple-600" />
+              <span className="text-xs font-bold text-purple-900">AI Summary</span>
+            </div>
+            {isSummarizing ? (
+              <p className="text-sm text-purple-700 animate-pulse">Generating summary...</p>
+            ) : summaryError ? (
+              <p className="text-sm text-red-500">{summaryError}</p>
+            ) : (
+              <p className="text-sm text-purple-800 leading-relaxed italic">"{summary}"</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer / Interaction Bar */}
@@ -108,13 +144,14 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
             className="group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:bg-green-50 hover:text-green-600"
           >
             <ThumbsUp size={16} className="transition-transform group-hover:-translate-y-0.5" />
-            <span>Helpful</span>
+            <span>Helpful {review.helpful > 0 && `(${review.helpful})`}</span>
           </button>
           <button
             onClick={() => onVote(review._id || review.id, 'down')}
             className="group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             <ThumbsDown size={16} className="transition-transform group-hover:translate-y-0.5" />
+            {review.unhelpful > 0 && <span>({review.unhelpful})</span>}
           </button>
 
           <button
@@ -122,7 +159,16 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
             className={`group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${showComments ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
           >
             <MessageSquare size={16} />
-            <span>Discuss</span>
+            <span>Discuss {review.commentsCount > 0 && `(${review.commentsCount})`}</span>
+          </button>
+
+          <button
+            onClick={handleSummarize}
+            disabled={isSummarizing}
+            className="group flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-gray-500 transition-colors hover:bg-purple-50 hover:text-purple-600 disabled:opacity-50"
+          >
+            <Sparkles size={16} className={isSummarizing ? "animate-pulse text-purple-500" : ""} />
+            <span>{isSummarizing ? 'Summarizing...' : 'AI Summary'}</span>
           </button>
         </div>
 
