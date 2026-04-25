@@ -371,20 +371,39 @@ const flagReview = async (req, res, next) => {
 /**
  * @desc    Mark review as helpful
  * @route   PUT /api/reviews/:id/helpful
- * @access  Public
+ * @access  Private
  */
 const markHelpful = async (req, res, next) => {
     try {
-        const review = await CompanyReview.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { helpful: 1 } },
-            { new: true }
-        );
+        const review = await CompanyReview.findById(req.params.id);
 
         if (!review) {
             res.status(404);
             throw new Error("Review not found");
         }
+
+        const userId = req.student._id.toString();
+        const helpfulIndex = (review.helpfulBy || []).findIndex((v) => v.toString() === userId);
+        const unhelpfulIndex = (review.unhelpfulBy || []).findIndex((v) => v.toString() === userId);
+
+        if (helpfulIndex > -1) {
+            // Already marked helpful, remove it (toggle)
+            review.helpfulBy.splice(helpfulIndex, 1);
+            review.helpful = Math.max(0, (review.helpful || 1) - 1);
+        } else {
+            // Mark as helpful
+            review.helpfulBy = review.helpfulBy || [];
+            review.helpfulBy.push(req.student._id);
+            review.helpful = (review.helpful || 0) + 1;
+
+            // Remove from unhelpful if present
+            if (unhelpfulIndex > -1) {
+                review.unhelpfulBy.splice(unhelpfulIndex, 1);
+                review.unhelpful = Math.max(0, (review.unhelpful || 1) - 1);
+            }
+        }
+
+        await review.save();
 
         res.status(200).json({
             success: true,
@@ -398,20 +417,39 @@ const markHelpful = async (req, res, next) => {
 /**
  * @desc    Mark review as unhelpful
  * @route   PUT /api/reviews/:id/unhelpful
- * @access  Public
+ * @access  Private
  */
 const markUnhelpful = async (req, res, next) => {
     try {
-        const review = await CompanyReview.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { unhelpful: 1 } },
-            { new: true }
-        );
+        const review = await CompanyReview.findById(req.params.id);
 
         if (!review) {
             res.status(404);
             throw new Error("Review not found");
         }
+
+        const userId = req.student._id.toString();
+        const helpfulIndex = (review.helpfulBy || []).findIndex((v) => v.toString() === userId);
+        const unhelpfulIndex = (review.unhelpfulBy || []).findIndex((v) => v.toString() === userId);
+
+        if (unhelpfulIndex > -1) {
+            // Already marked unhelpful, remove it (toggle)
+            review.unhelpfulBy.splice(unhelpfulIndex, 1);
+            review.unhelpful = Math.max(0, (review.unhelpful || 1) - 1);
+        } else {
+            // Mark as unhelpful
+            review.unhelpfulBy = review.unhelpfulBy || [];
+            review.unhelpfulBy.push(req.student._id);
+            review.unhelpful = (review.unhelpful || 0) + 1;
+
+            // Remove from helpful if present
+            if (helpfulIndex > -1) {
+                review.helpfulBy.splice(helpfulIndex, 1);
+                review.helpful = Math.max(0, (review.helpful || 1) - 1);
+            }
+        }
+
+        await review.save();
 
         res.status(200).json({
             success: true,
@@ -920,35 +958,43 @@ const summarizeReview = async (req, res, next) => {
             throw new Error("Review not found");
         }
 
-        const client = getOpenAIClient();
+        try {
+            const client = getOpenAIClient();
+            const response = await client.responses.create({
+                model: process.env.OPENAI_MODEL || "gpt-5",
+                reasoning: { effort: "medium" },
+                input: [
+                    {
+                        role: "developer",
+                        content: "You are a helpful assistant that summarizes company reviews. Provide a short 3 to 4 line summary of whether the review is good or bad, highlighting the key points. Be concise and professional."
+                    },
+                    {
+                        role: "user",
+                        content: `Company: ${review.companyName}\nRole: ${review.position}\nRating: ${review.rating}/5\nReview: ${review.description}`
+                    }
+                ]
+            });
 
-        const response = await client.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a helpful assistant that summarizes company reviews. Provide a short 3 to 4 line summary of whether the review is good or bad, highlighting the key points. Be concise.",
-                },
-                {
-                    role: "user",
-                    content: `Company: ${review.companyName}\nRole: ${review.position}\nRating: ${review.rating}/5\nReview: ${review.description}`,
-                },
-            ],
-            max_tokens: 150,
-        });
+            const summary = response.output_text.trim();
 
-        const summary = response.choices[0].message.content.trim();
-
-        res.status(200).json({
-            success: true,
-            summary,
-        });
+            res.status(200).json({
+                success: true,
+                summary,
+            });
+        } catch (aiError) {
+            console.error("AI Summarization failed, using fallback:", aiError);
+            // Simple rule-based fallback summary
+            const sentiment = review.rating >= 4 ? "positive" : review.rating <= 2 ? "negative" : "mixed";
+            const fallbackSummary = `This is a ${sentiment} review for ${review.companyName} as a ${review.position}. The reviewer rated it ${review.rating}/5. ${review.description.substring(0, 100)}...`;
+            
+            res.status(200).json({
+                success: true,
+                summary: fallbackSummary,
+                isFallback: true
+            });
+        }
     } catch (error) {
-        console.error("Summarization error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to generate summary",
-        });
+        next(error);
     }
 };
 

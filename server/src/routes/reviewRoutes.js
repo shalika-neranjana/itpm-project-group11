@@ -53,10 +53,10 @@ router.get("/:id/comments", getReviewComments);
 router.get("/:id/summarize", summarizeReview);
 
 // Mark review as helpful
-router.put("/:id/helpful", markHelpful);
+router.put("/:id/helpful", protect, markHelpful);
 
 // Mark review as unhelpful
-router.put("/:id/unhelpful", markUnhelpful);
+router.put("/:id/unhelpful", protect, markUnhelpful);
 
 /**
  * Private routes (require authentication)

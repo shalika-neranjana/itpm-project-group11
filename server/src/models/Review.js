@@ -74,10 +74,22 @@ const companyReviewSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        helpfulBy: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Student",
+            }
+        ],
         unhelpful: {
             type: Number,
             default: 0,
         },
+        unhelpfulBy: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Student",
+            }
+        ],
         workEnvironment: {
             type: Number,
             min: 1,

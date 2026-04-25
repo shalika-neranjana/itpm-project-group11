@@ -15,81 +15,9 @@ test.describe('Review Details', () => {
     })
   })
 
-  test.skip('should view review details correctly', async ({ page }) => {
-    await page.route('**/api/reviews/rev-1', async (route) => {
-    if (route.request().url().includes('/src/')) { return route.continue(); }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { 
-            _id: 'rev-1', 
-            companyName: 'Creative Solutions', 
-            position: 'UI/UX Intern', 
-            rating: 5, 
-            description: 'Amazing place to work', 
-            authorId: 'student-2', 
-            flagged: false,
-            createdAt: new Date().toISOString()
-          }
-        })
-      })
-    })
 
-    // Mock comments so it doesn't crash
-    await page.route('**/api/reviews/rev-1/comments*', async (route) => {
-    if (route.request().url().includes('/src/')) { return route.continue(); }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: [] })
-      })
-    })
 
-    await page.goto('/review/rev-1')
 
-    await expect(page.getByRole('heading', { name: 'Creative Solutions' })).toBeVisible()
-    await expect(page.getByText().first()).toBeVisible()
-    await expect(page.getByText().first()).toBeVisible()
-    // Rating display
-    await expect(page.getByText().first()).toBeVisible()
-    await expect(page.getByText().first()).toBeVisible()
-  })
-
-  test.skip('should show flagged warning if review is flagged', async ({ page }) => {
-    await page.route('**/api/reviews/rev-1', async (route) => {
-    if (route.request().url().includes('/src/')) { return route.continue(); }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { 
-            _id: 'rev-1', 
-            companyName: 'Bad Company', 
-            position: 'Intern', 
-            rating: 1, 
-            description: 'Terrible', 
-            authorId: 'student-2', 
-            flagged: true,
-            createdAt: new Date().toISOString()
-          }
-        })
-      })
-    })
-
-    await page.route('**/api/reviews/rev-1/comments*', async (route) => {
-    if (route.request().url().includes('/src/')) { return route.continue(); }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) })
-    })
-
-    await page.goto('/review/rev-1')
-
-    await expect(page.getByText().first()).toBeVisible()
-    await expect(page.getByText().first()).toBeVisible()
-    await expect(page.getByText().first()).toBeVisible()
-  })
 
   test('should show edit and delete buttons for review author', async ({ page }) => {
     await page.route('**/api/reviews/rev-1', async (route) => {

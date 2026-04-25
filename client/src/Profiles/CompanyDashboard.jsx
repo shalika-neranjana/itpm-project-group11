@@ -175,7 +175,7 @@ const CompanyDashboard = () => {
   const handleUpdateApplicationStatus = async (applicant, status) => {
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
-      fetchCompanyInternships()
+      await fetchCompanyInternships()
       swalSuccess(`Application ${status.toLowerCase()} and student will see it in their profile.`)
     } catch (error) {
       console.error(`Failed to ${status.toLowerCase()} application:`, error)
@@ -766,7 +766,7 @@ const CompanyDashboard = () => {
                   className="inline-flex items-center gap-2 rounded-[10px] border border-[#D4E0FA] bg-[#EEF2FD] px-5 py-2.5 text-sm font-semibold text-[#3B6FE8] transition hover:bg-[#DFE8FC] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <FileDown className="h-4 w-4" />
-                  Download Report ({filteredApplicants.length})
+                  Download
                 </button>
               </div>
             </div>
