@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MessageSquare, ThumbsUp, ThumbsDown, MoreVertical, Edit, Trash2, Clock, Share2, Sparkles, User, ChevronDown, ChevronUp } from 'lucide-react';
 import DiscussionModal from './DiscussionModal';
 import { summarizeReview } from '../../api/reviews';
+import { toast } from '../../utils/swal';
 
 function ThreadCard({ review, onDelete, onEdit, onVote }) {
   const navigate = useNavigate();
@@ -44,6 +45,13 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
     } finally {
       setIsSummarizing(false);
     }
+  };
+
+  const handleShare = (e) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/review/${review._id || review.id}`;
+    navigator.clipboard.writeText(url);
+    toast('Link copied to clipboard!');
   };
 
   const getInitials = (name) => {
@@ -203,7 +211,11 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
                 <Sparkles size={18} className={isSummarizing ? "animate-spin" : ""} />
             </button>
            )}
-           <button className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+          <button 
+            onClick={handleShare}
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            title="Share Review"
+          >
             <Share2 size={18} />
           </button>
         </div>
