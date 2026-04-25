@@ -175,7 +175,7 @@ const CompanyDashboard = () => {
   const handleUpdateApplicationStatus = async (applicant, status) => {
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
-      fetchCompanyInternships()
+      await fetchCompanyInternships()
       swalSuccess(`Application ${status.toLowerCase()} and student will see it in their profile.`)
     } catch (error) {
       console.error(`Failed to ${status.toLowerCase()} application:`, error)

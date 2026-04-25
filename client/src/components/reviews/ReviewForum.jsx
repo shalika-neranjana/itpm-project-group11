@@ -190,7 +190,7 @@ const ReviewForum = () => {
             className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-[#1A1D27] px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-black hover:-translate-y-0.5 active:scale-95"
           >
             <PenTool size={18} />
-            Write a Review
+            Write Review
           </button>
         </div>
       </div>
@@ -281,9 +281,9 @@ const ReviewForum = () => {
               </button>
               <button
                 onClick={() => setSortBy('top')}
-                className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${sortBy === 'top' ? 'bg-[#1A1D27] text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+                className={`px-6 py-2 text-sm font-bold rounded-lg transition-all ${sortBy === 'top' ? 'bg-[#1A1D27] text-white shadow-md border-blue-600' : 'text-gray-500 hover:text-gray-900 border-transparent'} border-2`}
               >
-                Helpful
+                Top Rated
               </button>
             </div>
             
@@ -316,7 +316,7 @@ const ReviewForum = () => {
                   <MessageCircle size={48} />
                 </div>
                 <h3 className="text-xl font-black text-[#1A1D27] mb-2">No reviews found</h3>
-                <p className="text-sm font-medium text-gray-400 max-w-[280px]">Try adjusting your filters or search terms.</p>
+                <p className="text-sm font-medium text-gray-400 max-w-[280px]">Try adjusting your search terms or filters.</p>
               </div>
             )}
           </div>

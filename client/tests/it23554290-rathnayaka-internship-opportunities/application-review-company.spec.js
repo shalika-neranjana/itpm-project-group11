@@ -55,7 +55,7 @@ test.describe('Application Review (Company)', () => {
     await page.getByRole('button', { name: 'Applicants' }).click()
 
     await expect(page.getByText('Gayantha Perera')).toBeVisible()
-    await expect(page.getByText('Pending')).toBeVisible()
+    await expect(page.getByText('Pending').last()).toBeVisible()
     await expect(page.getByText('I am a great fit.')).toBeVisible()
   })
 
@@ -120,7 +120,9 @@ test.describe('Application Review (Company)', () => {
     await page.getByRole('button', { name: 'OK' }).click()
     
     // Status is now Accepted due to fetchCompanyInternships re-run
-    await expect(page.getByText('Accepted').first()).toBeVisible()
+    // Status is now Accepted due to fetchCompanyInternships re-run. 
+    // We use .last() because the first one might be the hidden option in the select.
+    await expect(page.getByText('Accepted').last()).toBeVisible()
   })
 
   test('should reject applications and trigger email notifications (simulated)', async ({ page }) => {
@@ -184,6 +186,8 @@ test.describe('Application Review (Company)', () => {
     await page.getByRole('button', { name: 'OK' }).click()
     
     // Status is now Rejected due to fetchCompanyInternships re-run
-    await expect(page.getByText('Rejected').first()).toBeVisible()
+    // Status is now Rejected due to fetchCompanyInternships re-run
+    // We use .last() because the first one might be the hidden option in the select.
+    await expect(page.getByText('Rejected').last()).toBeVisible()
   })
 })

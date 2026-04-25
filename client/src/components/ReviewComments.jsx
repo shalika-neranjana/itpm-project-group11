@@ -238,7 +238,7 @@ function ReviewComments({ reviewId, reviewAuthorId }) {
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="What are your thoughts on this internship?"
+            placeholder="Start a new discussion point, question, or feedback..."
             rows="3"
             className="w-full resize-none bg-transparent px-4 py-2 text-sm font-medium text-gray-700 outline-none placeholder:text-gray-400"
             disabled={submitting}
@@ -254,7 +254,7 @@ function ReviewComments({ reviewId, reviewAuthorId }) {
                 className="flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-2.5 text-xs font-black text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
               >
                 <Send size={14} />
-                Post Message
+                Post to Forum
               </button>
           </div>
         </form>

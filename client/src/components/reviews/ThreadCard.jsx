@@ -167,7 +167,7 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
               }`}
             >
               <ThumbsUp size={16} className={`transition-transform ${review.helpfulBy?.includes(currentUserId) ? '' : 'group-hover:-translate-y-0.5'}`} />
-              <span>{review.helpful || 0}</span>
+              <span>Helpful ({review.helpful || 0})</span>
             </button>
             <div className="h-4 w-px bg-gray-100"></div>
             <button
@@ -179,7 +179,7 @@ function ThreadCard({ review, onDelete, onEdit, onVote }) {
               }`}
             >
               <ThumbsDown size={16} className={`transition-transform ${review.unhelpfulBy?.includes(currentUserId) ? '' : 'group-hover:translate-y-0.5'}`} />
-              {review.unhelpful > 0 && <span>{review.unhelpful}</span>}
+              <span>Unhelpful {review.unhelpful > 0 ? `(${review.unhelpful})` : ''}</span>
             </button>
           </div>
 
