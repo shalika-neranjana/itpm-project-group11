@@ -56,29 +56,46 @@ const ReviewForum = () => {
     }
   };
 
-  const companies = useMemo(() => {
-    const unique = [...new Set(reviews.map(r => r.company).filter(Boolean))];
-    return unique.sort();
-  }, [reviews]);
-
-  const topCompanies = useMemo(() => {
+  const companiesByCount = useMemo(() => {
     const counts = {};
     reviews.forEach(r => {
       if (r.company) counts[r.company] = (counts[r.company] || 0) + 1;
     });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
+  }, [reviews]);
+
+  const trendingCompanies = useMemo(() => {
+    const stats = {};
+    reviews.forEach(r => {
+      if (r.company) {
+        if (!stats[r.company]) stats[r.company] = { totalRating: 0, count: 0 };
+        stats[r.company].totalRating += r.rating || 0;
+        stats[r.company].count += 1;
+      }
+    });
+    return Object.entries(stats)
+      .map(([name, { totalRating, count }]) => ({ 
+        name, 
+        avgRating: totalRating / count 
+      }))
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 5);
   }, [reviews]);
 
   const filteredReviews = useMemo(() => {
     return reviews.filter(r => {
-      if (debouncedSearch && 
-          !r.company?.toLowerCase().includes(debouncedSearch.toLowerCase()) && 
-          !r.role?.toLowerCase().includes(debouncedSearch.toLowerCase()) &&
-          !r.title?.toLowerCase().includes(debouncedSearch.toLowerCase())) {
-        return false;
+      if (debouncedSearch) {
+        const searchLower = debouncedSearch.toLowerCase();
+        const companyMatch = r.company?.toLowerCase().includes(searchLower);
+        const roleMatch = r.role?.toLowerCase().includes(searchLower);
+        const titleMatch = r.title?.toLowerCase().includes(searchLower);
+        const descriptionMatch = (r.text || r.description)?.toLowerCase().includes(searchLower);
+        
+        if (!companyMatch && !roleMatch && !titleMatch && !descriptionMatch) {
+          return false;
+        }
       }
       if (selectedCompanies.length > 0 && !selectedCompanies.includes(r.company)) {
         return false;
@@ -240,22 +257,23 @@ const ReviewForum = () => {
               </div>
 
               <div>
-                <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Top Companies</h4>
+                <h4 className="mb-3 text-xs font-black uppercase tracking-[0.1em] text-[#9CA3AF]">Most Reviewed</h4>
                 <div className="max-h-64 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
-                  {companies.map(company => (
-                    <label key={company} className="flex cursor-pointer items-center justify-between group">
+                  {companiesByCount.map(({ name, count }) => (
+                    <label key={name} className="flex cursor-pointer items-center justify-between group">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <input
                           type="checkbox"
-                          checked={selectedCompanies.includes(company)}
-                          onChange={() => toggleCompanyFilter(company)}
+                          checked={selectedCompanies.includes(name)}
+                          onChange={() => toggleCompanyFilter(name)}
                           className="h-5 w-5 rounded-md border-2 border-gray-200 text-blue-600 focus:ring-blue-500 transition-all"
                         />
-                        <span className="truncate text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{company}</span>
+                        <span className="truncate text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{name}</span>
                       </div>
+                      <span className="text-[10px] font-black text-gray-400 group-hover:text-blue-500 transition-colors bg-gray-50 px-1.5 py-0.5 rounded-md">{count}</span>
                     </label>
                   ))}
-                  {companies.length === 0 && <p className="text-xs text-gray-400 italic">No companies yet</p>}
+                  {companiesByCount.length === 0 && <p className="text-xs text-gray-400 italic">No companies yet</p>}
                 </div>
               </div>
             </div>
@@ -326,21 +344,27 @@ const ReviewForum = () => {
         <div className="hidden lg:block lg:col-span-3 h-full overflow-y-auto pl-4 custom-scrollbar space-y-6 pb-10">
           <div className="rounded-3xl border border-[#F3F4F6] bg-white p-6 shadow-sm">
             <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-[#1A1D27]">
-              <Sparkles size={18} className="text-amber-500" /> Hot Companies
+              <Sparkles size={18} className="text-amber-500" /> Trending Companies
             </h3>
             <div className="space-y-4">
-              {companies.slice(0, 5).map((company, idx) => (
-                <div key={company} className="flex items-center justify-between group cursor-pointer" onClick={() => { setSelectedCompanies([company]); }}>
+              {trendingCompanies.map((company, idx) => (
+                <div key={company.name} className="flex items-center justify-between group cursor-pointer" onClick={() => { setSelectedCompanies([company.name]); }}>
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-xs font-black text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                       {idx + 1}
                     </div>
-                    <span className="text-sm font-bold text-gray-600 group-hover:text-[#1A1D27] transition-colors">{company}</span>
+                    <div>
+                      <span className="text-sm font-bold text-gray-600 group-hover:text-[#1A1D27] transition-colors block">{company.name}</span>
+                      <div className="flex items-center gap-1">
+                        <Star size={10} className="fill-amber-400 text-amber-400" />
+                        <span className="text-[10px] font-black text-amber-600">{company.avgRating.toFixed(1)} rating</span>
+                      </div>
+                    </div>
                   </div>
                   <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                 </div>
               ))}
-              {companies.length === 0 && <p className="text-xs text-gray-400 font-medium">Data will appear as students post reviews.</p>}
+              {trendingCompanies.length === 0 && <p className="text-xs text-gray-400 font-medium">Data will appear as students post reviews.</p>}
             </div>
           </div>
 
