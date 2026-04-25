@@ -6,7 +6,7 @@ import InputField from './InputField'
 import { toast as swalToast, error as swalError } from '../../utils/swal'
 
 function detectUserRole(email) {
-  if (!email) return null
+  if (!email) return 'student'
 
   const lowerEmail = email.toLowerCase()
   const studentKeywords = ['.edu', '.ac.lk', '.edu.lk', 'student', 'campus']
@@ -16,6 +16,13 @@ function detectUserRole(email) {
     return 'student'
   }
 
+  // Admin should be student role
+  if (lowerEmail === 'admin@internconnect.com') {
+    return 'student'
+  }
+
+  // If it's a public domain, we can't be sure, but default to student
+  // unless we want to be more careful.
   if (publicDomains.some((domain) => lowerEmail.endsWith(domain))) {
     return 'student'
   }
@@ -28,7 +35,8 @@ function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState(null)
+  const [role, setRole] = useState('student')
+  const [isManualRole, setIsManualRole] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -37,8 +45,11 @@ function LoginPage() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   useEffect(() => {
-    setRole(detectUserRole(email))
-  }, [email])
+    if (!isManualRole && email.includes('@')) {
+      const detected = detectUserRole(email)
+      setRole(detected)
+    }
+  }, [email, isManualRole])
 
   const validateForm = () => {
     const nextErrors = { email: '', password: '' }
@@ -69,7 +80,8 @@ function LoginPage() {
     setLoading(true)
 
     try {
-      const activeRole = role || 'student'
+      // If email is admin, force student role regardless of detection
+      const activeRole = email.toLowerCase() === 'admin@internconnect.com' ? 'student' : role
       const endpoint = activeRole === 'student' ? '/auth/login' : '/company/login'
       const response = await api.post(endpoint, { email, password })
 
@@ -86,6 +98,7 @@ function LoginPage() {
 
         // Show non-blocking success toast, then navigate
         try { swalToast('Login successful') } catch (e) {}
+        
         if (activeRole === 'student' && response.data.data.email === 'admin@internconnect.com') {
           navigate('/admin')
         } else if (activeRole === 'student') {
@@ -160,8 +173,41 @@ function LoginPage() {
             className="auth-panel-transition rounded-2xl border border-white/60 bg-white/70 p-8 shadow-[0_10px_40px_rgba(15,23,42,0.14)]"
             style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
           >
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-900">Login</h2>
+          <div className="mb-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Login</h2>
+            </div>
+            
+            <div className="flex p-1 bg-gray-100/80 rounded-xl border border-gray-200/50 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setRole('student')
+                  setIsManualRole(true)
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                  role === 'student'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                }`}
+              >
+                Student
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRole('company')
+                  setIsManualRole(true)
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                  role === 'company'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                }`}
+              >
+                Company
+              </button>
+            </div>
           </div>
 
           {submitError ? (
