@@ -104,6 +104,35 @@ const internshipSchema = new mongoose.Schema(
                 type: Date,
                 default: Date.now,
             },
+            interview: {
+                mode: {
+                    type: String,
+                    enum: ["Online", "Onsite"],
+                },
+                date: {
+                    type: Date,
+                },
+                time: {
+                    type: String,
+                    trim: true,
+                },
+                place: {
+                    type: String,
+                    trim: true,
+                },
+                supervisorEmail: {
+                    type: String,
+                    trim: true,
+                },
+                supervisorContact: {
+                    type: String,
+                    trim: true,
+                },
+                scheduledAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
         }],
     },
     {

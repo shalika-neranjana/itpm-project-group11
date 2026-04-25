@@ -173,6 +173,11 @@ const CompanyDashboard = () => {
   }, [navigate])
 
   const handleUpdateApplicationStatus = async (applicant, status) => {
+    if (status === 'Accepted') {
+      navigate(`/company-dashboard/interview/${applicant.internshipId}/${applicant._id}`)
+      return
+    }
+
     try {
       await api.put(`/internships/${applicant.internshipId}/applications/${applicant._id}`, { status })
       await fetchCompanyInternships()
@@ -822,7 +827,7 @@ const CompanyDashboard = () => {
                         disabled={applicant.status === 'Accepted'}
                         className="rounded-[10px] bg-[#16A34A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Accept
+                        {applicant.status === 'Accepted' ? 'Accepted' : 'Accept and Schedule'}
                       </button>
                       <button
                         onClick={() => handleUpdateApplicationStatus(applicant, 'Rejected')}

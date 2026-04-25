@@ -8,6 +8,7 @@ import InternshipMarketplace from './Profiles/InternshipMarketplace'
 import CompanyDashboard from './Profiles/CompanyDashboard'
 import CompanyPostInternship from './Profiles/CompanyPostInternship'
 import CompanyEditInternship from './Profiles/CompanyEditInternship'
+import CompanyScheduleInterview from './Profiles/CompanyScheduleInterview'
 import ApplicationForm from './Profiles/ApplicationForm'
 import Home from './pages/Home'
 import WriteReview from './pages/WriteReview'
@@ -30,6 +31,7 @@ function App() {
         <Route path="/company-dashboard" element={<CompanyDashboard />} />
         <Route path="/company-dashboard/post-internship" element={<CompanyPostInternship />} />
         <Route path="/company-dashboard/edit-internship/:id" element={<CompanyEditInternship />} />
+        <Route path="/company-dashboard/interview/:internshipId/:appId" element={<CompanyScheduleInterview />} />
         <Route path="/apply/:id" element={<ApplicationForm />} />
         <Route path="/write-review" element={<WriteReview />} />
         <Route path="/review/:reviewId" element={<ReviewDetail />} />

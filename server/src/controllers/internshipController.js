@@ -362,13 +362,58 @@ const getStudentApplications = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get single application for company
+ * @route   GET /api/internships/:id/applications/:appId
+ * @access  Private (Company owner)
+ */
+const getCompanyApplicationById = async (req, res, next) => {
+    try {
+        const internship = await Internship.findById(req.params.id);
+
+        if (!internship) {
+            res.status(404);
+            throw new Error("Internship not found");
+        }
+
+        if (internship.company.toString() !== req.company._id.toString()) {
+            res.status(403);
+            throw new Error("Not authorized to access this application");
+        }
+
+        const application = (internship.applications || []).find(
+            app => app._id.toString() === req.params.appId
+        );
+
+        if (!application) {
+            res.status(404);
+            throw new Error("Application not found");
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                internship: {
+                    _id: internship._id,
+                    title: internship.title,
+                    type: internship.type,
+                    location: internship.location,
+                },
+                application,
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * @desc    Update application status
  * @route   PUT /api/internships/:id/applications/:appId
  * @access  Private (Company owner)
  */
 const updateApplicationStatus = async (req, res, next) => {
     try {
-        const { status } = req.body;
+        const { status, interviewDetails } = req.body;
 
         if (!["Accepted", "Rejected"].includes(status)) {
             res.status(400);
@@ -396,12 +441,50 @@ const updateApplicationStatus = async (req, res, next) => {
             throw new Error("Application not found");
         }
 
+        if (status === "Accepted") {
+            const mode = interviewDetails?.mode;
+            const date = interviewDetails?.date;
+            const time = interviewDetails?.time;
+            const place = interviewDetails?.place;
+            const supervisorEmail = interviewDetails?.supervisorEmail;
+            const supervisorContact = interviewDetails?.supervisorContact;
+
+            if (!mode || !date || !time || !place || !supervisorEmail || !supervisorContact) {
+                res.status(400);
+                throw new Error("Interview mode, date, time, place, supervisor email and contact number are required");
+            }
+
+            if (!["Online", "Onsite"].includes(mode)) {
+                res.status(400);
+                throw new Error("Interview mode must be Online or Onsite");
+            }
+
+            const interviewDate = new Date(date);
+            if (Number.isNaN(interviewDate.getTime())) {
+                res.status(400);
+                throw new Error("Invalid interview date");
+            }
+
+            application.interview = {
+                mode,
+                date: interviewDate,
+                time,
+                place,
+                supervisorEmail,
+                supervisorContact,
+                scheduledAt: new Date(),
+            };
+        }
+
         application.status = status;
         await internship.save();
 
         // Create notification for the student
+        const interviewDateLabel = application.interview?.date
+            ? new Date(application.interview.date).toLocaleDateString()
+            : null;
         const message = status === "Accepted"
-            ? `Your application for "${internship.title}" has been accepted!`
+            ? `Your application for "${internship.title}" has been accepted. Interview: ${interviewDateLabel} at ${application.interview.time} (${application.interview.mode}), ${application.interview.place}. Supervisor: ${application.interview.supervisorEmail}, ${application.interview.supervisorContact}.`
             : `Your application for "${internship.title}" has been rejected.`;
         const type = status === "Accepted" ? "application_accepted" : "application_rejected";
 
@@ -421,10 +504,10 @@ const updateApplicationStatus = async (req, res, next) => {
         if (application.student) {
             const student = await Student.findById(application.student);
             if (student && student.email) {
-                await sendApplicationEmail(student.email, internship.title, status);
+                await sendApplicationEmail(student.email, internship.title, status, application.interview);
             }
         } else if (application.email) {
-            await sendApplicationEmail(application.email, internship.title, status);
+            await sendApplicationEmail(application.email, internship.title, status, application.interview);
         }
 
         res.status(200).json({
@@ -445,5 +528,6 @@ module.exports = {
     getCompanyInternships,
     applyForInternship,
     getStudentApplications,
+    getCompanyApplicationById,
     updateApplicationStatus,
 };
